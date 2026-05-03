@@ -6,7 +6,7 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/031070d1-81a5-4d52-a79f-6c55e241f323
+View your app in Vercel: https://heroic-dashboard-three.vercel.app
 
 ## Run Locally
 

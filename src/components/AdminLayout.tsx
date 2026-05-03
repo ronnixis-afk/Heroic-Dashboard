@@ -61,7 +61,7 @@ export default function AdminLayout() {
                 <div className="h-8 w-8 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500 overflow-hidden">
                    {/* Logo mock */}
                 </div>
-                <span className="font-sans text-xl font-bold tracking-tight text-white">Border</span>
+                <span className="font-sans text-xl font-bold tracking-tight text-white">Heroic Dashboard</span>
               </motion.div>
             ) : (
               <motion.div 

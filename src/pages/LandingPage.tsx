@@ -31,7 +31,7 @@ export default function LandingPage() {
           </div>
           <span className="font-serif text-xl font-bold text-slate-900">Heroic AI RPG</span>
         </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500 uppercase tracking-widest">
+        <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500 tracking-widest">
           <a href="#" className="hover:text-indigo-600 transition-colors">Lore</a>
           <a href="#" className="hover:text-indigo-600 transition-colors">Mechanics</a>
           <a href="#" className="hover:text-indigo-600 transition-colors">Pricing</a>
@@ -132,7 +132,7 @@ export default function LandingPage() {
                   </div>
                 )}
                 <div className="p-6 flex-1 flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-accent mb-2">Announcement</span>
+                  <span className="text-[10px] font-bold tracking-widest text-brand-accent mb-2">Announcement</span>
                   <h3 className="text-xl font-bold mb-3">{item.title}</h3>
                   <p className="text-sm text-brand-text-muted line-clamp-3 mb-6">
                     {item.content}
@@ -185,7 +185,7 @@ export default function LandingPage() {
             <span className="font-serif font-bold">Heroic AI RPG</span>
           </div>
           <p className="text-xs text-brand-text-muted">© 2026 Ghost Dimension Games. Built with Gemini AI.</p>
-          <div className="flex gap-6 text-xs font-bold uppercase tracking-widest text-brand-text-muted">
+          <div className="flex gap-6 text-xs font-bold tracking-widest text-brand-text-muted">
             <a href="#" className="hover:text-brand-accent transition-colors">Privacy</a>
             <a href="#" className="hover:text-brand-accent transition-colors">Terms</a>
             <a href="#" className="hover:text-brand-accent transition-colors">Discord</a>

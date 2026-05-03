@@ -80,8 +80,8 @@ export default function LoginPage() {
           <div className="mb-6 h-12 w-12 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500 overflow-hidden shadow-[0_0_20px_rgba(0,178,255,0.2)]">
              {/* Logo Mock */}
           </div>
-          <h1 className="font-sans text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-[#8b8c94]">Enter your details to access Border</p>
+          <h1 className="font-sans text-3xl font-bold tracking-tight">Welcome Back</h1>
+          <p className="mt-2 text-sm text-[#8b8c94]">Enter Your Details To Access Heroic Dashboard</p>
         </div>
 
         {error && (
