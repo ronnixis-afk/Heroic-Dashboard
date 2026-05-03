@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -40,6 +40,8 @@ const topUsers = [
 ];
 
 export default function AdminAnalytics() {
+  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users'>('tokens');
+
   return (
     <div className="space-y-8">
       {/* Top Row: Detailed Metrics */}
@@ -109,7 +111,7 @@ export default function AdminAnalytics() {
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-brand-accent">{user.tokens}</span>
-                  <p className="text-[8px] uppercase tracking-widest text-brand-text-muted">Tokens</p>
+                  <p className="text-[8px] text-brand-text-muted">Tokens</p>
                 </div>
               </div>
             ))}
@@ -130,8 +132,18 @@ export default function AdminAnalytics() {
             <p className="text-sm text-brand-text-muted">Token usage vs active users over the last 7 days</p>
           </div>
           <div className="flex gap-2">
-            <button className="rounded-lg bg-brand-primary/20 px-3 py-1 text-xs font-bold text-brand-accent">Tokens</button>
-            <button className="rounded-lg px-3 py-1 text-xs font-bold text-brand-text-muted hover:bg-brand-primary/10">Active Users</button>
+            <button 
+              onClick={() => setActiveMetric('tokens')}
+              className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === 'tokens' ? 'bg-brand-primary/20 text-brand-accent' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
+            >
+              Tokens
+            </button>
+            <button 
+              onClick={() => setActiveMetric('users')}
+              className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === 'users' ? 'bg-brand-primary/20 text-[#38bdf8]' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
+            >
+              Active Users
+            </button>
           </div>
         </div>
         <div className="h-[400px] w-full">

@@ -80,7 +80,7 @@ export default function AdminNews() {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Headline</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Headline</label>
               <input 
                 type="text" 
                 required
@@ -92,7 +92,7 @@ export default function AdminNews() {
             </div>
             
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Content</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Content</label>
               <textarea 
                 required
                 rows={6}
@@ -104,7 +104,7 @@ export default function AdminNews() {
             </div>
             
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Banner Image URL (Optional)</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Banner Image URL (Optional)</label>
               <div className="relative">
                 <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted" size={18} />
                 <input 
@@ -149,7 +149,7 @@ export default function AdminNews() {
 
         {/* Preview */}
         <div className="glass-panel overflow-hidden border-dashed border-brand-accent/30 p-6 opacity-80">
-          <span className="mb-4 inline-block rounded-lg bg-brand-accent/10 px-3 py-1 text-[10px] font-bold uppercase text-brand-accent">Live Preview</span>
+          <span className="mb-4 inline-block rounded-lg bg-brand-accent/10 px-3 py-1 text-[10px] font-bold text-brand-accent">Live Preview</span>
           {formData.imageUrl && (
             <img src={formData.imageUrl} alt="Preview" className="mb-4 h-48 w-full rounded-xl object-cover" />
           )}
@@ -162,7 +162,7 @@ export default function AdminNews() {
 
       {/* Feed Management */}
       <div className="space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-brand-text-muted">Recent Posts ({news.length})</h3>
+        <h3 className="text-sm font-bold text-brand-text-muted">Recent Posts ({news.length})</h3>
         <div className="space-y-4">
           <AnimatePresence>
             {news.map((item) => (
@@ -184,7 +184,7 @@ export default function AdminNews() {
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold line-clamp-1">{item.title}</h4>
-                        {!item.published && <span className="text-[10px] uppercase text-red-400 font-bold">Draft</span>}
+                        {!item.published && <span className="text-[10px] text-red-400 font-bold">Draft</span>}
                       </div>
                       <p className="text-xs text-brand-text-muted line-clamp-2">{item.content}</p>
                       <div className="flex items-center gap-3 pt-2 text-[10px] text-brand-text-muted">

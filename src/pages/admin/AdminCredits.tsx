@@ -66,7 +66,7 @@ export default function AdminCredits() {
 
           <form onSubmit={handleAdjust} className="space-y-4">
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Target User Email</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Target User Email</label>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted" size={18} />
                 <input 
@@ -81,7 +81,7 @@ export default function AdminCredits() {
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Amount</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Amount</label>
               <div className="flex items-center gap-4">
                 <input 
                   type="number" 
@@ -106,7 +106,7 @@ export default function AdminCredits() {
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase text-brand-text-muted">Reason / Note</label>
+              <label className="mb-2 block text-xs font-bold text-brand-text-muted">Reason / Note</label>
               <select 
                 value={formData.reason}
                 onChange={(e) => setFormData({...formData, reason: e.target.value})}
@@ -182,7 +182,7 @@ export default function AdminCredits() {
                       </span>
                     </td>
                     <td className="text-xs font-medium">{item.reason}</td>
-                    <td className="text-[10px] uppercase tracking-wider text-brand-text-muted">
+                    <td className="text-[10px] text-brand-text-muted">
                       {item.adminId?.slice(0, 5)}...
                     </td>
                   </tr>

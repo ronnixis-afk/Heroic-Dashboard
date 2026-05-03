@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { ArrowLeftRight, ChevronDown, Repeat } from 'lucide-react';
 
@@ -41,6 +41,17 @@ const topConsumers = [
 ];
 
 export default function AdminDashboard() {
+  const [revenueFilter, setRevenueFilter] = useState('Month');
+  const [signupFilter, setSignupFilter] = useState('6 months');
+  const [tokensProcessed, setTokensProcessed] = useState('1,000,000');
+  const [estimatedCost, setEstimatedCost] = useState('10.00');
+
+  const handleCalculateCost = () => {
+    const tokens = parseInt(tokensProcessed.replace(/,/g, '')) || 0;
+    const cost = (tokens / 1000) * 0.01;
+    setEstimatedCost(cost.toFixed(2));
+  };
+
   return (
     <div className="space-y-6 text-white pb-8">
       {/* Top Row */}
@@ -58,9 +69,15 @@ export default function AdminDashboard() {
             
             <div className="flex flex-col items-end gap-6">
               <div className="flex bg-[#141416] rounded-xl p-1 border border-[#292a32]">
-                <button className="px-4 py-1.5 text-[11px] font-bold text-[#8b8c94] rounded-lg hover:text-white">Day</button>
-                <button className="px-4 py-1.5 text-[11px] font-bold text-[#8b8c94] rounded-lg hover:text-white">Week</button>
-                <button className="px-4 py-1.5 text-[11px] font-bold bg-white text-black rounded-lg">Month</button>
+                {['Day', 'Week', 'Month'].map(filter => (
+                  <button 
+                    key={filter}
+                    onClick={() => setRevenueFilter(filter)}
+                    className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-black' : 'text-[#8b8c94] hover:text-white'}`}
+                  >
+                    {filter}
+                  </button>
+                ))}
               </div>
               <div className="flex items-center gap-4 text-xs font-bold text-[#8b8c94]">
                 <div className="flex items-center gap-1.5">
@@ -125,7 +142,8 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center mt-2">
                 <input 
                   type="text" 
-                  defaultValue="1,000,000" 
+                  value={tokensProcessed}
+                  onChange={(e) => setTokensProcessed(e.target.value)}
                   className="bg-transparent text-3xl font-bold flex-1 min-w-0 mr-4 outline-none" 
                 />
                 <button className="shrink-0 flex items-center gap-2 bg-[#1d1e24] border border-[#292a32] px-3 py-1.5 rounded-full text-sm font-medium">
@@ -147,7 +165,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center mt-2">
                 <input 
                   type="text" 
-                  defaultValue="10.00" 
+                  value={estimatedCost} 
                   className="bg-transparent text-3xl font-bold flex-1 min-w-0 mr-4 outline-none" 
                   readOnly
                 />
@@ -161,7 +179,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.01 / 1k tokens</p>
             </div>
             
-            <button className="w-full bg-white text-black py-4 rounded-full font-bold text-sm mt-6 hover:bg-gray-200 transition-colors">
+            <button onClick={handleCalculateCost} className="w-full bg-white text-black py-4 rounded-full font-bold text-sm mt-6 hover:bg-gray-200 active:scale-[0.98] transition-all">
               Calculate Cost
             </button>
           </div>
@@ -176,8 +194,11 @@ export default function AdminDashboard() {
         <div className="glass-panel p-6 h-[340px] flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">New Signups</h3>
-            <button className="flex items-center gap-2 bg-[#141416] border border-[#292a32] px-3 py-1.5 rounded-lg text-xs font-medium text-[#8b8c94] hover:text-white transition-colors">
-              6 months <ChevronDown size={14} />
+            <button 
+              onClick={() => setSignupFilter(signupFilter === '6 months' ? '30 days' : '6 months')}
+              className="flex items-center gap-2 bg-[#141416] border border-[#292a32] px-3 py-1.5 rounded-lg text-xs font-medium text-[#8b8c94] hover:text-white transition-colors"
+            >
+              {signupFilter} <ChevronDown size={14} />
             </button>
           </div>
           
