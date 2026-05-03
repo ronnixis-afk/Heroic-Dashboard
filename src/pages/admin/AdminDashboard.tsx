@@ -27,28 +27,28 @@ const acquisitionData = [
 ];
 
 const recentSignups = [
-  { id: 1, user: 'alex@startup.io', date: '3 mins ago', plan: 'Pro', icon: 'https://ui-avatars.com/api/?name=A&background=ff0000&color=fff' },
-  { id: 2, user: 'maria@tech.co', date: '12 mins ago', plan: 'Enterprise', icon: 'https://ui-avatars.com/api/?name=M&background=FF9900&color=fff' },
-  { id: 3, user: 'dev@framer.app', date: '1 hour ago', plan: 'Pro', icon: 'https://ui-avatars.com/api/?name=F&background=0055FF&color=fff' },
-  { id: 4, user: 'design@figma.com', date: '2 hours ago', plan: 'Basic', icon: 'https://ui-avatars.com/api/?name=D&background=F24E1E&color=fff' },
+  { id: 1, user: 'knight_errant@heroic.app', date: '3 mins ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=K&background=ff0000&color=fff' },
+  { id: 2, user: 'wizard@rpg.com', date: '12 mins ago', plan: 'Adventurer', icon: 'https://ui-avatars.com/api/?name=W&background=FF9900&color=fff' },
+  { id: 3, user: 'rogue@guild.net', date: '1 hour ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=R&background=0055FF&color=fff' },
+  { id: 4, user: 'cleric@temple.org', date: '2 hours ago', plan: 'Free', icon: 'https://ui-avatars.com/api/?name=C&background=F24E1E&color=fff' },
 ];
 
 const topConsumers = [
-  { id: 1, user: 'acme_corp', model: 'GPT-4', cost: 1254.99, icon: 'https://ui-avatars.com/api/?name=AC&background=EA4C89&color=fff' },
-  { id: 2, user: 'video_gen', model: 'DALL-E 3', cost: 820.00, icon: 'https://ui-avatars.com/api/?name=VG&background=FF0000&color=fff' },
-  { id: 3, user: 'indie_dev', model: 'Claude 3', cost: 345.00, icon: 'https://ui-avatars.com/api/?name=ID&background=000&color=fff' },
-  { id: 4, user: 'ai_research', model: 'GPT-3.5', cost: 120.00, icon: 'https://ui-avatars.com/api/?name=AI&background=10A37F&color=fff' },
+  { id: 1, user: 'dragon_slayer', model: 'gemini-3.1-flash', cost: 1254.99, icon: 'https://ui-avatars.com/api/?name=DS&background=EA4C89&color=fff' },
+  { id: 2, user: 'dungeon_master', model: 'gemini-3-pro-img', cost: 820.00, icon: 'https://ui-avatars.com/api/?name=DM&background=FF0000&color=fff' },
+  { id: 3, user: 'lore_seeker', model: 'gemini-2.5-tts', cost: 345.00, icon: 'https://ui-avatars.com/api/?name=LS&background=000&color=fff' },
+  { id: 4, user: 'epic_bard', model: 'gemini-2.0-flash', cost: 120.00, icon: 'https://ui-avatars.com/api/?name=EB&background=10A37F&color=fff' },
 ];
 
 export default function AdminDashboard() {
   const [revenueFilter, setRevenueFilter] = useState('Month');
   const [signupFilter, setSignupFilter] = useState('6 months');
-  const [tokensProcessed, setTokensProcessed] = useState('1,000,000');
-  const [estimatedCost, setEstimatedCost] = useState('10.00');
+  const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
+  const [estimatedCost, setEstimatedCost] = useState('0.19');
 
   const handleCalculateCost = () => {
     const tokens = parseInt(tokensProcessed.replace(/,/g, '')) || 0;
-    const cost = (tokens / 1000) * 0.01;
+    const cost = (tokens / 1000000) * 0.075;
     setEstimatedCost(cost.toFixed(2));
   };
 
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
                   Input <ChevronDown size={14} className="text-[#8b8c94]"/>
                 </button>
               </div>
-              <p className="text-xs text-[#8b8c94] mt-2 font-medium">GPT-4 Turbo</p>
+              <p className="text-xs text-[#8b8c94] mt-2 font-medium">Gemini 3.1 Flash</p>
               
               <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#1d1e24] border border-[#292a32] flex items-center justify-center z-10 cursor-pointer hover:bg-[#292a32] transition-colors shadow-lg">
                 <ArrowLeftRight size={14} className="text-[#8b8c94] rotate-90" />
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
                   USD <ChevronDown size={14} className="text-[#8b8c94]"/>
                 </button>
               </div>
-              <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.01 / 1k tokens</p>
+              <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.075 / 1M tokens</p>
             </div>
             
             <button onClick={handleCalculateCost} className="w-full bg-white text-black py-4 rounded-full font-bold text-sm mt-6 hover:bg-gray-200 active:scale-[0.98] transition-all">

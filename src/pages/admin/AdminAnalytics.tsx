@@ -27,16 +27,16 @@ const usageTrends = [
 ];
 
 const modelDistribution = [
-  { name: 'Gemini 3 Flash', value: 65, color: '#3ecf8e' },
-  { name: 'Gemini 3 Pro', value: 25, color: '#a855f7' },
-  { name: 'Imagen 3', value: 10, color: '#38bdf8' },
+  { name: 'Gemini 3.1 Flash', value: 65, color: '#3ecf8e' },
+  { name: 'Gemini 2.5 TTS', value: 25, color: '#a855f7' },
+  { name: 'Gemini 3 Image', value: 10, color: '#38bdf8' },
 ];
 
 const topUsers = [
   { email: 'wizard@rpg.com', usages: 450, tokens: '1.2M' },
-  { email: 'hero@gmail.com', usages: 380, tokens: '980k' },
-  { email: 'dragon@boss.com', usages: 310, tokens: '820k' },
-  { email: 'knight@quest.net', usages: 290, tokens: '750k' },
+  { email: 'knight_errant@heroic.app', usages: 380, tokens: '980k' },
+  { email: 'dungeon_master@boss.com', usages: 310, tokens: '820k' },
+  { email: 'rogue@guild.net', usages: 290, tokens: '750k' },
 ];
 
 export default function AdminAnalytics() {
