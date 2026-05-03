@@ -1,0 +1,114 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getExistingUserTier() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tier;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getExistingUserTier() == 'super_admin' || 
+        request.auth.token.email == 'ronnixis@gmail.com' // Bootstrapped admin
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Rules ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.id is string && data.id == request.auth.uid &&
+               data.email is string && data.email.size() <= 128 &&
+               data.tier in ['newbie', 'adventurer', 'hero', 'super_admin'] &&
+               data.currentCredits is int &&
+               data.maxCredits is int &&
+               data.createdAt is timestamp &&
+               data.lastActive is timestamp &&
+               data.keys().hasAll(['id', 'email', 'tier', 'currentCredits', 'maxCredits', 'createdAt', 'lastActive']) &&
+               data.keys().size() == 7;
+      }
+
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && 
+                       ((incoming().tier == 'newbie') || 
+                        (request.auth.token.email == 'ronnixis@gmail.com' && incoming().tier == 'super_admin')) && 
+                       incoming().createdAt == request.time;
+      
+      allow update: if (isOwner(userId) && 
+                       incoming().diff(existing()).affectedKeys().hasOnly(['lastActive', 'currentCredits']) &&
+                       incoming().tier == existing().tier &&
+                       incoming().maxCredits == existing().maxCredits) ||
+                       isAdmin();
+    }
+
+    // --- Usage Logs ---
+    match /usageLogs/{logId} {
+      function isValidLog(data) {
+        return data.userId == request.auth.uid &&
+               data.tokens is int &&
+               data.model is string &&
+               data.type is string &&
+               data.createdAt == request.time;
+      }
+
+      allow create: if isSignedIn() && isValidLog(incoming());
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // --- News ---
+    match /news/{newsId} {
+      function isValidNews(data) {
+        return data.title is string && data.title.size() <= 200 &&
+               data.content is string && data.content.size() <= 10000 &&
+               data.published is bool &&
+               data.createdAt is timestamp;
+      }
+
+      allow read: if incoming() == null || existing().published == true || isAdmin();
+      allow write: if isAdmin() && isValidNews(incoming());
+    }
+
+    // --- Credit Adjustments ---
+    match /creditAdjustments/{adjId} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- Tier Configs ---
+    match /tierConfigs/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

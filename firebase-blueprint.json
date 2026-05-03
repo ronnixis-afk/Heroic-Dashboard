@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier (Firebase UID)" },
+        "email": { "type": "string", "description": "User email address" },
+        "tier": { "type": "string", "enum": ["newbie", "adventurer", "hero", "super_admin"], "description": "User subscription tier" },
+        "currentCredits": { "type": "integer", "description": "Current available credits" },
+        "maxCredits": { "type": "integer", "description": "Maximum credit limit" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last activity timestamp" }
+      },
+      "required": ["id", "email", "tier", "currentCredits", "maxCredits", "createdAt"]
+    },
+    "UsageLog": {
+      "title": "Usage Log",
+      "description": "Record of AI model usage",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Referenced User ID" },
+        "tokens": { "type": "integer", "description": "Total tokens used" },
+        "inputTokens": { "type": "integer", "description": "Input tokens" },
+        "outputTokens": { "type": "integer", "description": "Output tokens" },
+        "model": { "type": "string", "description": "AI model identifier" },
+        "type": { "type": "string", "description": "Type of request (e.g., world-building, chat)" },
+        "costUsd": { "type": "number", "description": "Estimated cost in USD" },
+        "durationMs": { "type": "integer", "description": "Time taken for processing" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of usage" }
+      },
+      "required": ["userId", "tokens", "model", "type", "createdAt"]
+    },
+    "CreditAdjustment": {
+      "title": "Credit Adjustment",
+      "description": "Audit log of manual credit changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Target User ID" },
+        "amount": { "type": "integer", "description": "Change amount (positive or negative)" },
+        "balanceAfter": { "type": "integer", "description": "Credits after adjustment" },
+        "reason": { "type": "string", "description": "Reason for adjustment" },
+        "adminId": { "type": "string", "description": "Admin User ID who performed action" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of adjustment" }
+      },
+      "required": ["userId", "amount", "balanceAfter", "reason", "adminId", "createdAt"]
+    },
+    "News": {
+      "title": "News Item",
+      "description": "News board entry for the app landing page",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Headline" },
+        "content": { "type": "string", "description": "Full text content" },
+        "imageUrl": { "type": "string", "description": "Optional image URL" },
+        "published": { "type": "boolean", "description": "Visibility status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["title", "content", "published", "createdAt"]
+    },
+    "TierConfig": {
+      "title": "Tier Configuration",
+      "description": "Rules for auto-replenishment per tier",
+      "type": "object",
+      "properties": {
+        "tier": { "type": "string", "description": "Tier name" },
+        "baseCredits": { "type": "integer", "description": "Default start credits" },
+        "replenishAmount": { "type": "integer", "description": "Amount added per cycle" },
+        "replenishCycle": { "type": "string", "description": "Cycle duration (daily, weekly, monthly)" },
+        "maxCredits": { "type": "integer", "description": "Hard cap on credits" }
+      },
+      "required": ["tier", "baseCredits", "replenishAmount", "replenishCycle", "maxCredits"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "usageLogs": {
+      "schema": "UsageLog",
+      "description": "Consumption tracking"
+    },
+    "creditAdjustments": {
+      "schema": "CreditAdjustment",
+      "description": "Audit logs for credits"
+    },
+    "news": {
+      "schema": "News",
+      "description": "App news and updates"
+    },
+    "tierConfigs": {
+      "schema": "TierConfig",
+      "description": "Global tier settings"
+    }
+  }
+}
