@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { Newspaper, Plus, Trash2, Edit3, Image as ImageIcon, Send, Clock, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,27 +16,52 @@ export default function AdminNews() {
   });
 
   useEffect(() => {
-    const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return unsubscribe;
+    const fetchNews = async () => {
+      const { data, error } = await supabase
+        .from('News')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
+      if (data) setNews(data);
+      if (error) console.error("Error fetching news:", error);
+    };
+
+    fetchNews();
+
+    // Real-time subscription
+    const subscription = supabase
+      .channel('public:News')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'News' }, () => {
+        fetchNews();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingId) {
-        await updateDoc(doc(db, 'news', editingId), {
-          ...formData,
-          updatedAt: serverTimestamp()
-        });
+        const { error } = await supabase
+          .from('News')
+          .update({
+            ...formData,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', editingId);
+        
+        if (error) throw error;
       } else {
-        await addDoc(collection(db, 'news'), {
-          ...formData,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+        const { error } = await supabase
+          .from('News')
+          .insert({
+            ...formData,
+          });
+        
+        if (error) throw error;
       }
       resetForm();
     } catch (error) {
@@ -64,7 +88,12 @@ export default function AdminNews() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this news item?")) {
-      await deleteDoc(doc(db, 'news', id));
+      const { error } = await supabase
+        .from('News')
+        .delete()
+        .eq('id', id);
+      
+      if (error) console.error("Error deleting news:", error);
     }
   };
 
@@ -188,7 +217,7 @@ export default function AdminNews() {
                       </div>
                       <p className="text-xs text-brand-text-muted line-clamp-2">{item.content}</p>
                       <div className="flex items-center gap-3 pt-2 text-[10px] text-brand-text-muted">
-                        <span className="flex items-center gap-1"><Clock size={10} /> {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Just Now'}</span>
+                        <span className="flex items-center gap-1"><Clock size={10} /> {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Just Now'}</span>
                         <span className="flex items-center gap-1">
                           {item.published ? <><Eye size={10} /> Visible</> : <><EyeOff size={10} /> Hidden</>}
                         </span>

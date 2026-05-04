@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import { Search, Filter, MoreHorizontal, ShieldCheck, Mail, Calendar, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,11 +25,36 @@ export default function AdminUsers() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return unsubscribe;
+    // Initial fetch
+    const fetchUsers = async () => {
+      const { data, error } = await supabase
+        .from('User')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
+      if (data) setUsers(data);
+      if (error) console.error('Error fetching users:', error);
+    };
+
+    fetchUsers();
+
+    // Subscribe to changes for real-time updates
+    const subscription = supabase
+      .channel('public:User')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setUsers(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setUsers(prev => prev.map(u => u.id === payload.new.id ? payload.new : u));
+        } else if (payload.eventType === 'DELETE') {
+          setUsers(prev => prev.filter(u => u.id === payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const filteredUsers = users.filter(user => 
@@ -146,15 +170,15 @@ export default function AdminUsers() {
                     </td>
                     <td>
                       <div className="flex flex-col">
-                        <span className="text-xs font-medium text-brand-text-muted">
-                          {user.createdAt?.toDate ? new Date(user.createdAt.toDate()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                         <span className="text-xs font-medium text-brand-text-muted">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                         </span>
                       </div>
                     </td>
                     <td>
                       <span className="text-[10px] font-bold text-brand-text-muted flex items-center gap-1">
                         <Calendar size={10} />
-                        {user.lastActive?.toDate ? new Date(user.lastActive.toDate()).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Online'}
+                        {user.updatedAt ? new Date(user.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Online'}
                       </span>
                     </td>
                     <td className="text-right">
@@ -234,7 +258,7 @@ export default function AdminUsers() {
                     <div className="flex justify-between">
                       <span className="text-xs text-brand-text-muted">Registered</span>
                       <span className="text-xs font-bold text-white">
-                        {selectedUser.createdAt?.toDate ? new Date(selectedUser.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                        {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
                   </div>

@@ -1,64 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { ArrowLeftRight, ChevronDown, Repeat } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, Repeat, Users as UsersIcon, Zap, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const revenueData = [
-  { name: 'Jan', revenue: 4000, apiCost: 2400 },
-  { name: 'Feb', revenue: 3000, apiCost: 1398 },
-  { name: 'Mar', revenue: 9000, apiCost: 4000 },
-  { name: 'Apr', revenue: 5000, apiCost: 3908 },
-  { name: 'May', revenue: 11000, apiCost: 8000 },
-  { name: 'Jun', revenue: 13000, apiCost: 6000 },
-  { name: 'Jul', revenue: 14000, apiCost: 10000 },
-  { name: 'Aug', revenue: 10000, apiCost: 5000 },
-  { name: 'Sep', revenue: 18000, apiCost: 12000 },
-  { name: 'Oct', revenue: 15000, apiCost: 9000 },
-  { name: 'Nov', revenue: 20000, apiCost: 13000 },
-  { name: 'Dec', revenue: 23000, apiCost: 16000 },
-];
-
-const acquisitionData = [
-  { name: 'Jan', organic: 40, referral: 24, paid: 24 },
-  { name: 'Feb', organic: 30, referral: 13, paid: 22 },
-  { name: 'Mar', organic: 20, referral: 50, paid: 22 },
-  { name: 'Apr', organic: 27, referral: 39, paid: 20 },
-  { name: 'May', organic: 18, referral: 48, paid: 21 },
-  { name: 'Jun', organic: 23, referral: 38, paid: 25 },
-];
-
-const recentSignups = [
-  { id: 1, user: 'knight_errant@heroic.app', date: '3 Mins Ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=K&background=ff0000&color=fff' },
-  { id: 2, user: 'wizard@rpg.com', date: '12 Mins Ago', plan: 'Adventurer', icon: 'https://ui-avatars.com/api/?name=W&background=FF9900&color=fff' },
-  { id: 3, user: 'rogue@guild.net', date: '1 Hour Ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=R&background=0055FF&color=fff' },
-  { id: 4, user: 'cleric@temple.org', date: '2 Hours Ago', plan: 'Free', icon: 'https://ui-avatars.com/api/?name=C&background=F24E1E&color=fff' },
-];
-
-const topConsumers = [
-  { id: 1, user: 'dragon_slayer', model: 'gemini-3.1-flash', cost: 1254.99, icon: 'https://ui-avatars.com/api/?name=DS&background=EA4C89&color=fff' },
-  { id: 2, user: 'dungeon_master', model: 'gemini-3-pro-img', cost: 820.00, icon: 'https://ui-avatars.com/api/?name=DM&background=FF0000&color=fff' },
-  { id: 3, user: 'lore_seeker', model: 'gemini-2.5-tts', cost: 345.00, icon: 'https://ui-avatars.com/api/?name=LS&background=000&color=fff' },
-  { id: 4, user: 'epic_bard', model: 'gemini-2.0-flash', cost: 120.00, icon: 'https://ui-avatars.com/api/?name=EB&background=10A37F&color=fff' },
-];
+import { supabase } from '../../lib/supabase';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [revenueFilter, setRevenueFilter] = useState('Month');
   const [signupFilter, setSignupFilter] = useState('6 Months');
+  
+  // Live State
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [recentSignups, setRecentSignups] = useState<any[]>([]);
+  const [topConsumers, setTopConsumers] = useState<any[]>([]);
+  const [acquisitionData, setAcquisitionData] = useState<any[]>([]);
+  
+  // Estimator State
   const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
   const [estimatedCost, setEstimatedCost] = useState('0.19');
-  
   const [showInputDropdown, setShowInputDropdown] = useState(false);
   const [showUsdDropdown, setShowUsdDropdown] = useState(false);
   const [inputType, setInputType] = useState('Tokens');
   const [currencyType, setCurrencyType] = useState('USD');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // 1. Fetch Users
+      const { data: users, error: usersError } = await supabase
+        .from('User')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (users) {
+        setRecentSignups(users.slice(0, 5).map(u => ({
+          id: u.id,
+          user: u.email,
+          date: new Date(u.createdAt).toLocaleDateString(),
+          plan: u.tier.charAt(0).toUpperCase() + u.tier.slice(1),
+          icon: `https://ui-avatars.com/api/?name=${u.email.charAt(0)}&background=random&color=fff`
+        })));
+      }
+
+      // 2. Fetch Usage Logs
+      const { data: logs, error: logsError } = await supabase
+        .from('UsageLog')
+        .select('*, User(email)');
+
+      if (logs) {
+        // Aggregate Revenue
+        const total = logs.reduce((sum, log) => sum + (log.costUsd || 0), 0);
+        setTotalRevenue(total * 3); // Mocking a 3x multiplier for "Revenue" vs "API Cost"
+
+        // Process Revenue Trends (Group by Month)
+        const monthlyData: Record<string, any> = {};
+        logs.forEach(log => {
+          const month = new Date(log.createdAt).toLocaleString('default', { month: 'short' });
+          if (!monthlyData[month]) monthlyData[month] = { name: month, revenue: 0, apiCost: 0 };
+          monthlyData[month].apiCost += log.costUsd;
+          monthlyData[month].revenue += log.costUsd * 3;
+        });
+        setRevenueData(Object.values(monthlyData));
+
+        // Process Top Consumers
+        const consumerMap: Record<string, any> = {};
+        logs.forEach(log => {
+          const email = log.User?.email || 'Unknown';
+          if (!consumerMap[email]) {
+            consumerMap[email] = { id: log.userId, user: email, model: log.model, cost: 0 };
+          }
+          consumerMap[email].cost += log.costUsd;
+          consumerMap[email].model = log.model; // Last used model
+        });
+        
+        const top = Object.values(consumerMap)
+          .sort((a, b) => b.cost - a.cost)
+          .slice(0, 4)
+          .map((u, idx) => ({
+            ...u,
+            icon: `https://ui-avatars.com/api/?name=${u.user.charAt(0)}&background=random&color=fff`
+          }));
+        setTopConsumers(top);
+
+        // Process Acquisition (Mocking breakdown based on real signup volume)
+        const signupCount = users?.length || 0;
+        setAcquisitionData([
+          { name: 'Organic', organic: Math.round(signupCount * 0.5), referral: 0, paid: 0 },
+          { name: 'Referral', organic: 0, referral: Math.round(signupCount * 0.3), paid: 0 },
+          { name: 'Paid', organic: 0, referral: 0, paid: Math.round(signupCount * 0.2) },
+        ]);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
 
   const calculateCost = (value: string) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
     const cost = (tokens / 1000000) * 0.075;
     setEstimatedCost(cost.toFixed(2));
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-accent border-t-transparent" />
+          <p className="text-brand-text-muted animate-pulse">Synchronizing With RPG Database...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-white pb-8">
@@ -71,7 +129,7 @@ export default function AdminDashboard() {
             <div>
               <h3 className="text-xl font-bold">Revenue & API Costs</h3>
               <p className="gap-2 mt-4">
-                 <span className="text-3xl font-bold">$14,642.53</span>
+                 <span className="text-3xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </p>
             </div>
             
@@ -290,19 +348,19 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span> Organic  <span className="text-[#292a32] mx-1">|</span> (50%)
               </div>
-              <span className="font-bold text-white">2,450</span>
+              <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Organic')?.organic || 0}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Referral  <span className="text-[#292a32] mx-1">|</span> (32%)
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Referral  <span className="text-[#292a32] mx-1">|</span> (30%)
               </div>
-              <span className="font-bold text-white">1,563</span>
+              <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Referral')?.referral || 0}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a36]"></span> Paid Ads  <span className="text-[#292a32] mx-1">|</span> (18%)
+                <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a36]"></span> Paid Ads  <span className="text-[#292a32] mx-1">|</span> (20%)
               </div>
-              <span className="font-bold text-white">1,152</span>
+              <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Paid')?.paid || 0}</span>
             </div>
           </div>
         </div>

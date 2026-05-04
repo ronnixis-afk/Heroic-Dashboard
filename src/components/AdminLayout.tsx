@@ -16,7 +16,6 @@ import {
   Bell,
   Search
 } from 'lucide-react';
-import { auth } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,14 +29,14 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [showNotifications, setShowNotifications] = React.useState(false);
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await signOut();
     navigate('/');
   };
 
@@ -144,8 +143,14 @@ export default function AdminLayout() {
                 )}
               </AnimatePresence>
             </div>
-            <div className="h-8 w-8 overflow-hidden rounded-full border border-[#292a32]">
-              <img src="https://ui-avatars.com/api/?name=User&background=3ecf8e&color=fff" alt="User" />
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-white">{user?.fullName || 'Administrator'}</p>
+                <p className="text-[10px] text-brand-text-muted">{user?.primaryEmailAddress?.emailAddress}</p>
+              </div>
+              <div className="h-10 w-10 overflow-hidden rounded-full border border-[#292a32] shadow-xl">
+                <img src={user?.imageUrl || `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}&background=3ecf8e&color=fff`} alt="User" className="w-full h-full object-cover" />
+              </div>
             </div>
           </div>
         </header>

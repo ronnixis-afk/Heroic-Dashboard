@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -9,6 +10,12 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Clerk Publishable Key");
+}
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
   children, 
@@ -25,7 +32,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 
 export default function App() {
   return (
-    <AuthProvider>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+      <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LoginPage />} />
@@ -47,6 +55,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </ClerkProvider>
   );
 }

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc, increment, serverTimestamp, getDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 import { cn } from '../../lib/utils';
 import { Coins, History, ArrowUpRight, Search, AlertCircle, CheckCircle2, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminCredits() {
+  const { user } = useAuth();
   const [history, setHistory] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     userEmail: '',
@@ -15,42 +16,73 @@ export default function AdminCredits() {
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'creditAdjustments'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return unsubscribe;
+    // Initial fetch of history
+    const fetchHistory = async () => {
+      const { data, error } = await supabase
+        .from('CreditAdjustment')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
+      if (data) setHistory(data);
+      if (error) console.error('Error fetching history:', error);
+    };
+
+    fetchHistory();
+
+    // Real-time subscription for history
+    const subscription = supabase
+      .channel('public:CreditAdjustment')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'CreditAdjustment' }, (payload) => {
+        setHistory(prev => [payload.new, ...prev]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
     try {
-      // Find user by email (mocking search as firestore doesn't have partial search easily)
-      // In real app, we'd have a users collection query
-      // For brevity, we assume the user exists and find them
-      // NOTE: This is a simplified version. A real implementation would verify the user.
-      
-      const userId = formData.userEmail.trim(); // Using email as user identifier for this demo/logic
-      
-      // 1. Log adjustment
-      await addDoc(collection(db, 'creditAdjustments'), {
-        userId,
-        amount: formData.amount,
-        reason: formData.reason,
-        adminId: auth.currentUser?.uid,
-        createdAt: serverTimestamp()
+      const email = formData.userEmail.trim();
+      const apiUrl = import.meta.env.VITE_RPG_API_URL;
+      const apiKey = import.meta.env.VITE_ADMIN_API_KEY;
+
+      if (!apiUrl || !apiKey) {
+        throw new Error("Admin API configuration missing in Dashboard.");
+      }
+
+      // Call the secure RPG Admin API
+      const response = await fetch(`${apiUrl}/api/admin/adjust-credits`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-API-Key': apiKey
+        },
+        body: JSON.stringify({
+          email,
+          amount: formData.amount,
+          reason: formData.reason,
+          adminEmail: user?.primaryEmailAddress?.emailAddress || 'Unknown Admin'
+        })
       });
 
-      // 2. Ideally, we would update the user document here too
-      // await updateDoc(doc(db, 'users', userId), {
-      //   currentCredits: increment(formData.amount)
-      // });
+      const result = await response.json();
 
-      setStatus({ type: 'success', msg: `Successfully Adjusted Credits For ${userId}` });
+      if (!response.ok) {
+        throw new Error(result.error || "Failed To Adjust Credits.");
+      }
+
+      setStatus({ 
+        type: 'success', 
+        msg: `Successfully Adjusted Credits For ${email}. New Balance: ${result.newBalance}` 
+      });
       setFormData({ userEmail: '', amount: 1000, reason: 'Regular Grant' });
-    } catch (error) {
-      setStatus({ type: 'error', msg: "Failed To Adjust Credits. Check Permissions." });
+    } catch (error: any) {
+      console.error('Adjustment error:', error);
+      setStatus({ type: 'error', msg: error.message || "Failed To Adjust Credits." });
     }
   };
 
@@ -168,7 +200,7 @@ export default function AdminCredits() {
                 {history.map((item) => (
                   <tr key={item.id}>
                     <td className="text-xs text-brand-text-muted">
-                      {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleString() : 'Just Now'}
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just Now'}
                     </td>
                     <td>
                       <span className="font-mono text-xs">{item.userId?.slice(0, 5)}...</span>

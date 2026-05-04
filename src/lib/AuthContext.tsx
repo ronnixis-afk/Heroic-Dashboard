@@ -1,48 +1,37 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import React, { createContext, useContext } from 'react';
+import { useUser, useAuth as useClerkAuth } from '@clerk/clerk-react';
 
 interface AuthContextType {
-  user: User | null;
-  profile: any | null;
+  user: any | null;
   loading: boolean;
   isAdmin: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  profile: null,
   loading: true,
   isAdmin: false,
+  signOut: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerkAuth();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setProfile(userDoc.data());
-        }
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const isAdmin = profile?.tier === 'super_admin' || user?.email === 'ronnixis@gmail.com';
+  const loading = !isLoaded;
+  
+  // Admin Logic: Check against the master admin email
+  // In a production app, you might check a 'role' from Clerk publicMetadata
+  const isAdmin = isSignedIn && user?.primaryEmailAddress?.emailAddress === 'ronnixis@gmail.com';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user: user || null, 
+      loading, 
+      isAdmin,
+      signOut
+    }}>
       {children}
     </AuthContext.Provider>
   );
