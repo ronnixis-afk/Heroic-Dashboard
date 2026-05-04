@@ -98,7 +98,7 @@ export default function AdminNews() {
                 rows={6}
                 value={formData.content}
                 onChange={(e) => setFormData({...formData, content: e.target.value})}
-                placeholder="Write the announcement details here... supports multi-line text."
+                placeholder="Write the Announcement Details Here... Supports Multi-Line Text."
                 className="input-field w-full resize-none"
               />
             </div>
@@ -112,7 +112,7 @@ export default function AdminNews() {
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
                   placeholder="https://images.unsplash.com/..."
-                  className="input-field w-full pl-12"
+                  className="input-field w-full !pl-12"
                 />
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function AdminNews() {
                   onChange={(e) => setFormData({...formData, published: e.target.checked})}
                   className="h-4 w-4 rounded border-brand-primary/20 bg-brand-bg accent-brand-accent"
                 />
-                <span className="text-sm">Publish immediately</span>
+                <span className="text-sm">Publish Immediately</span>
               </label>
               
               <div className="flex items-center gap-3">
@@ -155,7 +155,7 @@ export default function AdminNews() {
           )}
           <h3 className="mb-2 font-serif text-2xl font-bold">{formData.title || 'Your Headline Here'}</h3>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-text-muted">
-            {formData.content || 'Your announcement content will appear here exactly as formatted.'}
+            {formData.content || 'Your Announcement Content Will Appear Here Exactly as Formatted.'}
           </p>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function AdminNews() {
                       </div>
                       <p className="text-xs text-brand-text-muted line-clamp-2">{item.content}</p>
                       <div className="flex items-center gap-3 pt-2 text-[10px] text-brand-text-muted">
-                        <span className="flex items-center gap-1"><Clock size={10} /> {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Just now'}</span>
+                        <span className="flex items-center gap-1"><Clock size={10} /> {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Just Now'}</span>
                         <span className="flex items-center gap-1">
                           {item.published ? <><Eye size={10} /> Visible</> : <><EyeOff size={10} /> Hidden</>}
                         </span>

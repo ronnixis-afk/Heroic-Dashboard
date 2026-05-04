@@ -111,17 +111,7 @@ export default function AdminLayout() {
 
       {/* Main Content */}
       <main className="relative flex-1 overflow-y-auto bg-[#141416] m-4 rounded-[2rem] border border-[#1e1f24] inner-shadow-sm flex flex-col">
-        <header className="sticky top-0 z-40 flex h-20 items-center justify-between px-8 bg-[#141416]/90 backdrop-blur-md rounded-t-[2rem]">
-          <div className="relative w-64 hidden sm:block">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8b8c94]" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search anything" 
-              className="bg-[#1c1d24] border border-[#292a32] rounded-full py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-brand-accent w-full placeholder:text-[#8b8c94]"
-            />
-          </div>
-          <div className="sm:hidden"></div>
-          
+        <header className="sticky top-0 z-40 bg-[#141416]/90 backdrop-blur-md rounded-t-[2rem] relative py-6 px-8 flex justify-end">
           <div className="flex items-center gap-6">
             <button className="text-[#8b8c94] hover:text-white transition-colors relative">
                <Bell size={20} />

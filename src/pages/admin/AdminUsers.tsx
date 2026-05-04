@@ -28,28 +28,30 @@ export default function AdminUsers() {
     <div className="space-y-6 relative overflow-hidden">
       {/* Header Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted" size={18} />
+        <div className="relative w-full max-w-md group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted group-focus-within:text-brand-accent transition-colors" size={18} />
           <input 
             type="text" 
             placeholder="Search by email or UID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-field w-full pl-12"
+            className="input-field w-full !pl-12 bg-brand-surface/30 border-brand-primary/50 focus:bg-brand-surface/50 transition-all"
           />
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all",
-              showFilters ? "bg-brand-accent text-black border-brand-accent" : "border-brand-primary bg-brand-bg text-brand-text-muted hover:text-white"
+              "flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-200",
+              showFilters 
+                ? "bg-brand-accent/10 text-brand-accent border-brand-accent/50 shadow-[0_0_15px_rgba(0,178,255,0.1)]" 
+                : "border-brand-primary bg-brand-surface/50 text-brand-text-muted hover:text-white hover:border-brand-primary/80"
             )}
           >
             <Filter size={16} />
             Filters
           </button>
-          <button className="btn-primary flex items-center gap-2 text-sm">
+          <button className="btn-primary flex items-center gap-2 text-sm shadow-lg shadow-white/5">
             Export Records
           </button>
         </div>
@@ -82,32 +84,35 @@ export default function AdminUsers() {
                 {filteredUsers.map((user) => (
                   <motion.tr 
                     key={user.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="group hover:bg-[#292a32] transition-colors"
+                    className="group hover:bg-brand-primary/10 transition-all duration-300 cursor-pointer"
                   >
                     <td>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-indigo-500/20 border border-brand-primary flex items-center justify-center text-indigo-400">
-                          <Mail size={16} />
+                      <div className="flex items-center gap-4">
+                        <div className="relative group/avatar">
+                          <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
+                          <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
+                            <Mail size={18} />
+                          </div>
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-white">{user.email}</span>
-                          <span className="text-[10px] text-brand-text-muted font-mono">UID: {user.id?.slice(0, 12)}</span>
+                          <span className="font-bold text-white group-hover:text-brand-accent transition-colors">{user.email}</span>
+                          <span className="text-[10px] text-brand-text-muted font-mono tracking-tight">ID: {user.id?.slice(0, 8)}...</span>
                         </div>
                       </div>
                     </td>
                     <td>
                       <span className={cn(
-                        "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold tracking-wider",
-                        user.tier === 'super_admin' ? "bg-indigo-500 text-white" :
-                        user.tier === 'hero' ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" :
-                        user.tier === 'adventurer' ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" :
-                        "bg-[#292a32] text-brand-text-muted border border-brand-primary"
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold transition-all shadow-sm",
+                        user.tier === 'super_admin' ? "bg-indigo-500 text-white shadow-indigo-500/20" :
+                        user.tier === 'hero' ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-purple-500/5" :
+                        user.tier === 'adventurer' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-blue-500/5" :
+                        "bg-brand-primary/20 text-brand-text-muted border border-brand-primary/30"
                       )}>
-                        {user.tier === 'super_admin' && <ShieldCheck size={10} />}
-                        {user.tier}
+                        {user.tier === 'super_admin' && <ShieldCheck size={10} className="text-white" />}
+                        {user.tier === 'super_admin' ? 'Super Admin' : user.tier.charAt(0).toUpperCase() + user.tier.slice(1)}
                       </span>
                     </td>
                     <td>
@@ -198,7 +203,7 @@ export default function AdminUsers() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-xs text-brand-text-muted">Access Level</span>
-                      <span className="text-xs font-bold text-white">{selectedUser.tier}</span>
+                      <span className="text-xs font-bold text-white">{selectedUser.tier === 'super_admin' ? 'Super Admin' : selectedUser.tier.charAt(0).toUpperCase() + selectedUser.tier.slice(1)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-xs text-brand-text-muted">Credits</span>

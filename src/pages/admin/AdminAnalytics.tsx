@@ -73,7 +73,7 @@ export default function AdminAnalytics() {
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1C1C1E', border: '1px solid #3a3a3a', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -106,7 +106,7 @@ export default function AdminAnalytics() {
                   <span className="text-xs font-mono text-brand-text-muted">#{idx + 1}</span>
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{user.email}</span>
-                    <span className="text-[10px] text-brand-text-muted">{user.usages} total invocations</span>
+                    <span className="text-[10px] text-brand-text-muted">{user.usages} Total Invocations</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -129,7 +129,7 @@ export default function AdminAnalytics() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium">Daily Consumption Trends</h3>
-            <p className="text-sm text-brand-text-muted">Token usage vs active users over the last 7 days</p>
+            <p className="text-sm text-brand-text-muted">Token Usage vs Active Users Over the Last 7 Days</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -154,7 +154,7 @@ export default function AdminAnalytics() {
               <YAxis yAxisId="left" stroke="#3ecf8e" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis yAxisId="right" orientation="right" stroke="#38bdf8" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1C1C1E', border: '1px solid #3a3a3a', borderRadius: '8px' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
               />
               <Line 
                 yAxisId="left"

@@ -27,10 +27,10 @@ const acquisitionData = [
 ];
 
 const recentSignups = [
-  { id: 1, user: 'knight_errant@heroic.app', date: '3 mins ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=K&background=ff0000&color=fff' },
-  { id: 2, user: 'wizard@rpg.com', date: '12 mins ago', plan: 'Adventurer', icon: 'https://ui-avatars.com/api/?name=W&background=FF9900&color=fff' },
-  { id: 3, user: 'rogue@guild.net', date: '1 hour ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=R&background=0055FF&color=fff' },
-  { id: 4, user: 'cleric@temple.org', date: '2 hours ago', plan: 'Free', icon: 'https://ui-avatars.com/api/?name=C&background=F24E1E&color=fff' },
+  { id: 1, user: 'knight_errant@heroic.app', date: '3 Mins Ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=K&background=ff0000&color=fff' },
+  { id: 2, user: 'wizard@rpg.com', date: '12 Mins Ago', plan: 'Adventurer', icon: 'https://ui-avatars.com/api/?name=W&background=FF9900&color=fff' },
+  { id: 3, user: 'rogue@guild.net', date: '1 Hour Ago', plan: 'Hero', icon: 'https://ui-avatars.com/api/?name=R&background=0055FF&color=fff' },
+  { id: 4, user: 'cleric@temple.org', date: '2 Hours Ago', plan: 'Free', icon: 'https://ui-avatars.com/api/?name=C&background=F24E1E&color=fff' },
 ];
 
 const topConsumers = [
@@ -42,12 +42,12 @@ const topConsumers = [
 
 export default function AdminDashboard() {
   const [revenueFilter, setRevenueFilter] = useState('Month');
-  const [signupFilter, setSignupFilter] = useState('6 months');
+  const [signupFilter, setSignupFilter] = useState('6 Months');
   const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
   const [estimatedCost, setEstimatedCost] = useState('0.19');
 
-  const handleCalculateCost = () => {
-    const tokens = parseInt(tokensProcessed.replace(/,/g, '')) || 0;
+  const calculateCost = (value: string) => {
+    const tokens = parseInt(value.replace(/,/g, '')) || 0;
     const cost = (tokens / 1000000) * 0.075;
     setEstimatedCost(cost.toFixed(2));
   };
@@ -143,7 +143,10 @@ export default function AdminDashboard() {
                 <input 
                   type="text" 
                   value={tokensProcessed}
-                  onChange={(e) => setTokensProcessed(e.target.value)}
+                  onChange={(e) => {
+                    setTokensProcessed(e.target.value);
+                    calculateCost(e.target.value);
+                  }}
                   className="bg-transparent text-3xl font-bold flex-1 min-w-0 mr-4 outline-none" 
                 />
                 <button className="shrink-0 flex items-center gap-2 bg-[#1d1e24] border border-[#292a32] px-3 py-1.5 rounded-full text-sm font-medium">
@@ -155,9 +158,7 @@ export default function AdminDashboard() {
               </div>
               <p className="text-xs text-[#8b8c94] mt-2 font-medium">Gemini 3.1 Flash</p>
               
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#1d1e24] border border-[#292a32] flex items-center justify-center z-10 cursor-pointer hover:bg-[#292a32] transition-colors shadow-lg">
-                <ArrowLeftRight size={14} className="text-[#8b8c94] rotate-90" />
-              </div>
+
             </div>
 
             <div className="bg-[#141416] rounded-3xl border border-[#292a32] p-5 mt-4">
@@ -179,9 +180,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.075 / 1M tokens</p>
             </div>
             
-            <button onClick={handleCalculateCost} className="w-full bg-white text-black py-4 rounded-full font-bold text-sm mt-6 hover:bg-gray-200 active:scale-[0.98] transition-all">
-              Calculate Cost
-            </button>
+
           </div>
         </div>
 
@@ -195,7 +194,7 @@ export default function AdminDashboard() {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">New Signups</h3>
             <button 
-              onClick={() => setSignupFilter(signupFilter === '6 months' ? '30 days' : '6 months')}
+              onClick={() => setSignupFilter(signupFilter === '6 Months' ? '30 Days' : '6 Months')}
               className="flex items-center gap-2 bg-[#141416] border border-[#292a32] px-3 py-1.5 rounded-lg text-xs font-medium text-[#8b8c94] hover:text-white transition-colors"
             >
               {signupFilter} <ChevronDown size={14} />

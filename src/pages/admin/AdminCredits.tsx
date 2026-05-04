@@ -10,7 +10,7 @@ export default function AdminCredits() {
   const [formData, setFormData] = useState({
     userEmail: '',
     amount: 1000,
-    reason: 'Regular grant'
+    reason: 'Regular Grant'
   });
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
@@ -47,10 +47,10 @@ export default function AdminCredits() {
       //   currentCredits: increment(formData.amount)
       // });
 
-      setStatus({ type: 'success', msg: `Successfully adjusted credits for ${userId}` });
-      setFormData({ userEmail: '', amount: 1000, reason: 'Regular grant' });
+      setStatus({ type: 'success', msg: `Successfully Adjusted Credits For ${userId}` });
+      setFormData({ userEmail: '', amount: 1000, reason: 'Regular Grant' });
     } catch (error) {
-      setStatus({ type: 'error', msg: "Failed to adjust credits. Check permissions." });
+      setStatus({ type: 'error', msg: "Failed To Adjust Credits. Check Permissions." });
     }
   };
 
@@ -75,7 +75,7 @@ export default function AdminCredits() {
                   value={formData.userEmail}
                   onChange={(e) => setFormData({...formData, userEmail: e.target.value})}
                   placeholder="ronnixis@gmail.com"
-                  className="input-field w-full pl-12"
+                  className="input-field w-full !pl-12"
                 />
               </div>
             </div>
@@ -112,11 +112,11 @@ export default function AdminCredits() {
                 onChange={(e) => setFormData({...formData, reason: e.target.value})}
                 className="input-field w-full"
               >
-                <option>Regular grant</option>
-                <option>System replenishment</option>
-                <option>Bug compensation</option>
+                <option>Regular Grant</option>
+                <option>System Replenishment</option>
+                <option>Bug Compensation</option>
                 <option>Refund</option>
-                <option>Custom adjustment</option>
+                <option>Custom Adjustment</option>
               </select>
             </div>
 
@@ -168,7 +168,7 @@ export default function AdminCredits() {
                 {history.map((item) => (
                   <tr key={item.id}>
                     <td className="text-xs text-brand-text-muted">
-                      {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleString() : 'Just now'}
+                      {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleString() : 'Just Now'}
                     </td>
                     <td>
                       <span className="font-mono text-xs">{item.userId?.slice(0, 5)}...</span>
