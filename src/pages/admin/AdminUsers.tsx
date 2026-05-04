@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import { Search, Filter, MoreHorizontal, ShieldCheck, Mail, Calendar, X } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, ShieldCheck, Mail, Calendar, X, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminUsers() {
@@ -12,6 +12,8 @@ export default function AdminUsers() {
   const [isExporting, setIsExporting] = useState(false);
   const [showManageAccess, setShowManageAccess] = useState(false);
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   const handleExport = () => {
     setIsExporting(true);
@@ -22,6 +24,30 @@ export default function AdminUsers() {
     setSelectedUser(null);
     setShowManageAccess(false);
     setShowSuspendConfirm(false);
+  };
+
+  const handleSyncUsers = async () => {
+    setIsSyncing(true);
+    setSyncMessage('');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/sync-users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_ADMIN_API_KEY}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSyncMessage('Sync Successful');
+        setTimeout(() => setSyncMessage(''), 3000);
+      } else {
+        console.error('Sync failed:', data.error);
+      }
+    } catch (err) {
+      console.error('Error syncing users:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
@@ -88,6 +114,14 @@ export default function AdminUsers() {
           >
             <Filter size={16} />
             Filters
+          </button>
+          <button 
+            onClick={handleSyncUsers}
+            disabled={isSyncing}
+            className="flex items-center gap-2 rounded-xl border border-brand-primary bg-brand-surface/50 px-4 py-2.5 text-sm font-bold text-brand-text-muted hover:text-white hover:border-brand-primary/80 transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Syncing...' : syncMessage || 'Sync Users'}
           </button>
           <button 
             onClick={handleExport}

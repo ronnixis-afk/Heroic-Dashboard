@@ -42,7 +42,7 @@ export default function LoginPage() {
             }
           }}
           routing="path"
-          path="/login"
+          path="/"
           afterSignInUrl="/admin"
         />
       </motion.div>
