@@ -60,15 +60,13 @@ service cloud.firestore {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       
-      allow create: if isOwner(userId) && isValidUser(incoming()) && 
+      allow create: if isOwner(userId) && isValidUser(incoming()) && isValidId(userId) &&
                        ((incoming().tier == 'newbie') || 
                         (request.auth.token.email == 'ronnixis@gmail.com' && incoming().tier == 'super_admin')) && 
                        incoming().createdAt == request.time;
       
       allow update: if (isOwner(userId) && 
-                       incoming().diff(existing()).affectedKeys().hasOnly(['lastActive', 'currentCredits']) &&
-                       incoming().tier == existing().tier &&
-                       incoming().maxCredits == existing().maxCredits) ||
+                       incoming().diff(existing()).affectedKeys().hasOnly(['lastActive'])) ||
                        isAdmin();
     }
 
@@ -82,7 +80,7 @@ service cloud.firestore {
                data.createdAt == request.time;
       }
 
-      allow create: if isSignedIn() && isValidLog(incoming());
+      allow create: if isSignedIn() && isValidLog(incoming()) && isValidId(logId);
       allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
@@ -96,19 +94,20 @@ service cloud.firestore {
                data.createdAt is timestamp;
       }
 
-      allow read: if incoming() == null || existing().published == true || isAdmin();
-      allow write: if isAdmin() && isValidNews(incoming());
+      allow read: if existing().published == true || isAdmin();
+      allow write: if isAdmin() && isValidNews(incoming()) && isValidId(newsId);
     }
 
     // --- Credit Adjustments ---
     match /creditAdjustments/{adjId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidId(adjId);
     }
 
     // --- Tier Configs ---
     match /tierConfigs/{configId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidId(configId);
     }
   }
 }

@@ -21,6 +21,29 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
+  // 2. Authentication Validation
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
+  }
+  
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const { apiKey } = require('../firebase-applet-config.json');
+    const verifyRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    });
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid Firebase token' });
+    }
+  } catch (authError) {
+    console.error('Auth verification failed:', authError);
+    return res.status(500).json({ error: 'Failed to verify authentication' });
+  }
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ error: 'Gemini API key not configured on server' });
   }
