@@ -34,6 +34,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [showNotifications, setShowNotifications] = React.useState(false);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -112,11 +113,37 @@ export default function AdminLayout() {
       {/* Main Content */}
       <main className="relative flex-1 overflow-y-auto bg-[#141416] m-4 rounded-[2rem] border border-[#1e1f24] inner-shadow-sm flex flex-col">
         <header className="sticky top-0 z-40 bg-[#141416]/90 backdrop-blur-md rounded-t-[2rem] relative py-6 px-8 flex justify-end">
-          <div className="flex items-center gap-6">
-            <button className="text-[#8b8c94] hover:text-white transition-colors relative">
-               <Bell size={20} />
-               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-[#141416]"></span>
-            </button>
+          <div className="flex items-center gap-6 relative">
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="text-[#8b8c94] hover:text-white transition-colors relative p-2"
+              >
+                 <Bell size={20} />
+                 <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#141416]"></span>
+              </button>
+              
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 top-full mt-2 w-64 glass-panel p-4 z-50 border border-[#292a32] shadow-2xl"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-sm font-bold text-white">Notifications</h4>
+                      <button onClick={() => setShowNotifications(false)} className="text-[#8b8c94] hover:text-white">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="text-center py-6 text-sm text-brand-text-muted italic bg-brand-bg rounded-xl">
+                      No new notifications.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="h-8 w-8 overflow-hidden rounded-full border border-[#292a32]">
               <img src="https://ui-avatars.com/api/?name=User&background=3ecf8e&color=fff" alt="User" />
             </div>

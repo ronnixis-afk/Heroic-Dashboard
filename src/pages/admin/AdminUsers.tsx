@@ -10,6 +10,20 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showManageAccess, setShowManageAccess] = useState(false);
+  const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+
+  const handleExport = () => {
+    setIsExporting(true);
+    setTimeout(() => setIsExporting(false), 1500);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedUser(null);
+    setShowManageAccess(false);
+    setShowSuspendConfirm(false);
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
@@ -51,8 +65,12 @@ export default function AdminUsers() {
             <Filter size={16} />
             Filters
           </button>
-          <button className="btn-primary flex items-center gap-2 text-sm shadow-lg shadow-white/5">
-            Export Records
+          <button 
+            onClick={handleExport}
+            disabled={isExporting}
+            className="btn-primary flex items-center gap-2 text-sm shadow-lg shadow-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? 'Exporting...' : 'Export Records'}
           </button>
         </div>
       </div>
@@ -141,7 +159,11 @@ export default function AdminUsers() {
                     </td>
                     <td className="text-right">
                       <button 
-                        onClick={() => setSelectedUser(user)}
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowManageAccess(false);
+                          setShowSuspendConfirm(false);
+                        }}
                         className="rounded-lg p-2 text-brand-text-muted transition-all hover:bg-brand-primary/50 hover:text-white"
                       >
                         <MoreHorizontal size={18} />
@@ -168,7 +190,7 @@ export default function AdminUsers() {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedUser(null)}
+              onClick={handleCloseModal}
               className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             />
             <motion.div 
@@ -181,7 +203,7 @@ export default function AdminUsers() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl font-bold text-white">User Details</h2>
                 <button 
-                  onClick={() => setSelectedUser(null)}
+                  onClick={handleCloseModal}
                   className="rounded-full p-2 text-brand-text-muted hover:bg-brand-primary/50 hover:text-white"
                 >
                   <X size={20} />
@@ -218,9 +240,56 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-brand-primary/50">
-                  <button className="btn-primary w-full flex justify-center items-center">Manage Access</button>
-                  <button className="rounded-full bg-red-500/10 px-6 py-2 text-sm font-bold text-red-400 hover:bg-red-500/20">Suspend</button>
+                <div className="flex flex-col gap-3 pt-4 border-t border-brand-primary/50">
+                  {/* Manage Access Section */}
+                  <AnimatePresence>
+                    {showManageAccess && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="glass-panel p-4 mb-2"
+                      >
+                        <h4 className="text-sm font-bold text-white mb-2">Change Role</h4>
+                        <select className="input-field w-full mb-3 text-sm">
+                          <option>Super Admin</option>
+                          <option>Hero</option>
+                          <option>Adventurer</option>
+                          <option>Free</option>
+                        </select>
+                        <div className="flex gap-2">
+                          <button onClick={() => setShowManageAccess(false)} className="rounded-lg px-4 py-2 text-xs font-bold text-brand-text-muted hover:bg-brand-primary/20">Cancel</button>
+                          <button onClick={() => setShowManageAccess(false)} className="btn-primary px-4 py-2 text-xs">Save Role</button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Suspend Confirm Section */}
+                  <AnimatePresence>
+                    {showSuspendConfirm && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 mb-2"
+                      >
+                        <h4 className="text-sm font-bold text-red-400 mb-2">Confirm Suspension</h4>
+                        <p className="text-xs text-brand-text-muted mb-3">Are you sure you want to suspend this user? They will lose access immediately.</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setShowSuspendConfirm(false)} className="rounded-lg px-4 py-2 text-xs font-bold text-brand-text-muted hover:bg-brand-primary/20">Cancel</button>
+                          <button onClick={() => setShowSuspendConfirm(false)} className="rounded-full bg-red-500 text-white px-4 py-2 text-xs font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]">Confirm Suspend</button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {!showManageAccess && !showSuspendConfirm && (
+                    <div className="flex gap-3">
+                      <button onClick={() => setShowManageAccess(true)} className="btn-primary w-full flex justify-center items-center">Manage Access</button>
+                      <button onClick={() => setShowSuspendConfirm(true)} className="rounded-full bg-red-500/10 px-6 py-2 text-sm font-bold text-red-400 hover:bg-red-500/20">Suspend</button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
