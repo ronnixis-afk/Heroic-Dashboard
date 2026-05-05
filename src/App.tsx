@@ -12,11 +12,6 @@ import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!CLERK_PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
-}
-
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
   children, 
   adminOnly = false 
@@ -31,6 +26,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 };
 
 export default function App() {
+  if (!CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0A0A0A] p-4 text-center">
+        <div className="max-w-md rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-white shadow-xl backdrop-blur-sm">
+          <h1 className="mb-4 text-2xl font-bold text-red-400">Configuration Error</h1>
+          <p className="mb-2 text-gray-300">
+            The application failed to start because the <code className="rounded bg-black/50 px-2 py-1 text-red-300">VITE_CLERK_PUBLISHABLE_KEY</code> environment variable is missing.
+          </p>
+          <p className="text-sm text-gray-400">
+            If you are viewing this on Vercel, please add this variable in your project's Environment Variables settings and redeploy.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <AuthProvider>
