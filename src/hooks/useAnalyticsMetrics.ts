@@ -62,10 +62,43 @@ async function fetchAnalyticsMetrics() {
       tokens: u.tokens > 1000000 ? `${(u.tokens / 1000000).toFixed(1)}M` : `${Math.round(u.tokens / 1000)}k`
     }));
 
+  // Fetch Sessions
+  const { data: sessions, error: sessionError } = await supabase
+    .from('UserSession')
+    .select('*')
+    .order('startTime', { ascending: true });
+
+  if (sessionError) console.error('Error fetching sessions:', sessionError);
+
+  // Process Session Data
+  const now = new Date().getTime();
+  const activeSessionsCount = sessions?.filter(s => !s.endTime && (now - new Date(s.lastPing).getTime()) < 300000).length || 0;
+  
+  const sessionsWithDuration = sessions?.filter(s => s.duration) || [];
+  const avgSessionLength = sessionsWithDuration.reduce((acc, s) => acc + (s.duration || 0), 0) / (sessionsWithDuration.length || 1);
+
+  const sessionTrendsMap: Record<string, any> = {};
+  sessions?.forEach(s => {
+    const date = new Date(s.startTime).toISOString().split('T')[0];
+    if (!sessionTrendsMap[date]) {
+      sessionTrendsMap[date] = { date, count: 0, totalDuration: 0 };
+    }
+    sessionTrendsMap[date].count++;
+    if (s.duration) sessionTrendsMap[date].totalDuration += s.duration;
+  });
+
+  const sessionTrends = Object.values(sessionTrendsMap).map(t => ({
+    date: t.date,
+    avgDuration: Math.round((t.totalDuration / (t.count || 1)) / 60) // in minutes
+  }));
+
   return {
     usageTrends,
     modelDistribution: distribution,
-    topUsers: leaders
+    topUsers: leaders,
+    activeSessionsCount,
+    avgSessionLength: Math.round(avgSessionLength / 60), // in minutes
+    sessionTrends
   };
 }
 
@@ -73,13 +106,17 @@ export function useAnalyticsMetrics() {
   const { data, isLoading: loading } = useQuery({
     queryKey: ['analytics-metrics'],
     queryFn: fetchAnalyticsMetrics,
+    refetchInterval: 30000, // Refresh every 30s for active sessions
   });
 
   return {
     loading,
     usageTrends: data?.usageTrends || [],
     modelDistribution: data?.modelDistribution || [],
-    topUsers: data?.topUsers || []
+    topUsers: data?.topUsers || [],
+    activeSessionsCount: data?.activeSessionsCount || 0,
+    avgSessionLength: data?.avgSessionLength || 0,
+    sessionTrends: data?.sessionTrends || []
   };
 }
 

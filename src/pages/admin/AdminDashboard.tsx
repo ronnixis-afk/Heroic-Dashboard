@@ -7,6 +7,8 @@ import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import RecentSignups from '../../components/dashboard/RecentSignups';
 import TopConsumers from '../../components/dashboard/TopConsumers';
 
+import { Activity } from 'lucide-react';
+
 export default function AdminDashboard() {
   const { 
     loading, 
@@ -14,7 +16,8 @@ export default function AdminDashboard() {
     revenueData, 
     recentSignups, 
     topConsumers, 
-    acquisitionData 
+    acquisitionData,
+    activeSessionsCount
   } = useDashboardMetrics();
   
   // Track page view
@@ -34,8 +37,18 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6 text-white pb-8">
       {/* Top Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <RevenueOverview totalRevenue={totalRevenue} revenueData={revenueData} />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-2">
+          <RevenueOverview totalRevenue={totalRevenue} revenueData={revenueData} />
+        </div>
+        <div className="glass-panel p-6 flex flex-col justify-center items-center text-center">
+          <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent mb-4">
+            <Activity size={24} className="animate-pulse" />
+          </div>
+          <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Live Players</p>
+          <h4 className="mt-2 text-4xl font-bold text-brand-accent">{activeSessionsCount}</h4>
+          <p className="text-[10px] text-brand-text-muted mt-2">Active in the last 5 minutes</p>
+        </div>
         <TokenEstimator />
       </div>
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import { 
   BarChart, 
   Bar, 
@@ -15,91 +14,20 @@ import {
   Line
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Globe } from 'lucide-react';
+import { TrendingUp, Users, Zap, Globe, Clock, Activity } from 'lucide-react';
+import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 
 export default function AdminAnalytics() {
-  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users'>('tokens');
-  const [usageTrends, setUsageTrends] = useState<any[]>([]);
-  const [modelDistribution, setModelDistribution] = useState<any[]>([]);
-  const [topUsers, setTopUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      
-      // 1. Fetch all usage logs (limit to last 30 days for performance)
-      const { data: logs, error } = await supabase
-        .from('UsageLog')
-        .select(`
-          *,
-          User ( email )
-        `)
-        .order('createdAt', { ascending: true });
-
-      if (error || !logs) {
-        console.error('Error fetching logs:', error);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Process Trends (Group by Date)
-      const trendsMap: Record<string, any> = {};
-      logs.forEach(log => {
-        const date = new Date(log.createdAt).toISOString().split('T')[0];
-        if (!trendsMap[date]) {
-          trendsMap[date] = { date, tokens: 0, users: new Set() };
-        }
-        trendsMap[date].tokens += log.tokens;
-        trendsMap[date].users.add(log.userId);
-      });
-      
-      const trends = Object.values(trendsMap).map(t => ({
-        ...t,
-        users: t.users.size
-      }));
-      setUsageTrends(trends.slice(-7)); // Last 7 days for trend line
-
-      // 3. Process Model Distribution
-      const modelMap: Record<string, number> = {};
-      logs.forEach(log => {
-        const name = log.model || 'Unknown';
-        modelMap[name] = (modelMap[name] || 0) + 1;
-      });
-      
-      const colors = ['#3ecf8e', '#a855f7', '#38bdf8', '#fbbf24', '#f87171'];
-      const distribution = Object.entries(modelMap).map(([name, count], idx) => ({
-        name,
-        value: Math.round((count / logs.length) * 100),
-        color: colors[idx % colors.length]
-      }));
-      setModelDistribution(distribution);
-
-      // 4. Process Leaderboard (Top Users by Token)
-      const userMap: Record<string, any> = {};
-      logs.forEach(log => {
-        const email = log.User?.email || 'Unknown';
-        if (!userMap[email]) {
-          userMap[email] = { email, usages: 0, tokens: 0 };
-        }
-        userMap[email].usages += 1;
-        userMap[email].tokens += log.tokens;
-      });
-
-      const leaders = Object.values(userMap)
-        .sort((a, b) => b.tokens - a.tokens)
-        .slice(0, 5)
-        .map(u => ({
-          ...u,
-          tokens: u.tokens > 1000000 ? `${(u.tokens / 1000000).toFixed(1)}M` : `${Math.round(u.tokens / 1000)}k`
-        }));
-      setTopUsers(leaders);
-
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
+  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement'>('tokens');
+  const { 
+    loading, 
+    usageTrends, 
+    modelDistribution, 
+    topUsers,
+    activeSessionsCount,
+    avgSessionLength,
+    sessionTrends
+  } = useAnalyticsMetrics();
 
   if (loading) {
     return (
@@ -114,6 +42,38 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-8">
+      {/* Real-time Stats Row */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel flex items-center justify-between p-6"
+        >
+          <div>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Active Sessions</p>
+            <h4 className="mt-2 text-3xl font-bold text-brand-accent">{activeSessionsCount}</h4>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent">
+            <Activity size={24} className="animate-pulse" />
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-panel flex items-center justify-between p-6"
+        >
+          <div>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Avg Session</p>
+            <h4 className="mt-2 text-3xl font-bold text-brand-text">{avgSessionLength}m</h4>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-text-muted">
+            <Clock size={24} />
+          </div>
+        </motion.div>
+      </div>
+
       {/* Top Row: Detailed Metrics */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <motion.div 
@@ -198,52 +158,65 @@ export default function AdminAnalytics() {
       >
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium">Daily Consumption Trends</h3>
-            <p className="text-sm text-brand-text-muted">Token Usage vs Active Users Over the Last 7 Days</p>
+            <h3 className="text-lg font-medium">Performance Trends</h3>
+            <p className="text-sm text-brand-text-muted">Analysis of consumption and engagement over time</p>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => setActiveMetric('tokens')}
-              className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === 'tokens' ? 'bg-brand-primary/20 text-brand-accent' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
-            >
-              Tokens
-            </button>
-            <button 
-              onClick={() => setActiveMetric('users')}
-              className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === 'users' ? 'bg-brand-primary/20 text-[#38bdf8]' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
-            >
-              Active Users
-            </button>
+            {[
+              { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
+              { id: 'users', label: 'Active Users', color: '#38bdf8' },
+              { id: 'engagement', label: 'Engagement', color: '#a855f7' }
+            ].map(m => (
+              <button 
+                key={m.id}
+                onClick={() => setActiveMetric(m.id as any)}
+                className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === m.id ? 'bg-brand-primary/20' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
+                style={{ color: activeMetric === m.id ? m.color : undefined }}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={usageTrends}>
+            <LineChart data={activeMetric === 'engagement' ? sessionTrends : usageTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
               <XAxis dataKey="date" stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="left" stroke="#3ecf8e" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="right" orientation="right" stroke="#38bdf8" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
               />
-              <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="tokens" 
-                stroke="#3ecf8e" 
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="users" 
-                stroke="#38bdf8" 
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-              />
+              {activeMetric === 'tokens' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="tokens" 
+                  stroke="#3ecf8e" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
+              {activeMetric === 'users' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="users" 
+                  stroke="#38bdf8" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
+              {activeMetric === 'engagement' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="avgDuration" 
+                  stroke="#a855f7" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>

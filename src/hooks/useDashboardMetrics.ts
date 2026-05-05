@@ -61,12 +61,22 @@ async function fetchDashboardMetrics() {
     { name: 'Paid', organic: 0, referral: 0, paid: Math.round(signupCount * 0.2) },
   ];
 
+  // 3. Fetch Active Sessions
+  const { data: sessions } = await supabase
+    .from('UserSession')
+    .select('lastPing')
+    .is('endTime', null);
+
+  const now = new Date().getTime();
+  const activeSessionsCount = sessions?.filter(s => (now - new Date(s.lastPing).getTime()) < 300000).length || 0;
+
   return {
     totalRevenue,
     revenueData: Object.values(monthlyData),
     recentSignups,
     topConsumers,
-    acquisitionData
+    acquisitionData,
+    activeSessionsCount
   };
 }
 
@@ -74,6 +84,7 @@ export function useDashboardMetrics() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-metrics'],
     queryFn: fetchDashboardMetrics,
+    refetchInterval: 60000, // Refresh every minute
   });
 
   return {
@@ -83,7 +94,8 @@ export function useDashboardMetrics() {
     revenueData: data?.revenueData || [],
     recentSignups: data?.recentSignups || [],
     topConsumers: data?.topConsumers || [],
-    acquisitionData: data?.acquisitionData || []
+    acquisitionData: data?.acquisitionData || [],
+    activeSessionsCount: data?.activeSessionsCount || 0
   };
 }
 
