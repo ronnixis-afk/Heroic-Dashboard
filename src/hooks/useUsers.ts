@@ -1,46 +1,41 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
+async function fetchUsers() {
+  const { data, error } = await supabase
+    .from('User')
+    .select('*')
+    .order('createdAt', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
 export function useUsers() {
-  const [users, setUsers] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
 
   useEffect(() => {
-    // Initial fetch
-    const fetchUsers = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('User')
-        .select('*')
-        .order('createdAt', { ascending: false });
-      
-      if (data) setUsers(data);
-      if (error) console.error('Error fetching users:', error);
-      setLoading(false);
-    };
-
-    fetchUsers();
-
     // Subscribe to changes for real-time updates
     const subscription = supabase
       .channel('public:User')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setUsers(prev => [payload.new, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setUsers(prev => prev.map(u => u.id === payload.new.id ? payload.new : u));
-        } else if (payload.eventType === 'DELETE') {
-          setUsers(prev => prev.filter(u => u.id === payload.old.id));
-        }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => {
+        // Industry standard: Invalidate the query to trigger a background refresh
+        queryClient.invalidateQueries({ queryKey: ['users'] });
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [queryClient]);
 
   const syncUsers = async () => {
     setIsSyncing(true);
@@ -55,6 +50,7 @@ export function useUsers() {
       const data = await response.json();
       if (data.success) {
         setSyncMessage('Sync Successful');
+        queryClient.invalidateQueries({ queryKey: ['users'] });
         setTimeout(() => setSyncMessage(''), 3000);
       } else {
         console.error('Sync failed:', data.error);
@@ -78,3 +74,4 @@ export function useUsers() {
     syncUsers
   };
 }
+
