@@ -26,7 +26,10 @@ async function fetchDashboardMetrics() {
     icon: `https://ui-avatars.com/api/?name=${u.email?.charAt(0) || 'U'}&background=random&color=fff`
   }));
 
-  const totalRevenue = (logs || []).reduce((sum, log) => sum + (log.costUsd || 0), 0) * 3;
+  const totalApiCost = (logs || []).reduce((sum, log) => sum + (log.costUsd || 0), 0);
+  const totalRevenue = totalApiCost * 3;
+  const netProfit = totalRevenue - totalApiCost;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   const monthlyData: Record<string, any> = {};
   logs?.forEach(log => {
@@ -72,6 +75,9 @@ async function fetchDashboardMetrics() {
 
   return {
     totalRevenue,
+    totalApiCost,
+    netProfit,
+    profitMargin,
     revenueData: Object.values(monthlyData),
     recentSignups,
     topConsumers,
@@ -91,6 +97,9 @@ export function useDashboardMetrics() {
     loading: isLoading,
     error,
     totalRevenue: data?.totalRevenue || 0,
+    totalApiCost: data?.totalApiCost || 0,
+    netProfit: data?.netProfit || 0,
+    profitMargin: data?.profitMargin || 0,
     revenueData: data?.revenueData || [],
     recentSignups: data?.recentSignups || [],
     topConsumers: data?.topConsumers || [],

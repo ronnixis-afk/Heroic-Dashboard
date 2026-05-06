@@ -2,7 +2,7 @@ import React from 'react';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import RevenueOverview from '../../components/dashboard/RevenueOverview';
-import TokenEstimator from '../../components/dashboard/TokenEstimator';
+import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import RecentSignups from '../../components/dashboard/RecentSignups';
 import TopConsumers from '../../components/dashboard/TopConsumers';
@@ -17,7 +17,9 @@ export default function AdminDashboard() {
     recentSignups, 
     topConsumers, 
     acquisitionData,
-    activeSessionsCount
+    activeSessionsCount,
+    netProfit,
+    profitMargin
   } = useDashboardMetrics();
   
   // Track page view
@@ -41,15 +43,7 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2">
           <RevenueOverview totalRevenue={totalRevenue} revenueData={revenueData} />
         </div>
-        <div className="glass-panel p-6 flex flex-col justify-center items-center text-center">
-          <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent mb-4">
-            <Activity size={24} className="animate-pulse" />
-          </div>
-          <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Live Players</p>
-          <h4 className="mt-2 text-4xl font-bold text-brand-accent">{activeSessionsCount}</h4>
-          <p className="text-[10px] text-brand-text-muted mt-2">Active in the last 5 minutes</p>
-        </div>
-        <TokenEstimator />
+        <NetProfitWidget netProfit={netProfit} profitMargin={profitMargin} />
       </div>
 
       {/* Bottom Row */}
