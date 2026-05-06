@@ -21,9 +21,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loading = !isLoaded;
   
-  // Admin Logic: Check against the master admin email
-  // In a production app, you might check a 'role' from Clerk publicMetadata
-  const isAdmin = isSignedIn && user?.primaryEmailAddress?.emailAddress === 'ronnixis@gmail.com';
+  // Admin Logic: Check against the master admin emails
+  const adminEmails = (import.meta.env.VITE_SUPER_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim().toLowerCase());
+  const isAdmin = isSignedIn && !!user?.primaryEmailAddress?.emailAddress && 
+    adminEmails.includes(user.primaryEmailAddress.emailAddress.toLowerCase());
 
   return (
     <AuthContext.Provider value={{ 

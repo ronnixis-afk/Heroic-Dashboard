@@ -19,15 +19,20 @@ export default function NetProfitWidget({ netProfit, profitMargin }: NetProfitWi
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <DollarSign size={48} className="text-emerald-500" />
           </div>
-          <label className="text-xs text-[#8b8c94] font-medium mb-2 block">Net Profit</label>
+          <label className="text-xs text-[#8b8c94] font-medium mb-2 block">
+            {netProfit >= 0 ? 'Net Profit' : 'Operating Loss'}
+          </label>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-white">
-              ${netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className={`text-4xl font-bold ${netProfit >= 0 ? 'text-white' : 'text-red-400'}`}>
+              {netProfit < 0 && '-'}${Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          <p className="text-xs text-emerald-400 mt-2 font-medium flex items-center gap-1">
-            <TrendingUp size={12} />
-            Healthy Profitability
+          <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${netProfit >= 0 ? 'text-emerald-400' : 'text-brand-text-muted'}`}>
+            {netProfit >= 0 ? (
+              <><TrendingUp size={12} /> Healthy Profitability</>
+            ) : (
+              'Pre-revenue Operating Phase'
+            )}
           </p>
         </div>
 

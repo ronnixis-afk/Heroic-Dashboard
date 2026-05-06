@@ -13,7 +13,10 @@ export default function AdminDashboard() {
   const { 
     loading, 
     totalRevenue, 
-    revenueData, 
+    dailyData,
+    weeklyData,
+    monthlyData,
+    yearlyData,
     recentSignups, 
     topConsumers, 
     acquisitionData,
@@ -24,7 +27,7 @@ export default function AdminDashboard() {
   
   // Track page view
   useAnalytics();
-
+ 
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -35,13 +38,19 @@ export default function AdminDashboard() {
       </div>
     );
   }
-
+ 
   return (
     <div className="space-y-6 text-white pb-8">
       {/* Top Row */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-2">
-          <RevenueOverview totalRevenue={totalRevenue} revenueData={revenueData} />
+          <RevenueOverview 
+            totalRevenue={totalRevenue} 
+            dailyData={dailyData}
+            weeklyData={weeklyData}
+            monthlyData={monthlyData}
+            yearlyData={yearlyData}
+          />
         </div>
         <NetProfitWidget netProfit={netProfit} profitMargin={profitMargin} />
       </div>

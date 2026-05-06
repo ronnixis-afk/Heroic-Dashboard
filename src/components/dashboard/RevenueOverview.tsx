@@ -3,11 +3,30 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 interface RevenueOverviewProps {
   totalRevenue: number;
-  revenueData: any[];
+  dailyData: any[];
+  weeklyData: any[];
+  monthlyData: any[];
+  yearlyData: any[];
 }
 
-export default function RevenueOverview({ totalRevenue, revenueData }: RevenueOverviewProps) {
+export default function RevenueOverview({ 
+  totalRevenue, 
+  dailyData, 
+  weeklyData, 
+  monthlyData, 
+  yearlyData 
+}: RevenueOverviewProps) {
   const [revenueFilter, setRevenueFilter] = useState('Month');
+
+  const getChartData = () => {
+    switch (revenueFilter) {
+      case 'Day': return dailyData;
+      case 'Week': return weeklyData;
+      case 'Month': return monthlyData;
+      case 'Year': return yearlyData;
+      default: return monthlyData;
+    }
+  };
 
   return (
     <div className="glass-panel col-span-1 lg:col-span-2 p-6 flex flex-col relative w-full h-[380px]">
@@ -21,7 +40,7 @@ export default function RevenueOverview({ totalRevenue, revenueData }: RevenueOv
         
         <div className="flex flex-col items-end gap-6">
           <div className="flex bg-[#141416] rounded-xl p-1 border border-[#292a32]">
-            {['Day', 'Week', 'Month'].map(filter => (
+            {['Day', 'Week', 'Month', 'Year'].map(filter => (
               <button 
                 key={filter}
                 onClick={() => setRevenueFilter(filter)}
@@ -46,7 +65,7 @@ export default function RevenueOverview({ totalRevenue, revenueData }: RevenueOv
       
       <div className="flex-1 w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={revenueData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <AreaChart data={getChartData()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#00b2ff" stopOpacity={0.1}/>
@@ -76,6 +95,10 @@ export default function RevenueOverview({ totalRevenue, revenueData }: RevenueOv
             <Tooltip 
               contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
               itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+              formatter={(value: number, name: string) => [
+                `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+                name === 'apiCost' ? 'API Cost' : 'Revenue'
+              ]}
             />
             <Area type="monotone" dataKey="revenue" stroke="#00b2ff" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" />
             <Area type="monotone" dataKey="apiCost" stroke="#ff5a36" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" />
