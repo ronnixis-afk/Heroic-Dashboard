@@ -21,6 +21,7 @@ const queryClient = new QueryClient({
     },
   },
 });
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
   children, 
   adminOnly = false 
@@ -28,8 +29,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
   const { user, loading, isAdmin } = useAuth();
   
   if (loading) return <div className="flex h-screen items-center justify-center bg-[#0A0A0A] text-white">Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  if (adminOnly && !isAdmin) return <Navigate to="/" />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/login" replace />;
   
   return <>{children}</>;
 };
@@ -55,27 +56,31 @@ export default function App() {
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="news" element={<AdminNews />} />
-            <Route path="credits" element={<AdminCredits />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+          <BrowserRouter>
+            <Routes>
+              {/* Landing or Redirect to Admin */}
+              <Route path="/" element={<Navigate to="/admin" replace />} />
+              <Route path="/login" element={<LoginPage />} />
+              
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="news" element={<AdminNews />} />
+                <Route path="credits" element={<AdminCredits />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
+              </Route>
+              
+              {/* Catch-all: redirect to admin */}
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Routes>
+          </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
     </ClerkProvider>

@@ -1,8 +1,27 @@
 import React from 'react';
 import { SignIn } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../lib/AuthContext';
+import { Navigate } from 'react-router-dom';
+import { LogOut, ShieldAlert } from 'lucide-react';
 
 export default function LoginPage() {
+  const { user, loading, isAdmin, signOut } = useAuth();
+
+  // If loading auth state, show a subtle spinner
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+      </div>
+    );
+  }
+
+  // If already logged in and an admin, redirect to dashboard
+  if (user && isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] p-6 relative overflow-hidden">
       {/* Background Aesthetic */}
@@ -12,7 +31,7 @@ export default function LoginPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10"
+        className="relative z-10 w-full max-w-md"
       >
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-6 h-12 w-12 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-indigo-500 overflow-hidden shadow-[0_0_30px_rgba(0,178,255,0.3)]">
@@ -22,29 +41,55 @@ export default function LoginPage() {
           <p className="text-sm text-brand-text-muted">Unified Admin Access Control</p>
         </div>
 
-        <SignIn 
-          appearance={{
-            elements: {
-              rootBox: "mx-auto",
-              card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl",
-              headerTitle: "text-white",
-              headerSubtitle: "text-[#8b8c94]",
-              socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
-              socialButtonsBlockButtonText: "text-white font-medium",
-              formButtonPrimary: "bg-white text-black hover:bg-gray-200 transition-colors py-3 rounded-full font-bold",
-              formFieldLabel: "text-[#8b8c94] text-[11px] font-bold uppercase tracking-wider",
-              formFieldInput: "bg-[#111114] border-[#292a32] text-white rounded-xl focus:border-brand-accent transition-all",
-              footerActionLink: "text-brand-accent hover:text-white transition-colors",
-              dividerLine: "bg-[#1e1f24]",
-              dividerText: "text-[#8b8c94] text-[10px]",
-              identityPreviewText: "text-white",
-              identityPreviewEditButtonIcon: "text-brand-accent"
-            }
-          }}
-          routing="path"
-          path="/"
-          afterSignInUrl="/admin"
-        />
+        {user && !isAdmin ? (
+          /* Access Denied State */
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="rounded-3xl border border-red-500/20 bg-[#141416] p-8 text-center shadow-2xl backdrop-blur-xl"
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+              <ShieldAlert size={32} />
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-white">Access Denied</h2>
+            <p className="mb-6 text-sm text-gray-400">
+              Your account (<span className="text-gray-200">{user.primaryEmailAddress?.emailAddress}</span>) 
+              does not have administrative privileges for this dashboard.
+            </p>
+            <button
+              onClick={() => signOut()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-bold text-black transition-colors hover:bg-gray-200"
+            >
+              <LogOut size={18} />
+              Sign Out
+            </button>
+          </motion.div>
+        ) : (
+          /* Sign In Form */
+          <SignIn 
+            appearance={{
+              elements: {
+                rootBox: "mx-auto w-full",
+                card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl w-full",
+                headerTitle: "text-white",
+                headerSubtitle: "text-[#8b8c94]",
+                socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
+                socialButtonsBlockButtonText: "text-white font-medium",
+                formButtonPrimary: "bg-white text-black hover:bg-gray-200 transition-colors py-3 rounded-full font-bold",
+                formFieldLabel: "text-[#8b8c94] text-[11px] font-bold uppercase tracking-wider",
+                formFieldInput: "bg-[#111114] border-[#292a32] text-white rounded-xl focus:border-brand-accent transition-all",
+                footerActionLink: "text-brand-accent hover:text-white transition-colors",
+                dividerLine: "bg-[#1e1f24]",
+                dividerText: "text-[#8b8c94] text-[10px]",
+                identityPreviewText: "text-white",
+                identityPreviewEditButtonIcon: "text-brand-accent"
+              }
+            }}
+            routing="path"
+            path="/login"
+            afterSignInUrl="/admin"
+          />
+        )}
       </motion.div>
     </div>
   );
