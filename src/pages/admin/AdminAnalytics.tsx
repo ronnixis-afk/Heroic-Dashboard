@@ -16,9 +16,10 @@ import {
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Zap, Globe, Clock, Activity } from 'lucide-react';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
+import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
 
 export default function AdminAnalytics() {
-  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement'>('tokens');
+  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'engine'>('tokens');
   const { 
     loading, 
     usageTrends, 
@@ -165,7 +166,8 @@ export default function AdminAnalytics() {
             {[
               { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
               { id: 'users', label: 'Active Users', color: '#38bdf8' },
-              { id: 'engagement', label: 'Engagement', color: '#a855f7' }
+              { id: 'engagement', label: 'Engagement', color: '#a855f7' },
+              { id: 'engine', label: 'Engine Health', color: '#00b2ff' }
             ].map(m => (
               <button 
                 key={m.id}
@@ -178,48 +180,52 @@ export default function AdminAnalytics() {
             ))}
           </div>
         </div>
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={activeMetric === 'engagement' ? sessionTrends : usageTrends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
-              <XAxis dataKey="date" stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
-              />
-              {activeMetric === 'tokens' && (
-                <Line 
-                  type="monotone" 
-                  dataKey="tokens" 
-                  stroke="#3ecf8e" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+        {activeMetric === 'engine' ? (
+          <EngineHealthDashboard />
+        ) : (
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={activeMetric === 'engagement' ? sessionTrends : usageTrends}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
+                <XAxis dataKey="date" stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
                 />
-              )}
-              {activeMetric === 'users' && (
-                <Line 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke="#38bdf8" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                />
-              )}
-              {activeMetric === 'engagement' && (
-                <Line 
-                  type="monotone" 
-                  dataKey="avgDuration" 
-                  stroke="#a855f7" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+                {activeMetric === 'tokens' && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="tokens" 
+                    stroke="#3ecf8e" 
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                )}
+                {activeMetric === 'users' && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="users" 
+                    stroke="#38bdf8" 
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                )}
+                {activeMetric === 'engagement' && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="avgDuration" 
+                    stroke="#a855f7" 
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </motion.div>
     </div>
   );

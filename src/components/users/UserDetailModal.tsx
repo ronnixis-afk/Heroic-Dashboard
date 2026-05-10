@@ -1,7 +1,9 @@
 import React from 'react';
-import { Mail, X } from 'lucide-react';
+import { Mail, X, Zap, Activity, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserConsumptionChart from './UserConsumptionChart';
+import { telemetryService, TelemetryData } from '../../services/EngineTelemetryService';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface UserDetailModalProps {
   selectedUser: any;
@@ -20,6 +22,19 @@ export default function UserDetailModal({
   showSuspendConfirm,
   setShowSuspendConfirm
 }: UserDetailModalProps) {
+  const [telemetry, setTelemetry] = React.useState<TelemetryData | null>(null);
+  const [loadingTelemetry, setLoadingTelemetry] = React.useState(false);
+
+  React.useEffect(() => {
+    if (selectedUser?.id) {
+      setLoadingTelemetry(true);
+      telemetryService.getTelemetry(selectedUser.id)
+        .then(setTelemetry)
+        .catch(console.error)
+        .finally(() => setLoadingTelemetry(false));
+    }
+  }, [selectedUser]);
+
   if (!selectedUser) return null;
 
   return (
@@ -152,6 +167,58 @@ export default function UserDetailModal({
 
           <div className="pt-2">
             <UserConsumptionChart userId={selectedUser.id} />
+          </div>
+
+          {/* Engine Health (User Specific) */}
+          <div className="pt-6 border-t border-brand-primary/10">
+            <h4 className="text-sm font-bold text-brand-text-muted mb-4 flex items-center gap-2">
+              <Activity size={16} className="text-brand-accent" />
+              Engine Performance
+            </h4>
+            
+            {loadingTelemetry ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+              </div>
+            ) : telemetry ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="glass-panel p-4 flex flex-col justify-center">
+                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest">Avg Latency (P50)</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-bold text-white">{telemetry.latency.p50}ms</span>
+                        <Zap size={14} className="text-brand-accent" />
+                    </div>
+                </div>
+                <div className="glass-panel p-4 flex flex-col justify-center">
+                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest">Intervention Rate</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-bold text-white">{telemetry.interventionRate}%</span>
+                        <ShieldAlert size={14} className={telemetry.interventionRate > 10 ? 'text-red-400' : 'text-emerald-400'} />
+                    </div>
+                </div>
+                
+                <div className="glass-panel p-4 col-span-1 md:col-span-2 h-[150px]">
+                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest mb-2 block">Tokens Per Phase</span>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={telemetry.avgTokensByPhase}>
+                            <defs>
+                                <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#00b2ff" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#00b2ff" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <XAxis dataKey="phase" hide />
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', fontSize: '10px' }}
+                            />
+                            <Area type="monotone" dataKey="avgTokens" stroke="#00b2ff" fillOpacity={1} fill="url(#colorTokens)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-brand-text-muted italic">No telemetry data available for this user.</p>
+            )}
           </div>
         </div>
       </motion.div>
