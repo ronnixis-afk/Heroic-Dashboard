@@ -11,6 +11,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+import Dashboard from './pages/Dashboard';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const queryClient = new QueryClient({
@@ -75,6 +76,7 @@ export default function App() {
                 <Route path="news" element={<AdminNews />} />
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="dashboard" element={<Dashboard />} />
               </Route>
               
               {/* Catch-all: redirect to admin */}

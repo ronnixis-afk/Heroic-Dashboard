@@ -25,7 +25,8 @@ const NAV_ITEMS = [
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: Newspaper, label: 'News', path: '/admin/news' },
   { icon: Coins, label: 'Credits', path: '/admin/credits' },
-  { icon: LineChart, label: 'Analytics', path: '/admin/analytics' },
+  { icon: LayoutDashboard, label: 'Analytics (Old)', path: '/admin/analytics' },
+  { icon: BarChart3, label: 'Advanced Dashboard', path: '/admin/dashboard' },
 ];
 
 export default function AdminLayout() {
