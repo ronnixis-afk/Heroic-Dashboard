@@ -6,6 +6,8 @@ interface UserConsumptionChartProps {
   userId: string;
 }
 
+import { ChartSkeleton } from '../Skeleton';
+
 export default function UserConsumptionChart({ userId }: UserConsumptionChartProps) {
   const [filter, setFilter] = useState('Day');
   const { loading, hourlyData, dailyData, weeklyData, monthlyData, logCount, totalTokens } = useUserUsage(userId);
@@ -29,12 +31,7 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
   }, [chartData]);
 
   if (loading) {
-    return (
-      <div className="glass-panel p-6 flex flex-col items-center justify-center w-full h-[350px]">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-accent border-t-transparent mb-4" />
-        <p className="text-brand-text-muted text-xs animate-pulse">Fetching Actual Usage Data...</p>
-      </div>
-    );
+    return <ChartSkeleton height={350} />;
   }
 
   return (

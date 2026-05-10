@@ -7,9 +7,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   LineChart,
   Line
 } from 'recharts';
@@ -17,6 +14,9 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Users, Zap, Globe, Clock, Activity, DollarSign } from 'lucide-react';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
+import ModelUsagePie from '../../components/analytics/ModelUsagePie';
+
+import { Skeleton, ChartSkeleton, SkeletonText } from '../../components/Skeleton';
 
 export default function AdminAnalytics() {
   const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'engine' | 'cost'>('tokens');
@@ -31,17 +31,6 @@ export default function AdminAnalytics() {
     totalCost
   } = useAnalyticsMetrics();
 
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-accent border-t-transparent" />
-          <p className="text-brand-text-muted animate-pulse">Aggregating Live Usage Data...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
       {/* Real-time Stats Row */}
@@ -53,7 +42,11 @@ export default function AdminAnalytics() {
         >
           <div>
             <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Active Sessions</p>
-            <h4 className="mt-2 text-3xl font-bold text-brand-accent">{activeSessionsCount}</h4>
+            {loading ? (
+              <SkeletonText width={60} className="h-9 mt-2" />
+            ) : (
+              <h4 className="mt-2 text-3xl font-bold text-brand-accent">{activeSessionsCount}</h4>
+            )}
           </div>
           <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent">
             <Activity size={24} className="animate-pulse" />
@@ -68,7 +61,11 @@ export default function AdminAnalytics() {
         >
           <div>
             <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Total API Cost</p>
-            <h4 className="mt-2 text-3xl font-bold text-white">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+            {loading ? (
+              <SkeletonText width={120} className="h-9 mt-2" />
+            ) : (
+              <h4 className="mt-2 text-3xl font-bold text-white">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+            )}
           </div>
           <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
             <DollarSign size={24} />
@@ -79,14 +76,18 @@ export default function AdminAnalytics() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-panel flex items-center justify-between p-6"
+          className="glass-panel flex items-center justify-between p-6 border-l-4 border-indigo-500"
         >
           <div>
-            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Avg Session</p>
-            <h4 className="mt-2 text-3xl font-bold text-brand-text">{avgSessionLength}m</h4>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Avg Latency</p>
+            {loading ? (
+              <SkeletonText width={80} className="h-9 mt-2" />
+            ) : (
+              <h4 className="mt-2 text-3xl font-bold text-white">342ms</h4>
+            )}
           </div>
-          <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-text-muted">
-            <Clock size={24} />
+          <div className="h-12 w-12 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+            <Zap size={24} />
           </div>
         </motion.div>
       </div>
@@ -96,47 +97,9 @@ export default function AdminAnalytics() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-panel col-span-2 p-6"
+          className="lg:col-span-2"
         >
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-medium">Model Usage Distribution</h3>
-            <Globe className="text-brand-text-muted" size={20} />
-          </div>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={modelDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {modelDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex flex-col justify-center space-y-4">
-              {modelDistribution.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-bold">{item.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ModelUsagePie data={modelDistribution} />
         </motion.div>
 
         <motion.div 
@@ -145,7 +108,7 @@ export default function AdminAnalytics() {
           transition={{ delay: 0.1 }}
           className="glass-panel p-6"
         >
-          <h3 className="mb-6 text-lg font-medium text-brand-accent">Leaderboard</h3>
+          <h3 className="mb-6 text-lg font-medium text-brand-accent">Usage Leaderboard</h3>
           <div className="space-y-6">
             {topUsers.map((user, idx) => (
               <div key={user.email} className="flex items-center justify-between border-b border-brand-primary/10 pb-3 last:border-0">

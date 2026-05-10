@@ -9,6 +9,8 @@ import TopConsumers from '../../components/dashboard/TopConsumers';
 
 import { Activity } from 'lucide-react';
 
+import { DashboardSkeleton } from '../../components/Skeleton';
+
 export default function AdminDashboard() {
   const { 
     loading, 
@@ -28,17 +30,6 @@ export default function AdminDashboard() {
   // Track page view
   useAnalytics();
  
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-accent border-t-transparent" />
-          <p className="text-brand-text-muted animate-pulse">Synchronizing With RPG Database...</p>
-        </div>
-      </div>
-    );
-  }
- 
   return (
     <div className="space-y-6 text-white pb-8">
       {/* Top Row */}
@@ -50,16 +41,30 @@ export default function AdminDashboard() {
             weeklyData={weeklyData}
             monthlyData={monthlyData}
             yearlyData={yearlyData}
+            isLoading={loading}
           />
         </div>
-        <NetProfitWidget netProfit={netProfit} profitMargin={profitMargin} />
+        <NetProfitWidget 
+          netProfit={netProfit} 
+          profitMargin={profitMargin} 
+          isLoading={loading}
+        />
       </div>
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <UserAcquisition acquisitionData={acquisitionData} />
-        <RecentSignups recentSignups={recentSignups} />
-        <TopConsumers topConsumers={topConsumers} />
+        <UserAcquisition 
+          acquisitionData={acquisitionData} 
+          isLoading={loading}
+        />
+        <RecentSignups 
+          recentSignups={recentSignups} 
+          isLoading={loading}
+        />
+        <TopConsumers 
+          topConsumers={topConsumers} 
+          isLoading={loading}
+        />
       </div>
     </div>
   );

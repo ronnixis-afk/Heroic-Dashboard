@@ -8,11 +8,11 @@ import { LogOut, ShieldAlert } from 'lucide-react';
 export default function LoginPage() {
   const { user, loading, isAdmin, signOut } = useAuth();
 
-  // If loading auth state, show a subtle spinner
+  // If loading auth state, show a shimmer placeholder
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+        <div className="h-8 w-8 shimmer rounded-full opacity-50" />
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function LoginPage() {
              {/* Logo */}
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Heroic Dashboard</h1>
-          <p className="text-sm text-brand-text-muted">Unified Admin Access Control</p>
+          <p className="text-[#8b8c94] text-sm font-medium">Unified Admin Access Control</p>
         </div>
 
         {user && !isAdmin ? (
@@ -52,13 +52,13 @@ export default function LoginPage() {
               <ShieldAlert size={32} />
             </div>
             <h2 className="mb-2 text-xl font-bold text-white">Access Denied</h2>
-            <p className="mb-6 text-sm text-gray-400">
-              Your account (<span className="text-gray-200">{user.primaryEmailAddress?.emailAddress}</span>) 
+            <p className="mb-6 text-sm text-[#8b8c94] font-medium">
+              Your account (<span className="text-white">{user.primaryEmailAddress?.emailAddress}</span>) 
               does not have administrative privileges for this dashboard.
             </p>
             <button
               onClick={() => signOut()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-bold text-black transition-colors hover:bg-gray-200"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-bold text-black transition-colors hover:bg-white/90"
             >
               <LogOut size={18} />
               Sign Out
@@ -71,18 +71,18 @@ export default function LoginPage() {
               elements: {
                 rootBox: "mx-auto w-full",
                 card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl w-full",
-                headerTitle: "text-white",
-                headerSubtitle: "text-[#8b8c94]",
+                headerTitle: "text-white font-bold text-xl",
+                headerSubtitle: "text-[#8b8c94] text-sm font-medium",
                 socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
-                socialButtonsBlockButtonText: "text-white font-medium",
-                formButtonPrimary: "bg-white text-black hover:bg-gray-200 transition-colors py-3 rounded-full font-bold",
-                formFieldLabel: "text-[#8b8c94] text-[11px] font-bold uppercase tracking-wider",
-                formFieldInput: "bg-[#111114] border-[#292a32] text-white rounded-xl focus:border-brand-accent transition-all",
-                footerActionLink: "text-brand-accent hover:text-white transition-colors",
-                dividerLine: "bg-[#1e1f24]",
+                socialButtonsBlockButtonText: "text-white font-bold text-sm",
+                formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm",
+                formFieldLabel: "text-[#8b8c94] text-[10px] font-bold uppercase tracking-wider",
+                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00b2ff] transition-all",
+                footerActionLink: "text-[#00b2ff] hover:text-white transition-colors text-sm font-bold",
+                dividerLine: "bg-[#292a32]/50",
                 dividerText: "text-[#8b8c94] text-[10px]",
-                identityPreviewText: "text-white",
-                identityPreviewEditButtonIcon: "text-brand-accent"
+                identityPreviewText: "text-white font-bold",
+                identityPreviewEditButtonIcon: "text-[#00b2ff]"
               }
             }}
             routing="path"

@@ -34,9 +34,7 @@ async function fetchAnalyticsMetrics() {
   let totalCost = 0;
   
   // Consistency Constants (matching useUserUsage.ts)
-  const INPUT_COST_PER_TOKEN = 0.00000025;
-  const OUTPUT_COST_PER_TOKEN = 0.0000015;
-  const BLENDED_COST_PER_TOKEN = 0.0000006;
+  const { calculateFallbackCost } = await import('../lib/costCalculator');
 
   allLogs.forEach(log => {
     const date = new Date(log.createdAt).toISOString().split('T')[0];
@@ -44,19 +42,7 @@ async function fetchAnalyticsMetrics() {
       trendsMap[date] = { date, tokens: 0, cost: 0, users: new Set() };
     }
     
-    // Core Logic: Trust DB first, fallback to estimation for legacy logs
-    let cost = Number(log.costUsd) || 0;
-    if (cost === 0) {
-      const inT = Number(log.inputTokens) || 0;
-      const outT = Number(log.outputTokens) || 0;
-      const totalT = Number(log.tokens) || (inT + outT);
-      
-      if (inT > 0 || outT > 0) {
-        cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
-      } else {
-        cost = totalT * BLENDED_COST_PER_TOKEN;
-      }
-    }
+    let cost = calculateFallbackCost(log);
 
     trendsMap[date].tokens += log.tokens;
     trendsMap[date].cost += cost;
@@ -91,14 +77,7 @@ async function fetchAnalyticsMetrics() {
       userMap[email] = { email, usages: 0, tokens: 0, cost: 0 };
     }
 
-    let cost = Number(log.costUsd) || 0;
-    if (cost === 0) {
-      const inT = Number(log.inputTokens) || 0;
-      const outT = Number(log.outputTokens) || 0;
-      const totalT = Number(log.tokens) || (inT + outT);
-      if (inT > 0 || outT > 0) cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
-      else cost = totalT * BLENDED_COST_PER_TOKEN;
-    }
+    let cost = calculateFallbackCost(log);
 
     userMap[email].usages += 1;
     userMap[email].tokens += log.tokens;

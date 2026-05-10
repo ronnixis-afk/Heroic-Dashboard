@@ -6,6 +6,8 @@ import UsersFilterBar from '../../components/users/UsersFilterBar';
 import UsersTable from '../../components/users/UsersTable';
 import UserDetailModal from '../../components/users/UserDetailModal';
 
+import { TableSkeleton } from '../../components/Skeleton';
+
 export default function AdminUsers() {
   const { users, isSyncing, syncMessage, syncUsers, loading } = useUsers();
   const { trackEvent } = useAnalytics();
@@ -60,6 +62,7 @@ export default function AdminUsers() {
         setSelectedUser={setSelectedUser}
         setShowManageAccess={setShowManageAccess}
         setShowSuspendConfirm={setShowSuspendConfirm}
+        isLoading={loading}
       />
 
       <UserDetailModal 

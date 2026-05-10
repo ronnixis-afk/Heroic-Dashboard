@@ -24,10 +24,8 @@ async function fetchDashboardMetrics() {
     if (from >= 100000) break;
   }
 
-  // Unified Cost Calculation (Matching other hooks exactly)
-  const INPUT_COST_PER_TOKEN = 0.00000025;
-  const OUTPUT_COST_PER_TOKEN = 0.0000015;
-  const BLENDED_COST_PER_TOKEN = 0.0000006;
+  // Unified Cost Calculation
+  const { calculateFallbackCost } = await import('../lib/costCalculator');
 
   let totalApiCost = 0;
   const dailyMap: Record<string, number> = {};
@@ -36,15 +34,7 @@ async function fetchDashboardMetrics() {
   const yearlyMap: Record<string, number> = {};
 
   allLogs.forEach(log => {
-    let cost = Number(log.costUsd) || 0;
-    if (cost === 0) {
-      const inT = Number(log.inputTokens) || 0;
-      const outT = Number(log.outputTokens) || 0;
-      const totalT = Number(log.tokens) || (inT + outT);
-      cost = (inT > 0 || outT > 0) 
-        ? (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN)
-        : totalT * BLENDED_COST_PER_TOKEN;
-    }
+    let cost = calculateFallbackCost(log);
     totalApiCost += cost;
 
     const date = new Date(log.createdAt);

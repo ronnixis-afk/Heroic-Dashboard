@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { SkeletonText } from '../Skeleton';
+
 interface RevenueOverviewProps {
   totalRevenue: number;
   dailyData: any[];
   weeklyData: any[];
   monthlyData: any[];
   yearlyData: any[];
+  isLoading?: boolean;
 }
 
 export default function RevenueOverview({ 
@@ -14,7 +17,8 @@ export default function RevenueOverview({
   dailyData, 
   weeklyData, 
   monthlyData, 
-  yearlyData 
+  yearlyData,
+  isLoading = false
 }: RevenueOverviewProps) {
   const [revenueFilter, setRevenueFilter] = useState('Month');
 
@@ -34,7 +38,11 @@ export default function RevenueOverview({
         <div>
           <h3 className="text-xl font-bold">Revenue & API Costs</h3>
           <p className="gap-2 mt-4">
-            <span className="text-3xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {isLoading ? (
+              <SkeletonText width={180} className="h-9" />
+            ) : (
+              <span className="text-3xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            )}
           </p>
         </div>
         
@@ -44,13 +52,13 @@ export default function RevenueOverview({
               <button 
                 key={filter}
                 onClick={() => setRevenueFilter(filter)}
-                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-black' : 'text-[#8b8c94] hover:text-white'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-black' : 'text-[#8b8c94] hover:text-white'}`}
               >
                 {filter}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-xs font-bold text-[#8b8c94]">
+          <div className="flex items-center gap-4 text-xs font-medium text-[#8b8c94]">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
               Revenue
@@ -63,9 +71,16 @@ export default function RevenueOverview({
         </div>
       </div>
       
-      <div className="flex-1 w-full mt-4">
+      <div className="flex-1 w-full mt-4 relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-end gap-2 px-2 pb-8 opacity-20 pointer-events-none">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="shimmer flex-1 rounded-t-lg" style={{ height: `${Math.random() * 60 + 20}%` }} />
+            ))}
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={getChartData()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <AreaChart data={isLoading ? [] : getChartData()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#00b2ff" stopOpacity={0.1}/>

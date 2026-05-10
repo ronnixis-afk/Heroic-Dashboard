@@ -28,10 +28,7 @@ export interface UsageLog {
   costUsd?: number;
 }
 
-const INPUT_COST_PER_TOKEN = 0.00000025;
-const OUTPUT_COST_PER_TOKEN = 0.0000015;
-const BLENDED_COST_PER_TOKEN = 0.0000006;
-
+import { calculateFallbackCost } from '../lib/costCalculator';
 /**
  * FIXED Scalable Fetcher: 
  * Handles strict server-side row limits (usually 1,000) by accurately 
@@ -116,16 +113,7 @@ export function useUserUsage(userId: string) {
       const outT = Number(log.outputTokens) || 0;
       const totalT = Number(log.tokens) || (inT + outT) || 0;
 
-      let cost = Number(log.costUsd);
-      
-      // Fallback only if database column is missing/zero for very old logs
-      if (!cost || cost === 0) {
-        if (inT > 0 || outT > 0) {
-          cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
-        } else {
-          cost = totalT * BLENDED_COST_PER_TOKEN;
-        }
-      }
+      let cost = calculateFallbackCost(log);
 
       return { totalT, cost, date };
     });

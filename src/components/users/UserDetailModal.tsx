@@ -14,6 +14,8 @@ interface UserDetailModalProps {
   setShowSuspendConfirm: (show: boolean) => void;
 }
 
+import { Skeleton } from '../Skeleton';
+
 export default function UserDetailModal({
   selectedUser,
   handleCloseModal,
@@ -65,103 +67,27 @@ export default function UserDetailModal({
 
         <div className="space-y-8">
           <div className="flex items-center gap-6">
-            <div className="h-20 w-20 rounded-full bg-indigo-500/20 border border-brand-primary flex items-center justify-center text-indigo-400 shadow-inner">
-              <Mail size={40} />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{selectedUser.email}</h3>
-              <p className="text-xs text-brand-text-muted font-mono mt-1 opacity-70">{selectedUser.id}</p>
+            <Skeleton width={80} height={80} circle />
+            <div className="space-y-2 flex-1">
+              <Skeleton width="60%" height={32} />
+              <Skeleton width="40%" height={12} className="opacity-50" />
             </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-panel p-6 flex flex-col justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-brand-text-muted mb-6">Account Information</h4>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-brand-text-muted">Access Level</span>
-                    <span className="px-3 py-1 rounded-full bg-brand-primary/50 text-[10px] font-bold text-white tracking-wide">
-                      {selectedUser.tier === 'super_admin' ? 'Super Admin' : selectedUser.tier?.charAt(0).toUpperCase() + selectedUser.tier?.slice(1)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-brand-text-muted">Credits</span>
-                    <span className="text-sm font-bold text-white">
-                      {selectedUser.currentCredits?.toLocaleString() || 0} <span className="text-[#8b8c94] font-normal text-xs">/ {selectedUser.maxCredits?.toLocaleString() || 1000}</span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-brand-text-muted">Registered</span>
-                    <span className="text-xs font-medium text-white">
-                      {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
-                    </span>
-                  </div>
-                </div>
+            <div className="glass-panel p-6 flex flex-col justify-between h-48">
+              <Skeleton width="40%" height={20} />
+              <div className="space-y-4 mt-6">
+                <Skeleton width="100%" height={16} />
+                <Skeleton width="100%" height={16} />
+                <Skeleton width="100%" height={16} />
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <h4 className="text-sm font-bold text-brand-text-muted mb-2">Quick Actions</h4>
-              {!showManageAccess && !showSuspendConfirm && (
-                <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={() => setShowManageAccess(true)} 
-                    className="btn-primary w-full py-3 flex justify-center items-center gap-2"
-                  >
-                    Manage Access
-                  </button>
-                  <button 
-                    onClick={() => setShowSuspendConfirm(true)} 
-                    className="rounded-full bg-red-500/10 border border-red-500/20 py-3 text-sm font-bold text-red-400 hover:bg-red-500/20 transition-all"
-                  >
-                    Suspend User
-                  </button>
-                </div>
-              )}
-
-              {/* Manage Access Section */}
-              <AnimatePresence>
-                {showManageAccess && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="glass-panel p-4"
-                  >
-                    <h4 className="text-sm font-bold text-white mb-3">Change Role</h4>
-                    <select className="input-field w-full mb-4 text-sm bg-[#141416] border-brand-primary rounded-xl p-2.5">
-                      <option>Super Admin</option>
-                      <option>Hero</option>
-                      <option>Adventurer</option>
-                      <option>Free</option>
-                    </select>
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowManageAccess(false)} className="flex-1 rounded-lg px-4 py-2 text-xs font-bold text-brand-text-muted hover:bg-brand-primary/20">Cancel</button>
-                      <button onClick={() => setShowManageAccess(false)} className="flex-1 btn-primary px-4 py-2 text-xs">Save Changes</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Suspend Confirm Section */}
-              <AnimatePresence>
-                {showSuspendConfirm && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="rounded-2xl bg-red-500/10 border border-red-500/20 p-5 shadow-xl"
-                  >
-                    <h4 className="text-sm font-bold text-red-400 mb-2">Confirm Suspension</h4>
-                    <p className="text-xs text-brand-text-muted mb-4 leading-relaxed">Are you sure you want to suspend this user? They will lose access to all premium features immediately.</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => setShowSuspendConfirm(false)} className="flex-1 rounded-lg px-4 py-2 text-xs font-bold text-brand-text-muted hover:bg-brand-primary/20">Cancel</button>
-                      <button onClick={() => setShowSuspendConfirm(false)} className="flex-1 rounded-full bg-red-500 text-white px-4 py-2 text-xs font-bold shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-600 transition-colors">Confirm</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <Skeleton width="30%" height={16} className="mb-2" />
+              <Skeleton width="100%" height={48} className="rounded-full" />
+              <Skeleton width="100%" height={48} className="rounded-full" />
             </div>
           </div>
 
@@ -177,8 +103,12 @@ export default function UserDetailModal({
             </h4>
             
             {loadingTelemetry ? (
-              <div className="h-24 flex items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Skeleton width="100%" height={80} />
+                  <Skeleton width="100%" height={80} />
+                </div>
+                <Skeleton width="100%" height={150} />
               </div>
             ) : telemetry ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

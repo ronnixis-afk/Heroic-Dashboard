@@ -17,6 +17,8 @@ interface CostByModel {
   avgLatencyMs: number;
 }
 
+import { SkeletonText } from '../Skeleton';
+
 export function CostAnalyticsCard() {
   const [data, setData] = useState<{ daily: CostDaily[], byModel: CostByModel[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,16 +34,10 @@ export function CostAnalyticsCard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !data) {
-    return <div className="glass-panel p-6 animate-pulse">
-      <div className="h-24 w-full bg-[#292a32] rounded mb-6"></div>
-      <div className="h-64 w-full bg-[#292a32]/50 rounded"></div>
-    </div>;
-  }
-
-  const today = data.daily[0] || { totalCost: 0, costPerUser: 0 };
-  const totalCost30d = data.byModel.reduce((acc, m) => acc + m.totalCost, 0);
-  const totalCalls30d = data.byModel.reduce((acc, m) => acc + m.calls, 0);
+  const isLoading = loading || !data;
+  const today = data?.daily?.[0] || { totalCost: 0, costPerUser: 0 };
+  const totalCost30d = data?.byModel?.reduce((acc, m) => acc + m.totalCost, 0) || 0;
+  const totalCalls30d = data?.byModel?.reduce((acc, m) => acc + m.calls, 0) || 0;
   const costPerMessage = totalCalls30d > 0 ? totalCost30d / totalCalls30d : 0;
 
   return (
@@ -49,22 +45,41 @@ export function CostAnalyticsCard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div>
           <h4 className="text-sm font-medium text-brand-text-muted mb-1">Today's Cost</h4>
-          <div className="text-3xl font-bold text-brand-text">${today.totalCost.toFixed(2)}</div>
+          {isLoading ? (
+            <SkeletonText width={120} className="h-9 mt-1" />
+          ) : (
+            <div className="text-3xl font-bold text-brand-text">${today.totalCost.toFixed(2)}</div>
+          )}
         </div>
         <div>
           <h4 className="text-sm font-medium text-brand-text-muted mb-1">Cost Per User (Today)</h4>
-          <div className="text-3xl font-bold text-brand-text">${today.costPerUser.toFixed(4)}</div>
+          {isLoading ? (
+            <SkeletonText width={120} className="h-9 mt-1" />
+          ) : (
+            <div className="text-3xl font-bold text-brand-text">${today.costPerUser.toFixed(4)}</div>
+          )}
         </div>
         <div>
           <h4 className="text-sm font-medium text-brand-text-muted mb-1">Avg Cost Per Call</h4>
-          <div className="text-3xl font-bold text-brand-text">${costPerMessage.toFixed(5)}</div>
+          {isLoading ? (
+            <SkeletonText width={120} className="h-9 mt-1" />
+          ) : (
+            <div className="text-3xl font-bold text-brand-text">${costPerMessage.toFixed(5)}</div>
+          )}
         </div>
       </div>
 
-      <div className="h-72">
+      <div className="h-72 relative">
         <h3 className="text-lg font-medium text-brand-text mb-4">Cost by Model (30 Days)</h3>
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-end gap-3 px-2 pb-8 opacity-20 pointer-events-none mt-10">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="shimmer flex-1 rounded-t-lg" style={{ height: `${Math.random() * 60 + 20}%` }} />
+            ))}
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.byModel} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <BarChart data={isLoading ? [] : data?.byModel} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
             <XAxis dataKey="model" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
             <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={val => `$${val}`} />

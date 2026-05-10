@@ -11,6 +11,10 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+import ReportsHub from './pages/admin/ReportsHub';
+import AudienceReports from './pages/admin/AudienceReports';
+import UsageReports from './pages/admin/UsageReports';
+import FinancialReports from './pages/admin/FinancialReports';
 import Dashboard from './pages/Dashboard';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -76,6 +80,15 @@ export default function App() {
                 <Route path="news" element={<AdminNews />} />
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                
+                {/* Reports Suite */}
+                <Route path="reports">
+                  <Route index element={<ReportsHub />} />
+                  <Route path="audience" element={<AudienceReports />} />
+                  <Route path="usage" element={<UsageReports />} />
+                  <Route path="financial" element={<FinancialReports />} />
+                </Route>
+
                 <Route path="dashboard" element={<Dashboard />} />
               </Route>
               

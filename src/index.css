@@ -83,3 +83,28 @@
 .overflow-y-auto, .overflow-x-auto {
   scrollbar-gutter: stable;
 }
+
+/* Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@utility shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(29, 30, 36, 1) 25%,
+    rgba(41, 42, 50, 1) 50%,
+    rgba(29, 30, 36, 1) 75%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2.5s infinite linear;
+}
+
+.skeleton-box {
+  @apply shimmer rounded-lg;
+}

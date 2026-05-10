@@ -9,6 +9,8 @@ interface UsageData {
   avgDurationMs: number;
 }
 
+import { SkeletonText } from '../Skeleton';
+
 export function FeatureUsageChart() {
   const [data, setData] = useState<{ usage: UsageData[], chatOnlyUsers: number }>({ usage: [], chatOnlyUsers: 0 });
   const [loading, setLoading] = useState(true);
@@ -24,12 +26,7 @@ export function FeatureUsageChart() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <div className="glass-panel p-6 h-96 animate-pulse flex flex-col justify-between">
-      <div className="h-6 w-48 bg-[#292a32] rounded mb-4"></div>
-      <div className="h-full w-full bg-[#292a32]/50 rounded"></div>
-    </div>;
-  }
+  const isLoading = loading;
 
   const getBarColor = (percentage: number) => {
     if (percentage >= 20) return '#00b2ff'; // Core
@@ -43,13 +40,24 @@ export function FeatureUsageChart() {
         <h3 className="text-lg font-medium text-brand-text m-0">Feature Usage (30 Days)</h3>
         <div className="text-right">
           <p className="text-xs text-brand-text-muted m-0">Chat-Only Users</p>
-          <p className="text-sm font-bold text-brand-text m-0">{data.chatOnlyUsers}</p>
+          {isLoading ? (
+            <SkeletonText width={40} className="h-4 mt-1 ml-auto" />
+          ) : (
+            <p className="text-sm font-bold text-brand-text m-0">{data.chatOnlyUsers}</p>
+          )}
         </div>
       </div>
       
-      <div className="flex-1 w-full min-h-0">
+      <div className="flex-1 w-full min-h-0 relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex flex-col gap-3 px-2 py-4 opacity-20 pointer-events-none">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="shimmer h-5 rounded-md" style={{ width: `${Math.random() * 60 + 20}%` }} />
+            ))}
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.usage} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+          <BarChart data={isLoading ? [] : data.usage} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" horizontal={false} />
             <XAxis type="number" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}%`} />
             <YAxis 
@@ -71,7 +79,7 @@ export function FeatureUsageChart() {
               }}
             />
             <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={20}>
-              {data.usage.map((entry, index) => (
+              {!isLoading && data.usage.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.percentage)} />
               ))}
             </Bar>

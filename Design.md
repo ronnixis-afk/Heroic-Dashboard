@@ -1,4 +1,4 @@
-# Heroic Dashboard Design System
+## Design Tokens
 
 This document serves as the ultimate source of truth for all User Interface (UI) design and implementation within the Heroic Dashboard project. Any new components, layouts, or updates must adhere strictly to these guidelines to ensure consistency, accessibility, and a premium user experience.
 

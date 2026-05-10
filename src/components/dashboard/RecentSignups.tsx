@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton, SkeletonText } from '../Skeleton';
 
 interface RecentSignupsProps {
   recentSignups: any[];
+  isLoading?: boolean;
 }
 
-export default function RecentSignups({ recentSignups }: RecentSignupsProps) {
+export default function RecentSignups({ recentSignups, isLoading = false }: RecentSignupsProps) {
   const navigate = useNavigate();
 
   return (
@@ -27,16 +29,32 @@ export default function RecentSignups({ recentSignups }: RecentSignupsProps) {
       </div>
       
       <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-        {recentSignups.map(signup => (
-          <div key={signup.id} className="flex items-center p-2 rounded-xl hover:bg-[#292a32] transition-colors">
+        {(isLoading ? Array.from({ length: 5 }) : recentSignups).map((signup, i) => (
+          <div key={isLoading ? i : signup.id} className="flex items-center p-2 rounded-xl hover:bg-[#292a32] transition-colors">
             <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
               <div className="w-8 h-8 rounded-full overflow-hidden border border-[#292a32] shrink-0">
-                <img src={signup.icon} alt={signup.user} className="w-full h-full object-cover" />
+                {isLoading ? (
+                  <Skeleton width="100%" height="100%" circle />
+                ) : (
+                  <img src={signup.icon} alt={signup.user} className="w-full h-full object-cover" />
+                )}
               </div>
-              <span className="text-xs font-medium text-[#e2e2e2] truncate" title={signup.user}>{signup.user}</span>
+              {isLoading ? (
+                <SkeletonText width={100} className="h-3" />
+              ) : (
+                <span className="text-xs font-medium text-[#e2e2e2] truncate" title={signup.user}>{signup.user}</span>
+              )}
             </div>
-            <span className="text-[11px] text-[#8b8c94] w-24 text-center shrink-0">{signup.date}</span>
-            <span className="text-xs font-bold text-white w-20 text-right shrink-0">{signup.plan}</span>
+            {isLoading ? (
+              <SkeletonText width={60} className="h-3 w-24 mx-auto" />
+            ) : (
+              <span className="text-[11px] text-[#8b8c94] w-24 text-center shrink-0">{signup.date}</span>
+            )}
+            {isLoading ? (
+              <SkeletonText width={50} className="h-3 w-20 ml-auto" />
+            ) : (
+              <span className="text-xs font-bold text-white w-20 text-right shrink-0">{signup.plan}</span>
+            )}
           </div>
         ))}
       </div>

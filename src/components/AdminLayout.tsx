@@ -14,19 +14,50 @@ import {
   LineChart,
   Settings,
   Bell,
-  Search
+  Search,
+  Activity,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-  { icon: Users, label: 'Users', path: '/admin/users' },
-  { icon: Newspaper, label: 'News', path: '/admin/news' },
-  { icon: Coins, label: 'Credits', path: '/admin/credits' },
-  { icon: LayoutDashboard, label: 'Analytics (Old)', path: '/admin/analytics' },
-  { icon: BarChart3, label: 'Advanced Dashboard', path: '/admin/dashboard' },
+const NAV_GROUPS = [
+  {
+    group: 'Main',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+    ]
+  },
+  {
+    group: 'Audience',
+    items: [
+      { icon: Users, label: 'Users', path: '/admin/users' },
+      { icon: LineChart, label: 'Audience Reports', path: '/admin/reports/audience' },
+    ]
+  },
+  {
+    group: 'Intelligence',
+    items: [
+      { icon: BarChart3, label: 'Reports Hub', path: '/admin/reports' },
+      { icon: Activity, label: 'Real-Time Analytics', path: '/admin/analytics' },
+      { icon: Search, label: 'Usage Reports', path: '/admin/reports/usage' },
+    ]
+  },
+  {
+    group: 'Monetization',
+    items: [
+      { icon: DollarSign, label: 'Financial Reports', path: '/admin/reports/financial' },
+      { icon: Coins, label: 'Credits', path: '/admin/credits' },
+    ]
+  },
+  {
+    group: 'Operations',
+    items: [
+      { icon: Newspaper, label: 'Global News', path: '/admin/news' },
+    ]
+  }
 ];
 
 export default function AdminLayout() {
@@ -62,7 +93,7 @@ export default function AdminLayout() {
                 <div className="h-8 w-8 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500 overflow-hidden">
                    {/* Logo mock */}
                 </div>
-                <span className="font-sans text-xl font-bold tracking-tight text-white">Heroic Dashboard</span>
+                <span className="font-sans text-lg font-bold tracking-tight text-white">Heroic Dashboard</span>
               </motion.div>
             ) : (
               <motion.div 
@@ -77,25 +108,34 @@ export default function AdminLayout() {
           </AnimatePresence>
         </div>
 
-        <nav className="flex-1 space-y-2 px-4 py-6">
-          {NAV_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path || (item.path === '/admin' && location.pathname === '/admin');
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-4 rounded-[1.5rem] px-4 py-3 transition-all duration-200",
-                  isActive 
-                    ? "bg-[#292a32] text-white" 
-                    : "text-[#8b8c94] hover:bg-[#1a1b21] hover:text-white"
-                )}
-              >
-                <item.icon size={20} />
-                {isSidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-6 px-4 py-6 overflow-y-auto custom-scrollbar">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.group} className="space-y-1">
+              {isSidebarOpen && (
+                <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-[#8b8c94] mb-2">
+                  {group.group}
+                </h3>
+              )}
+              {group.items.map((item) => {
+                const isActive = location.pathname === item.path || (item.path === '/admin' && location.pathname === '/admin');
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      "flex items-center gap-4 rounded-[1.5rem] px-4 py-3 transition-all duration-200",
+                      isActive 
+                        ? "bg-[#292a32] text-white shadow-lg" 
+                        : "text-[#8b8c94] hover:bg-[#1a1b21] hover:text-white"
+                    )}
+                  >
+                    <item.icon size={18} className={cn(isActive ? "text-brand-accent" : "")} />
+                    {isSidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-[#1e1f24] p-4">
@@ -137,7 +177,7 @@ export default function AdminLayout() {
                         <X size={14} />
                       </button>
                     </div>
-                    <div className="text-center py-6 text-sm text-brand-text-muted italic bg-brand-bg rounded-xl">
+                    <div className="text-center py-6 text-xs text-[#8b8c94] italic bg-[#0A0A0B] rounded-xl">
                       No new notifications.
                     </div>
                   </motion.div>
@@ -146,8 +186,8 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-white">{user?.fullName || 'Administrator'}</p>
-                <p className="text-[10px] text-brand-text-muted">{user?.primaryEmailAddress?.emailAddress}</p>
+                <p className="text-sm font-bold text-white">{user?.fullName || 'Administrator'}</p>
+                <p className="text-[10px] text-[#8b8c94]">{user?.primaryEmailAddress?.emailAddress}</p>
               </div>
               <div className="h-10 w-10 overflow-hidden rounded-full border border-[#292a32] shadow-xl">
                 <img src={user?.imageUrl || `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}&background=3ecf8e&color=fff`} alt="User" className="w-full h-full object-cover" />
