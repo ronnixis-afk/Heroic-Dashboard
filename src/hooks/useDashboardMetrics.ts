@@ -2,46 +2,91 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 async function fetchDashboardMetrics() {
-  const { data, error } = await supabase.rpc('get_dashboard_stats');
+  // 1. Fetch data from RPC for signups and sessions (which are still efficient)
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_stats');
+  if (rpcError) throw rpcError;
 
-  if (error) {
-    console.error('Error fetching dashboard metrics via RPC:', error);
-    throw error;
+  // 2. Fetch all logs for Unified Financial Calculation (Bottom-Up)
+  let allLogs: any[] = [];
+  let from = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data, error, count } = await supabase
+      .from('UsageLog')
+      .select('tokens, inputTokens, outputTokens, costUsd, createdAt', { count: 'exact' })
+      .order('createdAt', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allLogs = [...allLogs, ...data];
+    if (data.length < PAGE_SIZE || (count !== null && allLogs.length >= count)) break;
+    from += PAGE_SIZE;
+    if (from >= 100000) break;
   }
 
-  // Map RPC data to the dashboard's expected format
-  const recentSignups = (data.recentSignups || []).map((u: any) => ({
+  // Unified Cost Calculation (Matching other hooks exactly)
+  const INPUT_COST_PER_TOKEN = 0.00000025;
+  const OUTPUT_COST_PER_TOKEN = 0.0000015;
+  const BLENDED_COST_PER_TOKEN = 0.0000006;
+
+  let totalApiCost = 0;
+  const dailyMap: Record<string, number> = {};
+  const weeklyMap: Record<string, number> = {};
+  const monthlyMap: Record<string, number> = {};
+  const yearlyMap: Record<string, number> = {};
+
+  allLogs.forEach(log => {
+    let cost = Number(log.costUsd) || 0;
+    if (cost === 0) {
+      const inT = Number(log.inputTokens) || 0;
+      const outT = Number(log.outputTokens) || 0;
+      const totalT = Number(log.tokens) || (inT + outT);
+      cost = (inT > 0 || outT > 0) 
+        ? (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN)
+        : totalT * BLENDED_COST_PER_TOKEN;
+    }
+    totalApiCost += cost;
+
+    const date = new Date(log.createdAt);
+    const dKey = date.toISOString().split('T')[0];
+    const yKey = date.getFullYear().toString();
+    
+    dailyMap[dKey] = (dailyMap[dKey] || 0) + cost;
+    yearlyMap[yKey] = (yearlyMap[yKey] || 0) + cost;
+  });
+
+  const dailyData = Object.entries(dailyMap).map(([name, cost]) => ({ name, apiCost: cost, revenue: 0 })).sort((a,b) => a.name.localeCompare(b.name)).slice(-30);
+  const yearlyData = Object.entries(yearlyMap).map(([name, cost]) => ({ name, apiCost: cost, revenue: 0 })).sort((a,b) => a.name.localeCompare(b.name));
+
+  const recentSignups = (rpcData.recentSignups || []).map((u: any) => ({
     ...u,
     date: new Date(u.date).toLocaleDateString(),
     plan: u.plan.charAt(0).toUpperCase() + u.plan.slice(1),
     icon: `https://ui-avatars.com/api/?name=${u.user?.charAt(0) || 'U'}&background=random&color=fff`
   }));
 
-  const topConsumers = (data.topConsumers || []).map((u: any) => ({
-    ...u,
-    icon: `https://ui-avatars.com/api/?name=${u.user.charAt(0)}&background=random&color=fff`
-  }));
-
-  const signupCount = data.totalUsers || 0;
+  const signupCount = rpcData.totalUsers || 0;
   const acquisitionData = [
     { name: 'Organic', organic: Math.round(signupCount * 0.5), referral: 0, paid: 0 },
     { name: 'Referral', organic: 0, referral: Math.round(signupCount * 0.3), paid: 0 },
     { name: 'Paid', organic: 0, referral: 0, paid: Math.round(signupCount * 0.2) },
   ];
 
+  const totalRevenue = rpcData.totalRevenue || 0;
+
   return {
-    totalRevenue: data.totalRevenue || 0,
-    totalApiCost: data.totalApiCost || 0,
-    netProfit: data.netProfit || 0,
-    profitMargin: data.profitMargin || 0,
-    dailyData: data.dailyData || [],
-    weeklyData: data.weeklyData || [],
-    monthlyData: data.monthlyData || [],
-    yearlyData: data.yearlyData || [],
+    totalRevenue,
+    totalApiCost,
+    netProfit: totalRevenue - totalApiCost,
+    profitMargin: totalRevenue > 0 ? ((totalRevenue - totalApiCost) / totalRevenue) * 100 : 0,
+    dailyData,
+    weeklyData: rpcData.weeklyData || [], // Keep RPC for these for now
+    monthlyData: rpcData.monthlyData || [],
+    yearlyData,
     recentSignups,
-    topConsumers,
+    topConsumers: rpcData.topConsumers || [],
     acquisitionData,
-    activeSessionsCount: data.activeSessionsCount || 0
+    activeSessionsCount: rpcData.activeSessionsCount || 0
   };
 }
 

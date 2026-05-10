@@ -25,6 +25,7 @@ export interface UsageLog {
   inputTokens?: number;
   outputTokens?: number;
   createdAt: string;
+  costUsd?: number;
 }
 
 const INPUT_COST_PER_TOKEN = 0.00000025;
@@ -54,7 +55,7 @@ async function fetchUserUsagePartitioned(userId: string, months: number = 12) {
       // Query the subset of columns needed
       const { data, error, count } = await supabase
         .from('UsageLog')
-        .select('tokens, inputTokens, outputTokens, createdAt', { count: 'exact' })
+        .select('tokens, inputTokens, outputTokens, costUsd, createdAt', { count: 'exact' })
         .eq('userId', userId)
         .gte('createdAt', sinceISO)
         .order('createdAt', { ascending: false })
@@ -115,11 +116,15 @@ export function useUserUsage(userId: string) {
       const outT = Number(log.outputTokens) || 0;
       const totalT = Number(log.tokens) || (inT + outT) || 0;
 
-      let cost = 0;
-      if (inT > 0 || outT > 0) {
-        cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
-      } else {
-        cost = totalT * BLENDED_COST_PER_TOKEN;
+      let cost = Number(log.costUsd);
+      
+      // Fallback only if database column is missing/zero for very old logs
+      if (!cost || cost === 0) {
+        if (inT > 0 || outT > 0) {
+          cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
+        } else {
+          cost = totalT * BLENDED_COST_PER_TOKEN;
+        }
       }
 
       return { totalT, cost, date };

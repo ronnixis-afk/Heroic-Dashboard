@@ -32,15 +32,36 @@ async function fetchAnalyticsMetrics() {
   // Process Trends (Group by Date)
   const trendsMap: Record<string, any> = {};
   let totalCost = 0;
+  
+  // Consistency Constants (matching useUserUsage.ts)
+  const INPUT_COST_PER_TOKEN = 0.00000025;
+  const OUTPUT_COST_PER_TOKEN = 0.0000015;
+  const BLENDED_COST_PER_TOKEN = 0.0000006;
+
   allLogs.forEach(log => {
     const date = new Date(log.createdAt).toISOString().split('T')[0];
     if (!trendsMap[date]) {
       trendsMap[date] = { date, tokens: 0, cost: 0, users: new Set() };
     }
+    
+    // Core Logic: Trust DB first, fallback to estimation for legacy logs
+    let cost = Number(log.costUsd) || 0;
+    if (cost === 0) {
+      const inT = Number(log.inputTokens) || 0;
+      const outT = Number(log.outputTokens) || 0;
+      const totalT = Number(log.tokens) || (inT + outT);
+      
+      if (inT > 0 || outT > 0) {
+        cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
+      } else {
+        cost = totalT * BLENDED_COST_PER_TOKEN;
+      }
+    }
+
     trendsMap[date].tokens += log.tokens;
-    trendsMap[date].cost += Number(log.costUsd) || 0;
+    trendsMap[date].cost += cost;
     trendsMap[date].users.add(log.userId);
-    totalCost += Number(log.costUsd) || 0;
+    totalCost += cost;
   });
   
   const usageTrends = Object.values(trendsMap).map(t => ({
@@ -69,9 +90,19 @@ async function fetchAnalyticsMetrics() {
     if (!userMap[email]) {
       userMap[email] = { email, usages: 0, tokens: 0, cost: 0 };
     }
+
+    let cost = Number(log.costUsd) || 0;
+    if (cost === 0) {
+      const inT = Number(log.inputTokens) || 0;
+      const outT = Number(log.outputTokens) || 0;
+      const totalT = Number(log.tokens) || (inT + outT);
+      if (inT > 0 || outT > 0) cost = (inT * INPUT_COST_PER_TOKEN) + (outT * OUTPUT_COST_PER_TOKEN);
+      else cost = totalT * BLENDED_COST_PER_TOKEN;
+    }
+
     userMap[email].usages += 1;
     userMap[email].tokens += log.tokens;
-    userMap[email].cost += Number(log.costUsd) || 0;
+    userMap[email].cost += cost;
   });
 
   const leaders = Object.values(userMap)
