@@ -14,8 +14,9 @@ export default function TokenEstimator() {
 
   const calculateCost = (value: string) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
-    const cost = (tokens / 1000000) * 0.075;
-    setEstimatedCost(cost.toFixed(2));
+    // Assuming a blended rate of $0.60 per 1M tokens (avg of $0.25 input and $1.50 output)
+    const cost = (tokens / 1000000) * 0.60;
+    setEstimatedCost(cost.toFixed(4));
     
     // Throttle tracking or track on blur, but for now we track on change if desired.
     // Or we could track when they select a different input type.
@@ -129,7 +130,7 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.075 / 1M tokens</p>
+          <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.60 / 1M tokens (Blended)</p>
         </div>
       </div>
     </div>

@@ -18,26 +18,30 @@ export interface BehaviorData {
 }
 
 class EngineTelemetryService {
-    async getTelemetry(userId?: string): Promise<TelemetryData> {
+    async getTelemetry(token?: string, userId?: string): Promise<TelemetryData> {
         const url = new URL(`${RPG_API_URL}/api/admin/telemetry`);
         if (userId) url.searchParams.append('userId', userId);
 
         const response = await fetch(url.toString(), {
             headers: {
-                // Auth will be handled by the session cookie if on the same domain,
-                // or we'll need a way to pass the Clerk token.
-                // Assuming standard cross-app auth for now.
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                'Content-Type': 'application/json',
             }
         });
         if (!response.ok) throw new Error('Failed to fetch telemetry');
         return response.json();
     }
 
-    async getBehavior(userId?: string): Promise<BehaviorData> {
+    async getBehavior(token?: string, userId?: string): Promise<BehaviorData> {
         const url = new URL(`${RPG_API_URL}/api/analytics/behavior`);
         if (userId) url.searchParams.append('userId', userId);
 
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                'Content-Type': 'application/json',
+            }
+        });
         if (!response.ok) throw new Error('Failed to fetch behavior data');
         return response.json();
     }

@@ -14,12 +14,12 @@ import {
   Line
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Globe, Clock, Activity } from 'lucide-react';
+import { TrendingUp, Users, Zap, Globe, Clock, Activity, DollarSign } from 'lucide-react';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
 
 export default function AdminAnalytics() {
-  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'engine'>('tokens');
+  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'engine' | 'cost'>('tokens');
   const { 
     loading, 
     usageTrends, 
@@ -27,7 +27,8 @@ export default function AdminAnalytics() {
     topUsers,
     activeSessionsCount,
     avgSessionLength,
-    sessionTrends
+    sessionTrends,
+    totalCost
   } = useAnalyticsMetrics();
 
   if (loading) {
@@ -48,7 +49,7 @@ export default function AdminAnalytics() {
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-panel flex items-center justify-between p-6"
+          className="glass-panel flex items-center justify-between p-6 border-l-4 border-brand-accent"
         >
           <div>
             <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Active Sessions</p>
@@ -56,6 +57,21 @@ export default function AdminAnalytics() {
           </div>
           <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent">
             <Activity size={24} className="animate-pulse" />
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="glass-panel flex items-center justify-between p-6 border-l-4 border-emerald-500"
+        >
+          <div>
+            <p className="text-xs font-medium text-brand-text-muted uppercase tracking-wider">Total API Cost</p>
+            <h4 className="mt-2 text-3xl font-bold text-white">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+            <DollarSign size={24} />
           </div>
         </motion.div>
 
@@ -165,6 +181,7 @@ export default function AdminAnalytics() {
           <div className="flex gap-2">
             {[
               { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
+              { id: 'cost', label: 'USD Cost', color: '#10b981' },
               { id: 'users', label: 'Active Users', color: '#38bdf8' },
               { id: 'engagement', label: 'Engagement', color: '#a855f7' },
               { id: 'engine', label: 'Engine Health', color: '#00b2ff' }
@@ -199,6 +216,16 @@ export default function AdminAnalytics() {
                     stroke="#3ecf8e" 
                     strokeWidth={3}
                     dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                )}
+                {activeMetric === 'cost' && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="cost" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
                     activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                 )}

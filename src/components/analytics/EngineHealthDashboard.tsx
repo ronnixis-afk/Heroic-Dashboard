@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { Zap, ShieldAlert, Users, TrendingUp, Filter } from 'lucide-react';
+import { useAuth } from '@clerk/clerk-react';
 import { telemetryService, TelemetryData, BehaviorData } from '../../services/EngineTelemetryService';
 
 const COLORS = ['#00b2ff', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
@@ -23,13 +24,16 @@ export default function EngineHealthDashboard() {
     const [behavior, setBehavior] = useState<BehaviorData | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const { getToken } = useAuth();
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                const token = await getToken();
                 const [t, b] = await Promise.all([
-                    telemetryService.getTelemetry(),
-                    telemetryService.getBehavior()
+                    telemetryService.getTelemetry(token as string),
+                    telemetryService.getBehavior(token as string)
                 ]);
                 setTelemetry(t);
                 setBehavior(b);

@@ -2,36 +2,55 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 async function fetchAnalyticsMetrics() {
-  const { data: logs, error } = await supabase
-    .from('UsageLog')
-    .select(`
-      *,
-      User ( email )
-    `)
-    .order('createdAt', { ascending: true });
+  let allLogs: any[] = [];
+  let from = 0;
+  const PAGE_SIZE = 1000;
 
-  if (error || !logs) throw error || new Error('No logs found');
+  // 1. Scalable Fetching of Usage Logs
+  try {
+    while (true) {
+      const { data, error, count } = await supabase
+        .from('UsageLog')
+        .select(`
+          *,
+          User ( email )
+        `, { count: 'exact' })
+        .order('createdAt', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allLogs = [...allLogs, ...data];
+      if (data.length < PAGE_SIZE || (count !== null && allLogs.length >= count)) break;
+      from += PAGE_SIZE;
+      if (from >= 100000) break; // Safety cap
+    }
+  } catch (err) {
+    console.error('Error fetching logs:', err);
+  }
 
   // Process Trends (Group by Date)
   const trendsMap: Record<string, any> = {};
-  logs.forEach(log => {
+  let totalCost = 0;
+  allLogs.forEach(log => {
     const date = new Date(log.createdAt).toISOString().split('T')[0];
     if (!trendsMap[date]) {
-      trendsMap[date] = { date, tokens: 0, users: new Set() };
+      trendsMap[date] = { date, tokens: 0, cost: 0, users: new Set() };
     }
     trendsMap[date].tokens += log.tokens;
+    trendsMap[date].cost += Number(log.costUsd) || 0;
     trendsMap[date].users.add(log.userId);
+    totalCost += Number(log.costUsd) || 0;
   });
   
-  const trends = Object.values(trendsMap).map(t => ({
+  const usageTrends = Object.values(trendsMap).map(t => ({
     ...t,
     users: t.users.size
-  }));
-  const usageTrends = trends.slice(-7);
+  })).sort((a: any, b: any) => a.date.localeCompare(b.date));
 
   // Process Model Distribution
   const modelMap: Record<string, number> = {};
-  logs.forEach(log => {
+  allLogs.forEach(log => {
     const name = log.model || 'Unknown';
     modelMap[name] = (modelMap[name] || 0) + 1;
   });
@@ -39,19 +58,20 @@ async function fetchAnalyticsMetrics() {
   const colors = ['#3ecf8e', '#a855f7', '#38bdf8', '#fbbf24', '#f87171'];
   const distribution = Object.entries(modelMap).map(([name, count], idx) => ({
     name,
-    value: Math.round((count / logs.length) * 100),
+    value: Math.round((count / allLogs.length) * 100),
     color: colors[idx % colors.length]
   }));
 
-  // Process Leaderboard (Top Users by Token)
+  // Process Leaderboard
   const userMap: Record<string, any> = {};
-  logs.forEach(log => {
+  allLogs.forEach(log => {
     const email = log.User?.email || 'Unknown';
     if (!userMap[email]) {
-      userMap[email] = { email, usages: 0, tokens: 0 };
+      userMap[email] = { email, usages: 0, tokens: 0, cost: 0 };
     }
     userMap[email].usages += 1;
     userMap[email].tokens += log.tokens;
+    userMap[email].cost += Number(log.costUsd) || 0;
   });
 
   const leaders = Object.values(userMap)
@@ -62,11 +82,12 @@ async function fetchAnalyticsMetrics() {
       tokens: u.tokens > 1000000 ? `${(u.tokens / 1000000).toFixed(1)}M` : `${Math.round(u.tokens / 1000)}k`
     }));
 
-  // Fetch Sessions
+  // 2. Fetch Sessions
   const { data: sessions, error: sessionError } = await supabase
     .from('UserSession')
     .select('*')
-    .order('startTime', { ascending: true });
+    .order('startTime', { ascending: false })
+    .limit(5000); // Session history limit
 
   if (sessionError) console.error('Error fetching sessions:', sessionError);
 
@@ -90,14 +111,15 @@ async function fetchAnalyticsMetrics() {
   const sessionTrends = Object.values(sessionTrendsMap).map(t => ({
     date: t.date,
     avgDuration: Math.round((t.totalDuration / (t.count || 1)) / 60) // in minutes
-  }));
+  })).sort((a: any, b: any) => a.date.localeCompare(b.date));
 
   return {
     usageTrends,
+    totalCost,
     modelDistribution: distribution,
     topUsers: leaders,
     activeSessionsCount,
-    avgSessionLength: Math.round(avgSessionLength / 60), // in minutes
+    avgSessionLength: Math.round(avgSessionLength / 60),
     sessionTrends
   };
 }
@@ -116,7 +138,8 @@ export function useAnalyticsMetrics() {
     topUsers: data?.topUsers || [],
     activeSessionsCount: data?.activeSessionsCount || 0,
     avgSessionLength: data?.avgSessionLength || 0,
-    sessionTrends: data?.sessionTrends || []
+    sessionTrends: data?.sessionTrends || [],
+    totalCost: data?.totalCost || 0
   };
 }
 
