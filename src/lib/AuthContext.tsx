@@ -6,6 +6,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
+  getToken: (options?: any) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -13,11 +14,12 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   signOut: async () => {},
+  getToken: async () => null,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoaded, isSignedIn } = useUser();
-  const { signOut } = useClerkAuth();
+  const { signOut, getToken } = useClerkAuth();
 
   const loading = !isLoaded;
   
@@ -31,7 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user: user || null, 
       loading, 
       isAdmin,
-      signOut
+      signOut,
+      getToken
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '../../lib/AuthContext';
+import { SkeletonText } from '../Skeleton';
 
 interface CostDaily {
   date: string;
@@ -17,22 +19,29 @@ interface CostByModel {
   avgLatencyMs: number;
 }
 
-import { SkeletonText } from '../Skeleton';
-
 export function CostAnalyticsCard() {
   const [data, setData] = useState<{ daily: CostDaily[], byModel: CostByModel[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/cost-analytics?days=30`, {
-      headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_API_KEY }
-    })
-      .then(res => res.json())
-      .then(json => {
+    async function fetchData() {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/cost-analytics?days=30`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
         setData(json);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      } catch (error) {
+        console.error('Error fetching cost analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [getToken]);
 
   const isLoading = loading || !data;
   const today = data?.daily?.[0] || { totalCost: 0, costPerUser: 0 };

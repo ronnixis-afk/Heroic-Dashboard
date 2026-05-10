@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users, Activity, Target } from 'lucide-react';
+import { useAuth } from '../../lib/AuthContext';
 
 interface ActiveUsersData {
   activeNow: number;
@@ -11,12 +12,14 @@ interface ActiveUsersData {
 export function ActiveUsersCard() {
   const [data, setData] = useState<ActiveUsersData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = await getToken();
         const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`, {
-          headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_API_KEY }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await response.json();
         setData(json);
@@ -30,7 +33,7 @@ export function ActiveUsersCard() {
     fetchData();
     const interval = setInterval(fetchData, 60000); // 60s auto-refresh
     return () => clearInterval(interval);
-  }, []);
+  }, [getToken]);
 
   if (loading) {
     return (

@@ -1,10 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
-async function fetchAnalyticsMetrics() {
+async function fetchAnalyticsMetrics(getToken: () => Promise<string | null>) {
   let allLogs: any[] = [];
   let from = 0;
   const PAGE_SIZE = 1000;
+
+  // Get a Supabase client with the Clerk token for RLS access
+  const token = await getToken();
+  const supabase = getSupabaseClient(token || undefined);
 
   // 1. Scalable Fetching of Usage Logs
   try {
@@ -135,9 +140,10 @@ async function fetchAnalyticsMetrics() {
 }
 
 export function useAnalyticsMetrics() {
+  const { getToken } = useAuth();
   const { data, isLoading: loading } = useQuery({
     queryKey: ['analytics-metrics'],
-    queryFn: fetchAnalyticsMetrics,
+    queryFn: () => fetchAnalyticsMetrics(getToken),
     refetchInterval: 30000, // Refresh every 30s for active sessions
   });
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../lib/AuthContext';
 
 interface AtRiskUser {
   id: string;
@@ -23,17 +24,25 @@ interface ChurnSummary {
 export function ChurnSignalsTable() {
   const [data, setData] = useState<{ atRiskUsers: AtRiskUser[], summary: ChurnSummary } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
-      headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_API_KEY }
-    })
-      .then(res => res.json())
-      .then(json => {
+    async function fetchData() {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
         setData(json);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      } catch (error) {
+        console.error('Error fetching churn signals analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [getToken]);
 
   if (loading || !data) {
     return <div className="glass-panel p-6 h-96 animate-pulse flex flex-col">

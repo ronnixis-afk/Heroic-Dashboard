@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { useAuth } from '../../lib/AuthContext';
 
 interface SessionDaily {
   date: string;
@@ -18,20 +19,28 @@ interface SessionDistribution {
 export function SessionLengthChart() {
   const [data, setData] = useState<{ daily: SessionDaily[], distribution: SessionDistribution[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/session-length?days=30`, {
-      headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_API_KEY }
-    })
-      .then(res => res.json())
-      .then(json => {
+    async function fetchData() {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/session-length?days=30`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
         if (json && Array.isArray(json.daily)) {
           json.daily = json.daily.reverse();
         }
         setData(json);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      } catch (error) {
+        console.error('Error fetching session length analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [getToken]);
 
   const isLoading = loading || !data;
 

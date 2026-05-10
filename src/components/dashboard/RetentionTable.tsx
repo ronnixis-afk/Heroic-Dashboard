@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../lib/AuthContext';
 
 interface RetentionData {
   cohort: string;
@@ -11,19 +12,27 @@ interface RetentionData {
 export function RetentionTable() {
   const [data, setData] = useState<RetentionData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/retention`, {
-      headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_API_KEY }
-    })
-      .then(res => res.json())
-      .then(json => {
+    async function fetchData() {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/retention`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
         if (Array.isArray(json)) {
           setData(json);
         }
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      } catch (error) {
+        console.error('Error fetching retention analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [getToken]);
 
   if (loading) {
     return <div className="glass-panel p-6 h-80 animate-pulse">

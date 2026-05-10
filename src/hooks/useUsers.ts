@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
 async function fetchUsers() {
   const { data, error } = await supabase
@@ -14,6 +15,7 @@ async function fetchUsers() {
 
 export function useUsers() {
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
@@ -41,10 +43,11 @@ export function useUsers() {
     setIsSyncing(true);
     setSyncMessage('');
     try {
+      const token = await getToken();
       const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/sync-users`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_ADMIN_API_KEY}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();

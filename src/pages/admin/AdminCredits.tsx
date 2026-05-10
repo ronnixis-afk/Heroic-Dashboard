@@ -48,9 +48,10 @@ export default function AdminCredits() {
     try {
       const email = formData.userEmail.trim();
       const apiUrl = import.meta.env.VITE_RPG_API_URL;
-      const apiKey = import.meta.env.VITE_ADMIN_API_KEY;
+      const { getToken } = useAuth();
+      const token = await getToken();
 
-      if (!apiUrl || !apiKey) {
+      if (!apiUrl) {
         throw new Error("Admin API configuration missing in Dashboard.");
       }
 
@@ -59,7 +60,7 @@ export default function AdminCredits() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-API-Key': apiKey
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           email,
