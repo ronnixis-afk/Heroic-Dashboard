@@ -35,60 +35,40 @@ import { calculateFallbackCost } from '../lib/costCalculator';
  * Handles strict server-side row limits (usually 1,000) by accurately 
  * calculating pagination steps and checking for data completion.
  */
-async function fetchUserUsagePartitioned(userId: string, getToken: () => Promise<string | null>, months: number = 12) {
-  if (!userId) return [];
+async function fetchUserUsageAggregated(userId: string, getToken: (options?: any) => Promise<string | null>) {
+  if (!userId) return { logs: [], lifetime: null };
 
   const token = await getToken({ template: 'supabase' });
   const supabase = getSupabaseClient(token || undefined);
 
-  const since = new Date();
-  since.setMonth(since.getMonth() - months);
-  const sinceISO = since.toISOString();
+  // 1. Fetch lifetime totals from view
+  const { data: lifetime } = await supabase
+    .from('top_consumers_summary')
+    .select('*')
+    .eq('userId', userId)
+    .single();
 
-  let allData: any[] = [];
-  let from = 0;
-  
-  // INDUSTRY STANDARD: Use 1000 as a safe page size for Supabase default limits
-  const PAGE_SIZE = 1000; 
+  // 2. Fetch the last 30 days of aggregated data for this specific user
+  const { data, error } = await supabase
+    .from('user_daily_usage_summary')
+    .select('*')
+    .eq('userId', userId)
+    .order('date', { ascending: false })
+    .limit(30);
 
-  try {
-    while (true) {
-      // Query the subset of columns needed
-      const { data, error, count } = await supabase
-        .from('UsageLog')
-        .select('tokens, inputTokens, outputTokens, costUsd, createdAt', { count: 'exact' })
-        .eq('userId', userId)
-        .gte('createdAt', sinceISO)
-        .order('createdAt', { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
-
-      if (error) {
-        console.error('[useUserUsage] Fetch error:', error);
-        throw error;
-      }
-
-      if (!data || data.length === 0) break;
-
-      allData = [...allData, ...data];
-      
-      // If we got fewer than 1000, or we've reached the known count, stop.
-      if (data.length < PAGE_SIZE) break;
-      
-      // Safety check: if we've reached the total count returned by Supabase
-      if (count !== null && allData.length >= count) break;
-
-      from += PAGE_SIZE;
-
-      // Safety cap at 100,000 records
-      if (from >= 100000) break;
-    }
-    
-    console.log(`[useUserUsage] Scaled fetch complete: ${allData.length} records retrieved.`);
-    return allData;
-  } catch (err) {
-    console.error('[useUserUsage] Critical fetch failure:', err);
-    return allData;
+  if (error) {
+    console.error('[useUserUsage] Fetch error:', error);
   }
+
+  const logs = (data || []).map(m => ({
+    tokens: m.total_tokens || 0,
+    inputTokens: 0, 
+    outputTokens: 0,
+    costUsd: m.total_cost || 0,
+    createdAt: m.date
+  }));
+
+  return { logs, lifetime };
 }
 
 export function useUserUsage(userId: string) {
@@ -100,12 +80,15 @@ export function useUserUsage(userId: string) {
     return () => clearInterval(timer);
   }, []);
 
-  const { data: rawLogs = [], isLoading: loading } = useQuery({
+  const { data: rawData, isLoading: loading } = useQuery({
     queryKey: ['user-usage-optimized', userId],
-    queryFn: () => fetchUserUsagePartitioned(userId, () => getToken({ template: 'supabase' })),
+    queryFn: () => fetchUserUsageAggregated(userId, () => getToken({ template: 'supabase' })),
     enabled: !!userId,
     staleTime: 60000,
   });
+
+  const rawLogs = rawData?.logs || [];
+  const lifetimeStats = rawData?.lifetime || null;
 
   const processedData = useMemo(() => {
     const logs = rawLogs.map(log => {
@@ -190,8 +173,8 @@ export function useUserUsage(userId: string) {
     dailyData,
     weeklyData,
     monthlyData,
-    totalTokens: processedData.logs.reduce((sum, log) => sum + log.totalT, 0),
-    totalCost: processedData.logs.reduce((sum, log) => sum + log.cost, 0),
-    logCount: rawLogs.length
+    totalTokens: lifetimeStats ? Number(lifetimeStats.total_tokens) : processedData.logs.reduce((sum, log) => sum + log.totalT, 0),
+    totalCost: lifetimeStats ? Number(lifetimeStats.total_cost) : processedData.logs.reduce((sum, log) => sum + log.cost, 0),
+    logCount: lifetimeStats ? Number(lifetimeStats.interaction_count) : rawLogs.length
   };
 }

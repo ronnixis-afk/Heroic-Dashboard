@@ -25,14 +25,6 @@ export function FeatureUsageChart() {
     <div className="glass-panel p-6 h-96 flex flex-col">
       <div className="flex justify-between items-start mb-6">
         <h3 className="text-lg font-medium text-brand-text m-0">Feature Usage (30 Days)</h3>
-        <div className="text-right">
-          <p className="text-xs text-brand-text-muted m-0">Chat-Only Users</p>
-          {isLoading ? (
-            <SkeletonText width={40} className="h-4 mt-1 ml-auto" />
-          ) : (
-            <p className="text-sm font-bold text-brand-text m-0">{data.chatOnlyUsers}</p>
-          )}
-        </div>
       </div>
       
       <div className="flex-1 w-full min-h-0 relative">
@@ -57,12 +49,40 @@ export function FeatureUsageChart() {
               width={100}
             />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
-              itemStyle={{ color: '#ffffff' }}
-              labelStyle={{ color: '#8b8c94', marginBottom: '4px' }}
-              formatter={(value: any, name: any) => {
-                if (name === 'percentage') return [`${value}%`, 'Share'];
-                return [value, name];
+              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  const descriptions: Record<string, string> = {
+                    'Response': 'Standard AI dialogue and story narration. Primary interaction method for players.',
+                    'World Building': 'Generates new locations, lore, and background details. Helps expand the universe dynamically.',
+                    'Quest Log Summary': 'Automatically summarizes recent events into the player journal. Keeps adventure history organized.',
+                    'Tactical Brief': 'Internal AI logic that architects encounter layouts and GM notes. Ensures combat remains consistent.',
+                    'Scene Generation': 'Creates immersive sensory descriptions of the environment. Focuses on atmosphere and visual details.',
+                    'Profile Picture': 'Generates visual portraits for characters and NPCs. Adds a visual layer to the experience.',
+                    'Quest Narration': 'Specialized AI updates on quest progression. Acts as the overarching storyteller for the journey.'
+                  };
+                  const desc = descriptions[data.feature] || 'Miscellaneous AI requests and system prompts.';
+                  
+                  return (
+                    <div className="glass-panel p-4 shadow-2xl border border-brand-primary/50 w-[280px] pointer-events-none">
+                      <div className="flex justify-between items-start mb-3">
+                        <p className="text-xs font-bold text-brand-text m-0">{data.feature}</p>
+                        <p className="text-xs font-bold text-emerald-400 m-0">${data.totalCost.toFixed(2)}</p>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-lg font-bold text-white m-0">{data.percentage}%</p>
+                          <p className="text-[10px] text-brand-text-muted m-0 uppercase tracking-wider">of total usage</p>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-brand-text-muted italic border-t border-brand-primary/20 pt-2 block whitespace-normal">
+                          {desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
               }}
             />
             <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={20}>

@@ -117,11 +117,13 @@ export default function AdminNews() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <div className="space-y-8">
+      <h1>Global Announcements</h1>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       {/* Editor Section */}
       <div className="space-y-6">
         <div className="glass-panel p-6">
-          <h2 className="mb-6 flex items-center gap-2 text-xl font-medium">
+          <h2 className="mb-6 flex items-center gap-2">
             <Newspaper className="text-brand-accent" size={24} />
             {editingId ? 'Edit News Entry' : 'Create New Announcement'}
           </h2>
@@ -201,7 +203,7 @@ export default function AdminNews() {
           {formData.imageUrl && (
             <img src={formData.imageUrl} alt="Preview" className="mb-4 h-48 w-full rounded-xl object-cover" />
           )}
-          <h3 className="mb-2 font-serif text-2xl font-bold">{formData.title || 'Your Headline Here'}</h3>
+          <h3 className="mb-2 text-h2">{formData.title || 'Your Headline Here'}</h3>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-text-muted">
             {formData.content || 'Your Announcement Content Will Appear Here Exactly as Formatted.'}
           </p>
@@ -210,7 +212,7 @@ export default function AdminNews() {
 
       {/* Feed Management */}
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-brand-text-muted">Recent Posts ({news.length})</h3>
+        <h3 className="text-brand-text-muted">Recent Posts ({news.length})</h3>
         <div className="space-y-4">
           <AnimatePresence>
             {news.map((item) => (
@@ -231,7 +233,7 @@ export default function AdminNews() {
                     )}
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold line-clamp-1">{item.title}</h4>
+                        <h4>{item.title}</h4>
                         {!item.published && <span className="text-[10px] text-red-400 font-bold">Draft</span>}
                       </div>
                       <p className="text-xs text-brand-text-muted line-clamp-2">{item.content}</p>
@@ -262,6 +264,7 @@ export default function AdminNews() {
             ))}
           </AnimatePresence>
         </div>
+      </div>
       </div>
     </div>
   );

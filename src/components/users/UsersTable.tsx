@@ -69,8 +69,8 @@ export default function UsersTable({
                           </>
                         ) : (
                           <>
-                            <span className="font-bold text-white group-hover:text-brand-accent transition-colors">{user.email}</span>
-                            <span className="text-[10px] text-brand-text-muted font-mono tracking-tight">ID: {user.id?.slice(0, 8)}...</span>
+                            <span className="text-body font-bold text-white group-hover:text-brand-accent transition-colors">{user.email}</span>
+                            <span className="text-xs text-brand-text-muted font-mono tracking-tight">ID: {user.id?.slice(0, 8)}...</span>
                           </>
                         )}
                       </div>
@@ -81,7 +81,7 @@ export default function UsersTable({
                       <SkeletonText width={80} className="h-6 rounded-full" />
                     ) : (
                       <span className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold transition-all shadow-sm",
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all shadow-sm",
                         user.tier === 'super_admin' ? "bg-indigo-500 text-white shadow-indigo-500/20" :
                         user.tier === 'hero' ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-purple-500/5" :
                         user.tier === 'adventurer' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-blue-500/5" :
@@ -101,13 +101,13 @@ export default function UsersTable({
                         </div>
                       ) : (
                         <>
-                          <div className="w-20 h-1.5 rounded-full bg-[#292a32] overflow-hidden">
+                           <div className="w-20 h-1.5 rounded-full bg-brand-primary/30 overflow-hidden">
                             <div 
                               className="h-full bg-brand-accent transition-all shadow-[0_0_8px_rgba(0,178,255,0.4)]" 
                               style={{ width: `${Math.min(100, ((user.currentCredits || 0) / (user.maxCredits || 1000)) * 100)}%` }} 
                             />
                           </div>
-                          <span className="text-[11px] font-bold text-white">{user.currentCredits?.toLocaleString() || 0}</span>
+                          <span className="text-xs font-bold text-white">{user.currentCredits?.toLocaleString() || 0}</span>
                         </>
                       )}
                     </div>
@@ -127,7 +127,7 @@ export default function UsersTable({
                     {isLoading ? (
                       <SkeletonText width={60} className="h-3 opacity-50" />
                     ) : (
-                      <span className="text-[10px] font-bold text-brand-text-muted flex items-center gap-1">
+                      <span className="text-xs font-bold text-brand-text-muted flex items-center gap-1">
                         <Calendar size={10} />
                         {user.updatedAt ? new Date(user.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Online'}
                       </span>

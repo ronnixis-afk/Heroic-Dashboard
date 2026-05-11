@@ -45,8 +45,8 @@ export default function AudienceReports() {
     <div className="space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Audience Reports</h1>
-          <p className="text-brand-text-muted mt-2">Analysis of user growth, behavior, and retention across the platform.</p>
+          <h1>Audience Reports</h1>
+          <p className="text-body text-brand-text-muted mt-2">Analysis of user growth, behavior, and retention across the platform.</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-brand-accent/10 rounded-full border border-brand-accent/20">
           <Users size={16} className="text-brand-accent" />
@@ -91,7 +91,7 @@ export default function AudienceReports() {
         >
           <div className="mb-4 flex items-center gap-2">
             <TrendingUp size={20} className="text-emerald-500" />
-            <h3 className="text-lg font-bold">User Retention</h3>
+            <h3>User Retention</h3>
           </div>
           <RetentionTable />
         </motion.div>
@@ -103,7 +103,7 @@ export default function AudienceReports() {
         >
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle size={20} className="text-orange-500" />
-            <h3 className="text-lg font-bold">Churn Signals</h3>
+            <h3>Churn Signals</h3>
           </div>
           <ChurnSignalsTable />
         </motion.div>

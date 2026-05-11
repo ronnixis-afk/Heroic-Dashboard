@@ -67,27 +67,51 @@ export default function UserDetailModal({
 
         <div className="space-y-8">
           <div className="flex items-center gap-6">
-            <Skeleton width={80} height={80} circle />
-            <div className="space-y-2 flex-1">
-              <Skeleton width="60%" height={32} />
-              <Skeleton width="40%" height={12} className="opacity-50" />
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-indigo-400">
+              <Mail size={32} />
+            </div>
+            <div className="space-y-1 flex-1 min-w-0">
+              <h3 className="text-2xl font-bold text-white truncate" title={selectedUser.email}>
+                {selectedUser.email?.split('@')[0]}
+              </h3>
+              <p className="text-xs text-brand-text-muted font-mono truncate">ID: {selectedUser.id}</p>
             </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-panel p-6 flex flex-col justify-between h-48">
-              <Skeleton width="40%" height={20} />
-              <div className="space-y-4 mt-6">
-                <Skeleton width="100%" height={16} />
-                <Skeleton width="100%" height={16} />
-                <Skeleton width="100%" height={16} />
+            <div className="glass-panel p-6 flex flex-col justify-between border border-brand-primary/50">
+              <div>
+                <h4 className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-4">Account Information</h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-brand-text-muted">Membership Tier</span>
+                    <span className="px-3 py-1 bg-brand-primary/30 rounded-full text-[10px] font-bold text-brand-accent border border-brand-accent/20">
+                      {selectedUser.tier ? (selectedUser.tier.charAt(0).toUpperCase() + selectedUser.tier.slice(1)) : 'Newbie'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-brand-text-muted">Email Address</span>
+                    <span className="text-white font-medium truncate max-w-[150px]">{selectedUser.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-brand-text-muted">Status</span>
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Active
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <Skeleton width="30%" height={16} className="mb-2" />
-              <Skeleton width="100%" height={48} className="rounded-full" />
-              <Skeleton width="100%" height={48} className="rounded-full" />
+              <h4 className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-1">Administrative Actions</h4>
+              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-[0.98]">
+                Manage Credits
+              </button>
+              <button className="w-full py-3 bg-brand-primary/50 text-white font-bold rounded-xl border border-brand-primary hover:bg-brand-primary transition-all active:scale-[0.98]">
+                Suspend Access
+              </button>
             </div>
           </div>
 

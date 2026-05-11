@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* Colors */
   --color-brand-bg: #141416;
   --color-brand-surface: #1d1e24;
   --color-brand-primary: #292a32;
@@ -10,14 +11,48 @@
   --color-brand-text-muted: #8b8c94;
   --color-sidebar-bg: #111114;
   
+  /* Typography Scale */
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 2.5rem;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 2rem;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.75rem;
+  --text-h4: 1.125rem;
+  --text-h4--line-height: 1.5rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-small: 0.75rem;
+  --text-small--line-height: 1rem;
+  --text-xs: 0.6875rem;
+  --text-xs--line-height: 0.875rem;
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Icon Sizes */
+  --size-icon-sm: 0.875rem;
+  --size-icon-md: 1.125rem;
+  --size-icon-lg: 1.5rem;
+
+  /* Fonts */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Merriweather', serif;
 }
 
 @layer base {
   body {
-    @apply bg-brand-bg text-brand-text font-sans antialiased;
+    @apply bg-brand-bg text-brand-text font-sans antialiased text-body;
   }
+
+  h1 { @apply text-h1 font-bold tracking-tight; }
+  h2 { @apply text-h2 font-bold tracking-tight; }
+  h3 { @apply text-h3 font-bold; }
+  h4 { @apply text-h4 font-semibold; }
 }
 
 /* Custom UI Components - Dark Dashboard Style */
@@ -26,11 +61,11 @@
 }
 
 .btn-primary {
-  @apply bg-white text-black px-6 py-2.5 rounded-full font-bold transition-all hover:bg-gray-200 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 shadow-sm;
+  @apply bg-white text-black px-6 py-2.5 rounded-full font-bold text-body transition-all hover:bg-gray-200 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 shadow-sm;
 }
 
 .input-field {
-  @apply bg-[#141416] border border-brand-primary rounded-xl px-4 py-2.5 text-sm focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all text-white placeholder-brand-text-muted;
+  @apply bg-[#141416] border border-brand-primary rounded-xl px-4 py-2.5 text-body focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all text-white placeholder-brand-text-muted;
 }
 
 .data-table {
@@ -38,11 +73,11 @@
 }
 
 .data-table th {
-  @apply pt-6 pb-4 px-6 text-[11px] font-bold text-brand-text-muted border-b border-brand-primary/50 transition-colors;
+  @apply pt-6 pb-4 px-6 text-xs font-bold text-brand-text-muted border-b border-brand-primary/50 transition-colors;
 }
 
 .data-table td {
-  @apply py-5 px-6 text-sm border-b border-brand-primary/20 text-white transition-colors;
+  @apply py-5 px-6 text-body border-b border-brand-primary/20 text-white transition-colors;
 }
 
 .data-table tr:last-child td {

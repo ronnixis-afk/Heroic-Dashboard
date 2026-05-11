@@ -10,7 +10,7 @@ import { ChartSkeleton } from '../Skeleton';
 
 export default function UserConsumptionChart({ userId }: UserConsumptionChartProps) {
   const [filter, setFilter] = useState('Day');
-  const { loading, hourlyData, dailyData, weeklyData, monthlyData, logCount, totalTokens } = useUserUsage(userId);
+  const { loading, hourlyData, dailyData, weeklyData, monthlyData, logCount, totalTokens, totalCost } = useUserUsage(userId);
   
   const chartData = useMemo(() => {
     switch (filter) {
@@ -41,7 +41,7 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
           <h4 className="text-sm font-bold text-brand-text-muted mb-1">Actual API Cost</h4>
           <div className="flex items-baseline gap-3">
             <p className="text-2xl font-bold text-white">
-              ${currentTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
             </p>
             <p className="text-xs text-brand-text-muted">
               ({currentTotalTokens.toLocaleString()} tokens)

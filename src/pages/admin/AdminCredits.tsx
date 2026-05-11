@@ -101,11 +101,13 @@ export default function AdminCredits() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+    <div className="space-y-8">
+      <h1>Credit Monitoring</h1>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
       {/* Adjustment Form */}
       <div className="lg:col-span-1">
         <div className="glass-panel p-6">
-          <h2 className="mb-6 flex items-center gap-2 text-xl font-medium">
+          <h2 className="mb-6 flex items-center gap-2">
             <Coins className="text-brand-accent" size={24} />
             Grant Credits
           </h2>
@@ -193,7 +195,7 @@ export default function AdminCredits() {
       <div className="lg:col-span-2">
         <div className="glass-panel h-full overflow-hidden flex flex-col">
           <div className="p-6 border-b border-brand-primary/10">
-            <h2 className="flex items-center gap-2 text-xl font-medium">
+            <h2 className="flex items-center gap-2">
               <History className="text-brand-text-muted" size={24} />
               Adjustment History
             </h2>
@@ -229,7 +231,7 @@ export default function AdminCredits() {
                     </td>
                     <td className="text-xs font-medium">{item.reason}</td>
                     <td className="text-[10px] text-brand-text-muted">
-                      {item.adminId?.slice(0, 5)}...
+                      {item.adminId?.slice(0, 8)}...
                     </td>
                   </tr>
                 ))}
@@ -242,6 +244,7 @@ export default function AdminCredits() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

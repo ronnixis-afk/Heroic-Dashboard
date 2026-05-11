@@ -40,7 +40,6 @@ const NAV_GROUPS = [
   {
     group: 'Intelligence',
     items: [
-      { icon: BarChart3, label: 'Reports Hub', path: '/admin/reports' },
       { icon: Activity, label: 'Real-Time Analytics', path: '/admin/analytics' },
       { icon: Search, label: 'Usage Reports', path: '/admin/reports/usage' },
     ]
@@ -112,7 +111,7 @@ export default function AdminLayout() {
           {NAV_GROUPS.map((group) => (
             <div key={group.group} className="space-y-1">
               {isSidebarOpen && (
-                <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-[#8b8c94] mb-2">
+                <h3 className="px-4 text-xs font-bold tracking-wider text-brand-text-muted mb-2">
                   {group.group}
                 </h3>
               )}
@@ -130,7 +129,7 @@ export default function AdminLayout() {
                     )}
                   >
                     <item.icon size={18} className={cn(isActive ? "text-brand-accent" : "")} />
-                    {isSidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                    {isSidebarOpen && <span className="text-body font-medium">{item.label}</span>}
                   </Link>
                 );
               })}

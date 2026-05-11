@@ -33,8 +33,24 @@ The application uses Tailwind CSS v4 with custom tokens defined in `src/index.cs
 
 ### Typography
 
-*   **Primary Font (`--font-sans`)**: `Inter`, `ui-sans-serif`, `system-ui`, `sans-serif`. Used for all interface elements, data presentation, and general text.
-*   **Serif Font (`--font-serif`)**: `Merriweather`, `serif`. Reserved for specific editorial or distinct branding elements (if any).
+*   **Primary Font (`--font-sans`)**: `Inter`, `ui-sans-serif`, `system-ui`, `sans-serif`. Used for all interface elements.
+*   **Typography Scale**:
+    *   `--text-h1` (36px): Page Titles
+    *   `--text-h2` (24px): Major Section Headers
+    *   `--text-h3` (20px): Widget Titles
+    *   `--text-h4` (18px): Sub-headers
+    *   `--text-body` (14px): Default interface text, inputs, table data.
+    *   `--text-small` (12px): Metadata, secondary info.
+    *   `--text-xs` (11px): Table headers, status pills.
+*   **Font Weights**:
+    *   `--font-weight-bold` (700)
+    *   `--font-weight-semibold` (600)
+    *   `--font-weight-medium` (500)
+    *   `--font-weight-normal` (400)
+*   **Icon Sizes**:
+    *   `--size-icon-sm` (14px)
+    *   `--size-icon-md` (18px)
+    *   `--size-icon-lg` (24px)
 
 ---
 

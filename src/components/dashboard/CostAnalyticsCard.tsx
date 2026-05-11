@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../lib/AuthContext';
+import { getSupabaseClient } from '../../lib/supabase';
 import { SkeletonText } from '../Skeleton';
 
 interface CostDaily {
@@ -28,11 +29,30 @@ export function CostAnalyticsCard() {
     async function fetchData() {
       try {
         const token = await getToken({ template: 'supabase' });
-        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/cost-analytics?days=30`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const supabase = getSupabaseClient(token || undefined);
+        
+        // Fetch daily metrics for cost-per-user
+        const { data: daily } = await supabase.from('daily_usage_summary').select('*').order('date', { ascending: false }).limit(30);
+        
+        // Fetch model distribution
+        const { data: byModel } = await supabase.from('model_usage_distribution').select('*');
+        
+        setData({
+          daily: (daily || []).map(m => ({
+            date: m.date,
+            activeUsers: m.active_users || 0,
+            totalCost: Number(m.total_cost) || 0,
+            costPerUser: m.active_users > 0 ? (m.total_cost / m.active_users) : 0
+          })),
+          byModel: (byModel || []).map(m => ({
+            model: m.model,
+            calls: m.usage_count || 0,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
+            totalCost: Number(m.total_cost) || 0,
+            avgLatencyMs: 0
+          }))
         });
-        const json = await res.json();
-        setData(json);
       } catch (error) {
         console.error('Error fetching cost analytics:', error);
       } finally {

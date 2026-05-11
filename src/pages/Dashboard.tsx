@@ -10,11 +10,9 @@ import { ChurnSignalsTable } from '../components/dashboard/ChurnSignalsTable';
 export default function Dashboard() {
   return (
     <div className="space-y-8">
-      <header className="mb-8 border-b border-[#292a32] pb-4">
-        <h1 className="text-xl font-bold text-white">
-          Heroic Analytics
-        </h1>
-        <p className="text-sm font-medium text-[#8b8c94]">Real-time telemetry and user insights.</p>
+      <header className="mb-8 border-b border-brand-primary pb-4">
+        <h1>Heroic Analytics</h1>
+        <p className="text-body text-brand-text-muted mt-1">Real-time telemetry and user insights.</p>
       </header>
 
       {/* Top Row: Key Metrics */}

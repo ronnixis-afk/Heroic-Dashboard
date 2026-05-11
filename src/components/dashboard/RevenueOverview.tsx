@@ -36,12 +36,12 @@ export default function RevenueOverview({
     <div className="glass-panel col-span-1 lg:col-span-2 p-6 flex flex-col relative w-full h-[380px]">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-xl font-bold">Revenue & API Costs</h3>
+          <h3>Revenue & API Costs</h3>
           <p className="gap-2 mt-4">
             {isLoading ? (
               <SkeletonText width={180} className="h-9" />
             ) : (
-              <span className="text-3xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-h1 font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             )}
           </p>
         </div>
@@ -52,13 +52,13 @@ export default function RevenueOverview({
               <button 
                 key={filter}
                 onClick={() => setRevenueFilter(filter)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-black' : 'text-[#8b8c94] hover:text-white'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-black' : 'text-brand-text-muted hover:text-white'}`}
               >
                 {filter}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-[#8b8c94]">
+          <div className="flex items-center gap-4 text-xs font-medium text-brand-text-muted">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
               Revenue

@@ -11,7 +11,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
-import ReportsHub from './pages/admin/ReportsHub';
+
 import AudienceReports from './pages/admin/AudienceReports';
 import UsageReports from './pages/admin/UsageReports';
 import FinancialReports from './pages/admin/FinancialReports';
@@ -83,7 +83,7 @@ export default function App() {
                 
                 {/* Reports Suite */}
                 <Route path="reports">
-                  <Route index element={<ReportsHub />} />
+                  <Route index element={<Navigate to="/admin" replace />} />
                   <Route path="audience" element={<AudienceReports />} />
                   <Route path="usage" element={<UsageReports />} />
                   <Route path="financial" element={<FinancialReports />} />

@@ -37,6 +37,7 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6 relative overflow-hidden">
+      <h1 className="mb-8">User Management</h1>
       <UsersFilterBar 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

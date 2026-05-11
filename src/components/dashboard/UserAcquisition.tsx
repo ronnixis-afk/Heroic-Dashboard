@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import { SkeletonText } from '../Skeleton';
 
@@ -12,10 +12,18 @@ interface UserAcquisitionProps {
 export default function UserAcquisition({ acquisitionData, isLoading = false }: UserAcquisitionProps) {
   const [signupFilter, setSignupFilter] = useState('6 Months');
 
+  const getTierColor = (name: string) => {
+    const tier = name.toLowerCase();
+    if (tier.includes('super')) return '#6366f1'; // Indigo (Secondary Accent)
+    if (tier.includes('hero')) return '#3ecf8e';  // Emerald (Secondary Accent)
+    if (tier.includes('adventurer')) return '#00b2ff'; // Brand Accent
+    return '#ff5a36'; // Orange (Secondary Accent)
+  };
+
   return (
     <div className="glass-panel p-6 h-[340px] flex flex-col">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold">New Signups</h3>
+        <h3 className="text-lg font-bold text-white">Active Accounts by Tier</h3>
         <button 
           onClick={() => setSignupFilter(signupFilter === '6 Months' ? '30 Days' : '6 Months')}
           className="flex items-center gap-2 bg-[#141416] border border-[#292a32] px-3 py-1.5 rounded-lg text-xs font-bold text-[#8b8c94] hover:text-white transition-colors"
@@ -33,7 +41,7 @@ export default function UserAcquisition({ acquisitionData, isLoading = false }: 
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={isLoading ? [] : acquisitionData} barSize={6}>
+          <BarChart data={isLoading ? [] : acquisitionData} barSize={20}>
             <CartesianGrid strokeDasharray="3 3" stroke="#292a32" vertical={false} horizontal={false} />
             <XAxis 
               dataKey="name" 
@@ -43,45 +51,34 @@ export default function UserAcquisition({ acquisitionData, isLoading = false }: 
               axisLine={false} 
               dy={10}
             />
-            <Tooltip cursor={{fill: '#292a32', opacity: 0.2}} contentStyle={{ backgroundColor: '#1d1e24', border: 'none', borderRadius: '8px' }} />
-            <Bar dataKey="organic" fill="#00b2ff" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="referral" fill="#3ecf8e" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="paid" fill="#ff5a36" radius={[4, 4, 0, 0]} />
+            <Tooltip 
+              cursor={{fill: '#292a32', opacity: 0.2}} 
+              contentStyle={{ backgroundColor: '#1d1e24', border: 'none', borderRadius: '8px' }}
+              itemStyle={{ fontSize: '12px' }}
+              formatter={(value: any) => [value, 'Users']}
+            />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+              {acquisitionData.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={getTierColor(entry.name)} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-auto space-y-3">
-        <div className="flex justify-between items-center text-xs">
-          <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span> Organic  <span className="text-[#292a32] mx-1">|</span> (50%)
+      <div className="mt-8 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+        {acquisitionData.map((tier) => (
+          <div key={tier.name} className="flex justify-between items-center text-xs">
+            <div className="flex items-center gap-2 text-white font-medium">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getTierColor(tier.name) }}></span> 
+              {tier.name}
+            </div>
+            <span className="font-bold text-brand-text-muted">{tier.count}</span>
           </div>
-          {isLoading ? (
-            <SkeletonText width={40} className="h-4" />
-          ) : (
-            <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Organic')?.organic || 0}</span>
-          )}
-        </div>
-        <div className="flex justify-between items-center text-xs">
-          <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Referral  <span className="text-[#292a32] mx-1">|</span> (30%)
-          </div>
-          {isLoading ? (
-            <SkeletonText width={40} className="h-4" />
-          ) : (
-            <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Referral')?.referral || 0}</span>
-          )}
-        </div>
-        <div className="flex justify-between items-center text-xs">
-          <div className="flex items-center gap-2 text-[#8b8c94] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a36]"></span> Paid Ads  <span className="text-[#292a32] mx-1">|</span> (20%)
-          </div>
-          {isLoading ? (
-            <SkeletonText width={40} className="h-4" />
-          ) : (
-            <span className="font-bold text-white">{acquisitionData.find(d => d.name === 'Paid')?.paid || 0}</span>
-          )}
-        </div>
+        ))}
+        {acquisitionData.length === 0 && !isLoading && (
+          <div className="text-center text-[10px] text-brand-text-muted italic">No active tiers found</div>
+        )}
       </div>
     </div>
   );

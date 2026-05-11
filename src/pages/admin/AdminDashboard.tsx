@@ -32,6 +32,8 @@ export default function AdminDashboard() {
  
   return (
     <div className="space-y-6 text-white pb-8">
+      <h1 className="mb-8">Admin Dashboard</h1>
+      
       {/* Top Row */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-2">

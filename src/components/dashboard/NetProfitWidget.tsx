@@ -13,8 +13,8 @@ export default function NetProfitWidget({ netProfit, profitMargin, isLoading = f
   return (
     <div className="glass-panel col-span-1 lg:col-span-2 p-6 relative h-[380px] flex flex-col justify-between w-full">
       <div>
-        <h3 className="text-xl font-bold mb-2">Profitability</h3>
-        <p className="text-xs text-[#8b8c94] font-medium">Current Billing Period</p>
+        <h3 className="mb-2">Profitability</h3>
+        <p className="text-small text-brand-text-muted font-medium">Current Billing Period</p>
       </div>
       
       <div className="flex-1 flex flex-col lg:flex-row justify-center items-center gap-6 mt-4">
@@ -22,19 +22,19 @@ export default function NetProfitWidget({ netProfit, profitMargin, isLoading = f
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <DollarSign size={48} className="text-emerald-500" />
           </div>
-          <label className="text-xs text-[#8b8c94] font-medium mb-2 block">
+          <label className="text-xs text-brand-text-muted font-medium mb-2 block">
             {netProfit >= 0 ? 'Net Profit' : 'Operating Loss'}
           </label>
           <div className="flex items-baseline gap-2">
             {isLoading ? (
               <SkeletonText width={120} className="h-9" />
             ) : (
-              <span className={`text-3xl font-bold ${netProfit >= 0 ? 'text-white' : 'text-red-400'}`}>
+              <span className={`text-h1 font-bold ${netProfit >= 0 ? 'text-white' : 'text-red-400'}`}>
                 {netProfit < 0 && '-'}${Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             )}
           </div>
-          <p className={`text-[11px] mt-2 font-medium flex items-center gap-1 ${netProfit >= 0 ? 'text-emerald-400' : 'text-[#8b8c94]'}`}>
+          <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${netProfit >= 0 ? 'text-emerald-400' : 'text-brand-text-muted'}`}>
             {isLoading ? (
               <SkeletonText width={100} className="h-3" />
             ) : netProfit >= 0 ? (
@@ -49,12 +49,12 @@ export default function NetProfitWidget({ netProfit, profitMargin, isLoading = f
            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Activity size={48} className="text-brand-accent" />
           </div>
-          <label className="text-xs text-[#8b8c94] font-medium mb-2 block">Gross Margin</label>
+          <label className="text-xs text-brand-text-muted font-medium mb-2 block">Gross Margin</label>
           <div className="flex items-baseline gap-2">
             {isLoading ? (
               <SkeletonText width={80} className="h-9" />
             ) : (
-              <span className="text-3xl font-bold text-brand-accent">
+              <span className="text-h1 font-bold text-brand-accent">
                 {profitMargin.toFixed(1)}%
               </span>
             )}
