@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getSupabaseClient } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 import { cn } from '../../lib/utils';
 import { Newspaper, Plus, Trash2, Edit3, Image as ImageIcon, Send, Clock, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,35 +16,51 @@ export default function AdminNews() {
     published: false
   });
 
+  const { getToken } = useAuth();
+
   useEffect(() => {
-    const fetchNews = async () => {
-      const { data, error } = await supabase
-        .from('News')
-        .select('*')
-        .order('createdAt', { ascending: false });
-      
-      if (data) setNews(data);
-      if (error) console.error("Error fetching news:", error);
+    let subscription: any;
+
+    const setup = async () => {
+      const token = await getToken({ template: 'supabase' });
+      const supabase = getSupabaseClient(token || undefined);
+
+      const fetchNews = async () => {
+        const { data, error } = await supabase
+          .from('News')
+          .select('*')
+          .order('createdAt', { ascending: false });
+        
+        if (data) setNews(data);
+        if (error) console.error("Error fetching news:", error);
+      };
+
+      fetchNews();
+
+      // Real-time subscription
+      subscription = supabase
+        .channel('public:News')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'News' }, () => {
+          fetchNews();
+        })
+        .subscribe();
     };
 
-    fetchNews();
-
-    // Real-time subscription
-    const subscription = supabase
-      .channel('public:News')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'News' }, () => {
-        fetchNews();
-      })
-      .subscribe();
+    setup();
 
     return () => {
-      supabase.removeChannel(subscription);
+      if (subscription) {
+        getSupabaseClient().removeChannel(subscription);
+      }
     };
-  }, []);
+  }, [getToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const token = await getToken({ template: 'supabase' });
+      const supabase = getSupabaseClient(token || undefined);
+      
       if (editingId) {
         const { error } = await supabase
           .from('News')
@@ -88,6 +105,8 @@ export default function AdminNews() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this news item?")) {
+      const token = await getToken({ template: 'supabase' });
+      const supabase = getSupabaseClient(token || undefined);
       const { error } = await supabase
         .from('News')
         .delete()

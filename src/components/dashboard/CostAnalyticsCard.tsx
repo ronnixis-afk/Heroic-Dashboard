@@ -27,7 +27,7 @@ export function CostAnalyticsCard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const token = await getToken();
+        const token = await getToken({ template: 'supabase' });
         const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/cost-analytics?days=30`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });

@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
-import { useAuth } from '../../lib/AuthContext';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart, Line } from 'recharts';
+import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 
 interface MessageData {
   date: string;
@@ -10,29 +9,7 @@ interface MessageData {
 }
 
 export function MessagesPerUserChart() {
-  const [data, setData] = useState<MessageData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { getToken } = useAuth();
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = await getToken();
-        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/messages-per-user?days=7`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (Array.isArray(json)) {
-          setData(json.reverse());
-        }
-      } catch (error) {
-        console.error('Error fetching messages-per-user analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [getToken]);
+  const { messagesPerUser: data, loading } = useAnalyticsMetrics();
 
   const isLoading = loading;
 

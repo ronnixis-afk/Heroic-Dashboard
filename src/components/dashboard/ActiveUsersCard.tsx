@@ -17,7 +17,7 @@ export function ActiveUsersCard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = await getToken();
+        const token = await getToken({ template: 'supabase' });
         const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });

@@ -32,7 +32,7 @@ export default function EngineHealthDashboard() {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const token = await getToken();
+                const token = await getToken({ template: 'supabase' });
                 const [t, b] = await Promise.all([
                     telemetryService.getTelemetry(token as string),
                     telemetryService.getBehavior(token as string)

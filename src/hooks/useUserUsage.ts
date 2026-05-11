@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 import { 
   subHours, 
   subDays, 
@@ -34,8 +35,11 @@ import { calculateFallbackCost } from '../lib/costCalculator';
  * Handles strict server-side row limits (usually 1,000) by accurately 
  * calculating pagination steps and checking for data completion.
  */
-async function fetchUserUsagePartitioned(userId: string, months: number = 12) {
+async function fetchUserUsagePartitioned(userId: string, getToken: () => Promise<string | null>, months: number = 12) {
   if (!userId) return [];
+
+  const token = await getToken({ template: 'supabase' });
+  const supabase = getSupabaseClient(token || undefined);
 
   const since = new Date();
   since.setMonth(since.getMonth() - months);
@@ -88,6 +92,7 @@ async function fetchUserUsagePartitioned(userId: string, months: number = 12) {
 }
 
 export function useUserUsage(userId: string) {
+  const { getToken } = useAuth();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -97,7 +102,7 @@ export function useUserUsage(userId: string) {
 
   const { data: rawLogs = [], isLoading: loading } = useQuery({
     queryKey: ['user-usage-optimized', userId],
-    queryFn: () => fetchUserUsagePartitioned(userId),
+    queryFn: () => fetchUserUsagePartitioned(userId, () => getToken({ template: 'supabase' })),
     enabled: !!userId,
     staleTime: 60000,
   });

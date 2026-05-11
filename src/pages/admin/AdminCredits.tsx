@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getSupabaseClient } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { cn } from '../../lib/utils';
 import { Coins, History, ArrowUpRight, Search, AlertCircle, CheckCircle2, UserPlus } from 'lucide-react';
@@ -15,32 +15,45 @@ export default function AdminCredits() {
   });
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
+  const { getToken } = useAuth();
+
   useEffect(() => {
-    // Initial fetch of history
-    const fetchHistory = async () => {
-      const { data, error } = await supabase
-        .from('CreditAdjustment')
-        .select('*')
-        .order('createdAt', { ascending: false });
-      
-      if (data) setHistory(data);
-      if (error) console.error('Error fetching history:', error);
+    let subscription: any;
+
+    const setup = async () => {
+      const token = await getToken({ template: 'supabase' });
+      const supabase = getSupabaseClient(token || undefined);
+
+      // Initial fetch of history
+      const fetchHistory = async () => {
+        const { data, error } = await supabase
+          .from('CreditAdjustment')
+          .select('*')
+          .order('createdAt', { ascending: false });
+        
+        if (data) setHistory(data);
+        if (error) console.error('Error fetching history:', error);
+      };
+
+      fetchHistory();
+
+      // Real-time subscription for history
+      subscription = supabase
+        .channel('public:CreditAdjustment')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'CreditAdjustment' }, (payload) => {
+          setHistory(prev => [payload.new, ...prev]);
+        })
+        .subscribe();
     };
 
-    fetchHistory();
-
-    // Real-time subscription for history
-    const subscription = supabase
-      .channel('public:CreditAdjustment')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'CreditAdjustment' }, (payload) => {
-        setHistory(prev => [payload.new, ...prev]);
-      })
-      .subscribe();
+    setup();
 
     return () => {
-      supabase.removeChannel(subscription);
+      if (subscription) {
+        getSupabaseClient().removeChannel(subscription);
+      }
     };
-  }, []);
+  }, [getToken]);
 
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +62,7 @@ export default function AdminCredits() {
       const email = formData.userEmail.trim();
       const apiUrl = import.meta.env.VITE_RPG_API_URL;
       const { getToken } = useAuth();
-      const token = await getToken();
+      const token = await getToken({ template: 'supabase' });
 
       if (!apiUrl) {
         throw new Error("Admin API configuration missing in Dashboard.");

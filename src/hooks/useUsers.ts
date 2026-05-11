@@ -1,15 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
-async function fetchUsers() {
+async function fetchUsers(getToken: () => Promise<string | null>) {
+  let token: string | null = null;
+  try {
+    token = await getToken({ template: 'supabase' });
+  } catch (e) {
+    console.error('[UsersAudit] getToken failed, falling back to anonymous:', e);
+  }
+  
+  const supabase = getSupabaseClient(token || undefined);
+  
   const { data, error } = await supabase
     .from('User')
     .select('*')
     .order('createdAt', { ascending: false });
   
-  if (error) throw error;
+  if (error) {
+    console.error('[UsersAudit] Supabase error:', error);
+    throw error;
+  }
   return data || [];
 }
 
@@ -21,34 +33,43 @@ export function useUsers() {
 
   const { data: users = [], isLoading: loading } = useQuery({
     queryKey: ['users'],
-    queryFn: fetchUsers,
+    queryFn: () => fetchUsers(() => getToken({ template: 'supabase' })),
   });
 
   useEffect(() => {
-    // Subscribe to changes for real-time updates
-    const subscription = supabase
-      .channel('public:User')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => {
-        // Industry standard: Invalidate the query to trigger a background refresh
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      })
-      .subscribe();
+    const setupSubscription = async () => {
+      try {
+        const token = await getToken({ template: 'supabase' }).catch(() => null);
+        const supabase = getSupabaseClient(token || undefined);
+        const subscription = supabase
+          .channel('public:User')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+          })
+          .subscribe();
 
-    return () => {
-      supabase.removeChannel(subscription);
+        return () => {
+          supabase.removeChannel(subscription);
+        };
+      } catch (e) {
+        console.error('[UsersAudit] Real-time setup failed:', e);
+      }
     };
-  }, [queryClient]);
+    
+    setupSubscription();
+  }, [queryClient, getToken]);
 
   const syncUsers = async () => {
     setIsSyncing(true);
     setSyncMessage('');
     try {
-      const token = await getToken();
+      const token = await getToken({ template: 'supabase' }).catch(() => null);
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
       const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/sync-users`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers
       });
       const data = await response.json();
       if (data.success) {

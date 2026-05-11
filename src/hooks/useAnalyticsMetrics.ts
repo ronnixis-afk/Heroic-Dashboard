@@ -6,9 +6,14 @@ async function fetchAnalyticsMetrics(getToken: () => Promise<string | null>) {
   let allLogs: any[] = [];
   let from = 0;
   const PAGE_SIZE = 1000;
-
-  // Get a Supabase client with the Clerk token for RLS access
-  const token = await getToken();
+  
+  let token: string | null = null;
+  try {
+    token = await getToken({ template: 'supabase' });
+  } catch (e) {
+    console.warn('[AnalyticsAudit] Failed to get specialized token:', e);
+  }
+  
   const supabase = getSupabaseClient(token || undefined);
 
   // 1. Scalable Fetching of Usage Logs
@@ -113,19 +118,108 @@ async function fetchAnalyticsMetrics(getToken: () => Promise<string | null>) {
   const sessionsWithDuration = sessions?.filter(s => s.duration) || [];
   const avgSessionLength = sessionsWithDuration.reduce((acc, s) => acc + (s.duration || 0), 0) / (sessionsWithDuration.length || 1);
 
-  const sessionTrendsMap: Record<string, any> = {};
+  const sessionDailyMap: Record<string, number[]> = {};
   sessions?.forEach(s => {
-    const date = new Date(s.startTime).toISOString().split('T')[0];
-    if (!sessionTrendsMap[date]) {
-      sessionTrendsMap[date] = { date, count: 0, totalDuration: 0 };
-    }
-    sessionTrendsMap[date].count++;
-    if (s.duration) sessionTrendsMap[date].totalDuration += s.duration;
+    if (!s.duration) return;
+    const d = new Date(s.startTime).toISOString().split('T')[0];
+    if (!sessionDailyMap[d]) sessionDailyMap[d] = [];
+    sessionDailyMap[d].push(s.duration / 60); // Convert seconds to minutes
   });
 
-  const sessionTrends = Object.values(sessionTrendsMap).map(t => ({
+  const sessionDaily = Object.entries(sessionDailyMap).map(([date, durations]) => {
+    const sorted = [...durations].sort((a, b) => a - b);
+    const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    return {
+      date,
+      totalSessions: durations.length,
+      avgDurationMin: parseFloat(avg.toFixed(1)),
+      medianDurationMin: parseFloat(median.toFixed(1)),
+      p95DurationMin: parseFloat(p95.toFixed(1))
+    };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Session Distribution
+  const ranges = [
+    { label: '< 1m', min: 0, max: 1 },
+    { label: '1-5m', min: 1, max: 5 },
+    { label: '5-15m', min: 5, max: 15 },
+    { label: '15-30m', min: 15, max: 30 },
+    { label: '30-60m', min: 30, max: 60 },
+    { label: '> 60m', min: 60, max: Infinity }
+  ];
+
+  const distributionMap: Record<string, number> = {};
+  ranges.forEach(r => distributionMap[r.label] = 0);
+  let totalWithDuration = 0;
+  sessions?.forEach(s => {
+    if (!s.duration) return;
+    const mins = s.duration / 60;
+    totalWithDuration++;
+    const range = ranges.find(r => mins >= r.min && mins < r.max);
+    if (range) distributionMap[range.label]++;
+  });
+
+  const sessionDistribution = ranges.map(r => ({
+    range: r.label,
+    count: distributionMap[r.label],
+    percentage: parseFloat(((distributionMap[r.label] / (totalWithDuration || 1)) * 100).toFixed(1))
+  }));
+
+  // Process Feature Usage
+  const featureMap: Record<string, any> = {};
+  allLogs.forEach(log => {
+    const f = log.type || 'unknown';
+    if (!featureMap[f]) {
+      featureMap[f] = { feature: f, totalUses: 0, uniqueUsers: new Set(), totalDuration: 0 };
+    }
+    featureMap[f].totalUses++;
+    featureMap[f].uniqueUsers.add(log.userId);
+    featureMap[f].totalDuration += (log.durationMs || 0);
+  });
+
+  const totalUsesAll = allLogs.length || 1;
+  const featureUsage = Object.values(featureMap).map(f => ({
+    feature: f.feature,
+    totalUses: f.totalUses,
+    percentage: parseFloat(((f.totalUses / totalUsesAll) * 100).toFixed(1)),
+    uniqueUsers: f.uniqueUsers.size,
+    avgDurationMs: Math.round(f.totalDuration / f.totalUses)
+  })).sort((a, b) => b.totalUses - a.totalUses);
+
+  // Chat only users
+  const userFeatures: Record<string, Set<string>> = {};
+  allLogs.forEach(log => {
+    if (!userFeatures[log.userId]) userFeatures[log.userId] = new Set();
+    userFeatures[log.userId].add(log.type);
+  });
+  const chatOnlyUsers = Object.values(userFeatures).filter(fs => 
+    fs.size === 1 && (fs.has('response') || fs.has('Response') || fs.has('message'))
+  ).length;
+
+  // Process Messages Per User (7 Days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const msgLogs = allLogs.filter(l => {
+    const logDate = new Date(l.createdAt);
+    const type = (l.type || '').toLowerCase();
+    return logDate >= sevenDaysAgo && (type === 'response' || type === 'message');
+  });
+  
+  const msgTrendsMap: Record<string, any> = {};
+  msgLogs.forEach(l => {
+    const d = new Date(l.createdAt).toISOString().split('T')[0];
+    if (!msgTrendsMap[d]) msgTrendsMap[d] = { date: d, totalMessages: 0, users: new Set() };
+    msgTrendsMap[d].totalMessages++;
+    msgTrendsMap[d].users.add(l.userId);
+  });
+
+  const messagesPerUser = Object.values(msgTrendsMap).map(t => ({
     date: t.date,
-    avgDuration: Math.round((t.totalDuration / (t.count || 1)) / 60) // in minutes
+    activeUsers: t.users.size,
+    totalMessages: t.totalMessages,
+    msgsPerUser: parseFloat((t.totalMessages / (t.users.size || 1)).toFixed(1))
   })).sort((a: any, b: any) => a.date.localeCompare(b.date));
 
   return {
@@ -135,7 +229,10 @@ async function fetchAnalyticsMetrics(getToken: () => Promise<string | null>) {
     topUsers: leaders,
     activeSessionsCount,
     avgSessionLength: Math.round(avgSessionLength / 60),
-    sessionTrends
+    sessionTrends: sessionDaily,
+    featureUsage: { usage: featureUsage, chatOnlyUsers },
+    messagesPerUser,
+    sessionLengths: { daily: sessionDaily, distribution: sessionDistribution }
   };
 }
 
@@ -143,8 +240,8 @@ export function useAnalyticsMetrics() {
   const { getToken } = useAuth();
   const { data, isLoading: loading } = useQuery({
     queryKey: ['analytics-metrics'],
-    queryFn: () => fetchAnalyticsMetrics(getToken),
-    refetchInterval: 30000, // Refresh every 30s for active sessions
+    queryFn: () => fetchAnalyticsMetrics(() => getToken({ template: 'supabase' })),
+    refetchInterval: 30000, 
   });
 
   return {
@@ -155,7 +252,10 @@ export function useAnalyticsMetrics() {
     activeSessionsCount: data?.activeSessionsCount || 0,
     avgSessionLength: data?.avgSessionLength || 0,
     sessionTrends: data?.sessionTrends || [],
-    totalCost: data?.totalCost || 0
+    totalCost: data?.totalCost || 0,
+    featureUsage: data?.featureUsage || { usage: [], chatOnlyUsers: 0 },
+    messagesPerUser: data?.messagesPerUser || [],
+    sessionLengths: data?.sessionLengths || { daily: [], distribution: [] }
   };
 }
 

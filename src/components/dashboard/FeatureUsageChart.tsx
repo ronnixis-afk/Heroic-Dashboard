@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useAuth } from '../../lib/AuthContext';
+import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 import { SkeletonText } from '../Skeleton';
 
 interface UsageData {
@@ -12,27 +11,7 @@ interface UsageData {
 }
 
 export function FeatureUsageChart() {
-  const [data, setData] = useState<{ usage: UsageData[], chatOnlyUsers: number }>({ usage: [], chatOnlyUsers: 0 });
-  const [loading, setLoading] = useState(true);
-  const { getToken } = useAuth();
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = await getToken();
-        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/feature-usage`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        setData(json);
-      } catch (error) {
-        console.error('Error fetching feature usage analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [getToken]);
+  const { featureUsage: data, loading } = useAnalyticsMetrics();
 
   const isLoading = loading;
 

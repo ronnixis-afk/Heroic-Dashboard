@@ -29,7 +29,7 @@ export function ChurnSignalsTable() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const token = await getToken();
+        const token = await getToken({ template: 'supabase' });
         const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });

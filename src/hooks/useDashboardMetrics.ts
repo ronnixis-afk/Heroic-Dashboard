@@ -1,10 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
-async function fetchDashboardMetrics() {
-  // 1. Fetch data from RPC for signups and sessions (which are still efficient)
-  const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_stats');
-  if (rpcError) throw rpcError;
+async function fetchDashboardMetrics(getToken: () => Promise<string | null>, timeframe: string = 'Month') {
+  let token: string | null = null;
+  try {
+    // Attempt to get the specialized Supabase token
+    token = await getToken({ template: 'supabase' });
+  } catch (e) {
+    console.error('[DashboardAudit] Specialized token retrieval failed, falling back to anonymous client:', e);
+  }
+  
+  const supabase = getSupabaseClient(token || undefined);
+  console.log('[DashboardAudit] Client initialized with token:', token ? 'YES' : 'NO (Anonymous Mode)');
+  
+  // 1. Fetch data from RPC
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_stats', { timeframe });
+  
+  if (rpcError) {
+    console.error('[DashboardAudit] RPC Error:', rpcError);
+    // Don't throw, let's try to proceed with fallback data if possible
+  } else {
+    console.log('[DashboardAudit] RPC Success:', rpcData);
+  }
+
+  const safeRpcData = rpcData || {};
 
   // 2. Fetch all logs for Unified Financial Calculation (Bottom-Up)
   let allLogs: any[] = [];
@@ -16,7 +36,12 @@ async function fetchDashboardMetrics() {
       .select('tokens, inputTokens, outputTokens, costUsd, createdAt', { count: 'exact' })
       .order('createdAt', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
-    if (error) throw error;
+
+    if (error) {
+      console.error('[DashboardAudit] Error fetching logs range:', from, error);
+      throw error;
+    }
+    console.log(`[DashboardAudit] Fetched ${data?.length || 0} logs (range ${from}-${from + PAGE_SIZE - 1})`);
     if (!data || data.length === 0) break;
     allLogs = [...allLogs, ...data];
     if (data.length < PAGE_SIZE || (count !== null && allLogs.length >= count)) break;
@@ -48,21 +73,23 @@ async function fetchDashboardMetrics() {
   const dailyData = Object.entries(dailyMap).map(([name, cost]) => ({ name, apiCost: cost, revenue: 0 })).sort((a,b) => a.name.localeCompare(b.name)).slice(-30);
   const yearlyData = Object.entries(yearlyMap).map(([name, cost]) => ({ name, apiCost: cost, revenue: 0 })).sort((a,b) => a.name.localeCompare(b.name));
 
-  const recentSignups = (rpcData.recentSignups || []).map((u: any) => ({
+  const recentSignups = (safeRpcData.recentSignups || []).map((u: any) => ({
     ...u,
     date: new Date(u.date).toLocaleDateString(),
-    plan: u.plan.charAt(0).toUpperCase() + u.plan.slice(1),
+    plan: (u.plan || 'newbie').charAt(0).toUpperCase() + (u.plan || 'newbie').slice(1),
     icon: `https://ui-avatars.com/api/?name=${u.user?.charAt(0) || 'U'}&background=random&color=fff`
   }));
 
-  const signupCount = rpcData.totalUsers || 0;
+  const signupCount = safeRpcData.totalUsers || 0;
   const acquisitionData = [
     { name: 'Organic', organic: Math.round(signupCount * 0.5), referral: 0, paid: 0 },
     { name: 'Referral', organic: 0, referral: Math.round(signupCount * 0.3), paid: 0 },
     { name: 'Paid', organic: 0, referral: 0, paid: Math.round(signupCount * 0.2) },
   ];
 
-  const totalRevenue = rpcData.totalRevenue || 0;
+  const totalRevenue = safeRpcData.totalRevenue || 0;
+
+  console.log('[DashboardAudit] Final calculation complete. Costs:', totalApiCost);
 
   return {
     totalRevenue,
@@ -70,20 +97,22 @@ async function fetchDashboardMetrics() {
     netProfit: totalRevenue - totalApiCost,
     profitMargin: totalRevenue > 0 ? ((totalRevenue - totalApiCost) / totalRevenue) * 100 : 0,
     dailyData,
-    weeklyData: rpcData.weeklyData || [], // Keep RPC for these for now
-    monthlyData: rpcData.monthlyData || [],
+    weeklyData: safeRpcData.weeklyData || [], 
+    monthlyData: safeRpcData.monthlyData || [],
     yearlyData,
     recentSignups,
-    topConsumers: rpcData.topConsumers || [],
+    topConsumers: safeRpcData.topConsumers || [],
     acquisitionData,
-    activeSessionsCount: rpcData.activeSessionsCount || 0
+    activeSessionsCount: safeRpcData.activeSessionsCount || 0
   };
 }
 
-export function useDashboardMetrics() {
+export function useDashboardMetrics(timeframe: string = 'Month') {
+  const { getToken } = useAuth();
+  
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard-metrics'],
-    queryFn: fetchDashboardMetrics,
+    queryKey: ['dashboard-metrics', timeframe],
+    queryFn: () => fetchDashboardMetrics(() => getToken({ template: 'supabase' }), timeframe),
     refetchInterval: 60000, // Refresh every minute
   });
 
