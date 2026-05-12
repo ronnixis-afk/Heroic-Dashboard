@@ -76,7 +76,7 @@ export default function LoginPage() {
                 socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
                 socialButtonsBlockButtonText: "text-white font-bold text-sm",
                 formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm",
-                formFieldLabel: "text-[#8b8c94] text-[10px] font-bold uppercase tracking-wider",
+                formFieldLabel: "text-[#8b8c94] text-[10px] font-bold",
                 formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00b2ff] transition-all",
                 footerActionLink: "text-[#00b2ff] hover:text-white transition-colors text-sm font-bold",
                 dividerLine: "bg-[#292a32]/50",

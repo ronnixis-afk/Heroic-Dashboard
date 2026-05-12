@@ -42,7 +42,7 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
     >
       <div className="p-6 pb-0 flex justify-between items-start z-10">
         <div>
-          <p className="text-xs font-bold text-brand-text-muted tracking-wider mb-1">{title}</p>
+          <p className="text-xs font-bold text-brand-text-muted mb-1">{title}</p>
           {loading ? (
             <SkeletonText width={80} className="h-8 mt-2" />
           ) : (

@@ -111,7 +111,7 @@ export default function AdminLayout() {
           {NAV_GROUPS.map((group) => (
             <div key={group.group} className="space-y-1">
               {isSidebarOpen && (
-                <h3 className="px-4 text-xs font-bold tracking-wider text-brand-text-muted mb-2">
+                <h3 className="px-4 text-xs font-bold text-brand-text-muted mb-2">
                   {group.group}
                 </h3>
               )}

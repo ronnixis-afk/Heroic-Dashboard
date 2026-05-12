@@ -81,7 +81,7 @@ export default function UserDetailModal({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass-panel p-6 flex flex-col justify-between border border-brand-primary/50">
               <div>
-                <h4 className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-4">Account Information</h4>
+                <h4 className="text-xs font-bold text-brand-text-muted mb-4">Account Information</h4>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-brand-text-muted">Membership Tier</span>
@@ -105,7 +105,7 @@ export default function UserDetailModal({
             </div>
 
             <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-brand-text-muted uppercase tracking-widest mb-1">Administrative Actions</h4>
+              <h4 className="text-xs font-bold text-brand-text-muted mb-1">Administrative Actions</h4>
               <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-[0.98]">
                 Manage Credits
               </button>
@@ -137,14 +137,14 @@ export default function UserDetailModal({
             ) : telemetry ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="glass-panel p-4 flex flex-col justify-center">
-                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest">Avg Latency (P50)</span>
+                    <span className="text-[10px] text-brand-text-muted">Avg Latency (P50)</span>
                     <div className="flex items-baseline gap-2 mt-1">
                         <span className="text-2xl font-bold text-white">{telemetry.latency.p50}ms</span>
                         <Zap size={14} className="text-brand-accent" />
                     </div>
                 </div>
                 <div className="glass-panel p-4 flex flex-col justify-center">
-                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest">Intervention Rate</span>
+                    <span className="text-[10px] text-brand-text-muted">Intervention Rate</span>
                     <div className="flex items-baseline gap-2 mt-1">
                         <span className="text-2xl font-bold text-white">{telemetry.interventionRate}%</span>
                         <ShieldAlert size={14} className={telemetry.interventionRate > 10 ? 'text-red-400' : 'text-emerald-400'} />
@@ -152,7 +152,7 @@ export default function UserDetailModal({
                 </div>
                 
                 <div className="glass-panel p-4 col-span-1 md:col-span-2 h-[150px]">
-                    <span className="text-[10px] text-brand-text-muted uppercase tracking-widest mb-2 block">Tokens Per Phase</span>
+                    <span className="text-[10px] text-brand-text-muted mb-2 block">Tokens Per Phase</span>
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={telemetry.avgTokensByPhase}>
                             <defs>

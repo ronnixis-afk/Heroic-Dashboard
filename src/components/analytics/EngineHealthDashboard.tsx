@@ -57,7 +57,7 @@ export default function EngineHealthDashboard() {
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-6 border-l-4 border-brand-accent">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Median Latency</p>
+                            <p className="text-[10px] font-bold text-brand-text-muted">Median Latency</p>
                             {isLoading ? (
                                 <SkeletonText width={80} className="h-9 mt-2" />
                             ) : (
@@ -71,7 +71,7 @@ export default function EngineHealthDashboard() {
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="glass-panel p-6 border-l-4 border-purple-500">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Tail Latency (P95)</p>
+                            <p className="text-[10px] font-bold text-brand-text-muted">Tail Latency (P95)</p>
                             {isLoading ? (
                                 <SkeletonText width={80} className="h-9 mt-2" />
                             ) : (
@@ -85,7 +85,7 @@ export default function EngineHealthDashboard() {
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="glass-panel p-6 border-l-4 border-emerald-500">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Intervention Rate</p>
+                            <p className="text-[10px] font-bold text-brand-text-muted">Intervention Rate</p>
                             {isLoading ? (
                                 <SkeletonText width={80} className="h-9 mt-2" />
                             ) : (
@@ -152,7 +152,10 @@ export default function EngineHealthDashboard() {
                                     tickLine={false} 
                                     axisLine={false}
                                     width={100}
-                                    tickFormatter={(val) => val?.replace('tutorial_', '').toUpperCase() || ''}
+                                    tickFormatter={(val) => {
+                                      const label = val?.replace('tutorial_', '') || '';
+                                      return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+                                    }}
                                 />
                                 <Tooltip 
                                     contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
@@ -207,7 +210,10 @@ export default function EngineHealthDashboard() {
                                     {isLoading ? (
                                         <SkeletonText width={120} className="h-3" />
                                     ) : (
-                                        item.name.replace('mech_', '').replace('_', ' ').toUpperCase()
+                                        (() => {
+                                          const label = item.name.replace('mech_', '').replace('_', ' ');
+                                          return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+                                        })()
                                     )}
                                 </span>
                                 {isLoading ? (

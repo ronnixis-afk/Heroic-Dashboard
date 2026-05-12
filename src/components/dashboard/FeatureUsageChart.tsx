@@ -73,7 +73,7 @@ export function FeatureUsageChart() {
                       <div className="space-y-3">
                         <div className="flex items-baseline gap-2">
                           <p className="text-lg font-bold text-white m-0">{data.percentage}%</p>
-                          <p className="text-[10px] text-brand-text-muted m-0 uppercase tracking-wider">of total usage</p>
+                          <p className="text-[10px] text-brand-text-muted m-0">of total usage</p>
                         </div>
                         <p className="text-[10px] leading-relaxed text-brand-text-muted italic border-t border-brand-primary/20 pt-2 block whitespace-normal">
                           {desc}

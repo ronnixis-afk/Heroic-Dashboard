@@ -41,7 +41,7 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
           <h4 className="text-sm font-bold text-brand-text-muted mb-1">Actual API Cost</h4>
           <div className="flex items-baseline gap-3">
             <p className="text-2xl font-bold text-white">
-              ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-brand-text-muted">
               ({currentTotalTokens.toLocaleString()} tokens)
@@ -87,14 +87,14 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
                 fontSize={10} 
                 tickLine={false} 
                 axisLine={false}
-                tickFormatter={(value) => `$${value < 0.01 && value > 0 ? value.toFixed(4) : value.toFixed(2)}`}
+                tickFormatter={(value) => `$${value.toFixed(2)}`}
               />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                 itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
                 labelStyle={{ fontSize: '10px', color: '#8b8c94', marginBottom: '4px' }}
                 formatter={(value: number, name: string, props: any) => [
-                  `$${value.toFixed(6)} (${props.payload.tokens.toLocaleString()} tokens)`, 
+                  `$${value.toFixed(2)} (${props.payload.tokens.toLocaleString()} tokens)`, 
                   'Cost'
                 ]}
                 cursor={{ stroke: '#00b2ff', strokeWidth: 1 }}

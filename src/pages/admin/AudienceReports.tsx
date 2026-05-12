@@ -21,10 +21,8 @@ export default function AudienceReports() {
           <Skeleton width={450} height={16} className="opacity-50" />
         </div>
         <CardSkeleton height={200} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <ChartSkeleton height={340} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <ChartSkeleton height={340} />
           <CardSkeleton height={340} />
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -63,12 +61,11 @@ export default function AudienceReports() {
       </motion.div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="lg:col-span-2"
         >
           <UserAcquisition acquisitionData={acquisitionData} />
         </motion.div>

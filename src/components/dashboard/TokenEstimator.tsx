@@ -16,7 +16,7 @@ export default function TokenEstimator() {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
     // Assuming a blended rate of $0.60 per 1M tokens (avg of $0.25 input and $1.50 output)
     const cost = (tokens / 1000000) * 0.60;
-    setEstimatedCost(cost.toFixed(4));
+    setEstimatedCost(cost.toFixed(2));
     
     // Throttle tracking or track on blur, but for now we track on change if desired.
     // Or we could track when they select a different input type.

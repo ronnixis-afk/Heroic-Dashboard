@@ -85,7 +85,7 @@ export function CostAnalyticsCard() {
           {isLoading ? (
             <SkeletonText width={120} className="h-9 mt-1" />
           ) : (
-            <div className="text-3xl font-bold text-brand-text">${today.costPerUser.toFixed(4)}</div>
+            <div className="text-3xl font-bold text-brand-text">${today.costPerUser.toFixed(2)}</div>
           )}
         </div>
         <div>
@@ -93,7 +93,7 @@ export function CostAnalyticsCard() {
           {isLoading ? (
             <SkeletonText width={120} className="h-9 mt-1" />
           ) : (
-            <div className="text-3xl font-bold text-brand-text">${costPerMessage.toFixed(5)}</div>
+            <div className="text-3xl font-bold text-brand-text">${costPerMessage.toFixed(2)}</div>
           )}
         </div>
       </div>
@@ -111,7 +111,7 @@ export function CostAnalyticsCard() {
           <BarChart data={isLoading ? [] : data?.byModel} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
             <XAxis dataKey="model" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
-            <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={val => `$${val}`} />
+            <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={val => `$${Number(val).toFixed(2)}`} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
               itemStyle={{ color: '#ffffff' }}
