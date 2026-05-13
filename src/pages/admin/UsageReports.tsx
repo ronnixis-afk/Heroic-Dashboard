@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Clock, MessageSquare, BarChart2 } from 'lucide-react';
+import { Zap, Clock, MessageSquare, BarChart2, MousePointerClick } from 'lucide-react';
 import { FeatureUsageChart } from '../../components/dashboard/FeatureUsageChart';
 import { MessagesPerUserChart } from '../../components/dashboard/MessagesPerUserChart';
 import { SessionLengthChart } from '../../components/dashboard/SessionLengthChart';
+import { PageVisitChart } from '../../components/dashboard/PageVisitChart';
 
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 
@@ -49,6 +50,19 @@ export default function UsageReports() {
             <h3>Communication Volume</h3>
           </div>
           <MessagesPerUserChart />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="lg:col-span-2"
+        >
+          <div className="mb-4 flex items-center gap-2">
+            <MousePointerClick size={20} className="text-purple-400" />
+            <h3>Page Navigation</h3>
+          </div>
+          <PageVisitChart />
         </motion.div>
       </div>
 

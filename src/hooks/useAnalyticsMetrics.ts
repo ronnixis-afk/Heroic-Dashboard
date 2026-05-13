@@ -109,6 +109,17 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
     latency: h.avg_latency || 0
   }));
 
+  // 7. Fetch Page Visit Summary from View
+  const { data: pageVisitData } = await supabase.from('page_visit_summary').select('*');
+  const totalPageVisits = (pageVisitData || []).reduce((acc, curr) => acc + (curr.visit_count || 0), 0) || 1;
+  
+  const pageVisitUsage = (pageVisitData || []).map(p => ({
+    page: p.page,
+    visits: p.visit_count || 0,
+    percentage: parseFloat(((p.visit_count / totalPageVisits) * 100).toFixed(1)),
+    uniqueUsers: p.unique_users || 0
+  })).sort((a, b) => b.visits - a.visits);
+
   // Calculate comparisons (Simplified: current total vs previous 24h total estimate)
   // In a production app, we would query the previous 24h explicitly.
   // For now, we'll provide a mock baseline for the comparison badges.
@@ -128,7 +139,8 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
     sessionLengths: { daily: sessionDaily, distribution: [] },
     realTimeTrends,
     costComparison,
-    avgLatency: realTimeTrends.length > 0 ? Math.round(realTimeTrends.reduce((acc, curr) => acc + curr.latency, 0) / realTimeTrends.length) : 342
+    avgLatency: realTimeTrends.length > 0 ? Math.round(realTimeTrends.reduce((acc, curr) => acc + curr.latency, 0) / realTimeTrends.length) : 342,
+    pageVisitUsage
   };
 }
 
@@ -154,7 +166,8 @@ export function useAnalyticsMetrics() {
     sessionLengths: data?.sessionLengths || { daily: [], distribution: [] },
     realTimeTrends: data?.realTimeTrends || [],
     costComparison: data?.costComparison || 0,
-    avgLatency: data?.avgLatency || 0
+    avgLatency: data?.avgLatency || 0,
+    pageVisitUsage: data?.pageVisitUsage || []
   };
 }
 
