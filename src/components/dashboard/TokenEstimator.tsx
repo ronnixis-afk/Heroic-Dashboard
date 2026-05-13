@@ -12,14 +12,23 @@ export default function TokenEstimator() {
   const [currencyType, setCurrencyType] = useState('USD');
   const { trackEvent } = useAnalytics();
 
-  const calculateCost = (value: string) => {
+  const calculateCost = (value: string, type: string = currencyType) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
-    // Assuming a blended rate of $0.60 per 1M tokens (avg of $0.25 input and $1.50 output)
-    const cost = (tokens / 1000000) * 0.60;
-    setEstimatedCost(cost.toFixed(2));
     
-    // Throttle tracking or track on blur, but for now we track on change if desired.
-    // Or we could track when they select a different input type.
+    if (type === 'Credits') {
+      // 1 Credit per 1000 tokens
+      const credits = Math.max(1, Math.ceil(tokens / 1000));
+      setEstimatedCost(credits.toString());
+    } else if (type === 'EUR') {
+      // Assuming 0.92 USD to EUR conversion
+      const costUsd = (tokens / 1000000) * 0.60;
+      const costEur = costUsd * 0.92;
+      setEstimatedCost(costEur.toFixed(2));
+    } else {
+      // Assuming a blended rate of $0.60 per 1M tokens (avg of $0.25 input and $1.50 output)
+      const cost = (tokens / 1000000) * 0.60;
+      setEstimatedCost(cost.toFixed(2));
+    }
   };
 
   const handleInputTypeChange = (type: string) => {
@@ -31,6 +40,7 @@ export default function TokenEstimator() {
   const handleCurrencyTypeChange = (type: string) => {
     setCurrencyType(type);
     setShowUsdDropdown(false);
+    calculateCost(tokensProcessed, type);
     trackEvent('estimator_currency_type_changed', { type });
   };
 
