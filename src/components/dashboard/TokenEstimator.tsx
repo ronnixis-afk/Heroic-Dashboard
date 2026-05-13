@@ -11,22 +11,7 @@ export default function TokenEstimator() {
   const [inputType, setInputType] = useState('Tokens');
   const [currencyType, setCurrencyType] = useState('USD');
   const { trackEvent } = useAnalytics();
-  const [currentModelName, setCurrentModelName] = useState('Gemini 3.1 Flash Lite');
-
-  useEffect(() => {
-    const updateModelName = () => {
-      const saved = localStorage.getItem('heroic_global_model');
-      if (saved === 'deepseek') {
-        setCurrentModelName('Deepseek V4 Flash');
-      } else {
-        setCurrentModelName('Gemini 3.1 Flash Lite');
-      }
-    };
-
-    updateModelName();
-    window.addEventListener('heroic_model_changed', updateModelName);
-    return () => window.removeEventListener('heroic_model_changed', updateModelName);
-  }, []);
+  const currentModelName = 'Gemini 3.1 Flash Lite';
 
   const calculateCost = (value: string, type: string = currencyType) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
