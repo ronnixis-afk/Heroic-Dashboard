@@ -10,7 +10,8 @@ import {
   LineChart,
   Line,
   AreaChart,
-  Area
+  Area,
+  ReferenceLine
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Zap, Globe, Clock, Activity, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
@@ -88,7 +89,7 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
 }
 
 export default function AdminAnalytics() {
-  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'engine' | 'cost'>('tokens');
+  const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'cost'>('tokens');
   const { 
     loading, 
     usageTrends, 
@@ -110,7 +111,7 @@ export default function AdminAnalytics() {
       {/* Real-time Stats Row */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 
-          title="Active Sessions" 
+          title="Active Sessions (Live)" 
           value={activeSessionsCount} 
           trend={realTimeTrends} 
           dataKey="users"
@@ -121,7 +122,7 @@ export default function AdminAnalytics() {
         />
 
         <RealTimeTrendCard 
-          title="Total API Cost" 
+          title="Total API Cost (30d)" 
           value={`$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
           trend={realTimeTrends} 
           dataKey="cost"
@@ -132,7 +133,7 @@ export default function AdminAnalytics() {
         />
 
         <RealTimeTrendCard 
-          title="Avg Latency" 
+          title="Avg Latency (24h)" 
           value={`${avgLatency}ms`} 
           trend={realTimeTrends} 
           dataKey="latency"
@@ -197,8 +198,7 @@ export default function AdminAnalytics() {
               { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
               { id: 'cost', label: 'USD Cost', color: '#10b981' },
               { id: 'users', label: 'Active Users', color: '#38bdf8' },
-              { id: 'engagement', label: 'Engagement', color: '#a855f7' },
-              { id: 'engine', label: 'Engine Health', color: '#00b2ff' }
+              { id: 'engagement', label: 'Engagement', color: '#a855f7' }
             ].map(m => (
               <button 
                 key={m.id}
@@ -211,62 +211,111 @@ export default function AdminAnalytics() {
             ))}
           </div>
         </div>
-        {activeMetric === 'engine' ? (
-          <EngineHealthDashboard />
-        ) : (
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={(activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
-                <XAxis dataKey="date" stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#8E8E93" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart 
+              data={(activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[]}
+              margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
+              <XAxis 
+                dataKey="date" 
+                stroke="#8E8E93" 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false} 
+                tickFormatter={(val) => {
+                  const d = new Date(val);
+                  return isNaN(d.getTime()) ? val : d.getDate().toString();
+                }}
+              />
+              <YAxis stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+                labelFormatter={(label) => {
+                  const d = new Date(label);
+                  return isNaN(d.getTime()) ? label : d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+                }}
+              />
+              
+              {/* Detect and render Month Transitions */}
+              {(() => {
+                const data = (activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[];
+                const monthMarkers: React.ReactNode[] = [];
+                
+                for (let i = 1; i < data.length; i++) {
+                  const prevDate = new Date(data[i-1].date);
+                  const currDate = new Date(data[i].date);
+                  
+                  if (prevDate.getMonth() !== currDate.getMonth()) {
+                    const monthName = currDate.toLocaleDateString(undefined, { month: 'long' });
+                    // Title Case is handled by toLocaleDateString, but we'll ensure it here
+                    const formattedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                    
+                    monthMarkers.push(
+                      <ReferenceLine 
+                        key={data[i].date}
+                        x={data[i].date} 
+                        stroke="#444" 
+                        strokeWidth={1}
+                        label={{ 
+                          value: formattedMonth, 
+                          position: 'top', 
+                          fill: '#3ecf8e', 
+                          fontSize: 12, 
+                          fontWeight: 'bold',
+                          offset: 10
+                        }} 
+                      />
+                    );
+                  }
+                }
+                return monthMarkers;
+              })()}
+
+              {activeMetric === 'tokens' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="tokens" 
+                  stroke="#3ecf8e" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
                 />
-                {activeMetric === 'tokens' && (
-                  <Line 
-                    type="monotone" 
-                    dataKey="tokens" 
-                    stroke="#3ecf8e" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                )}
-                {activeMetric === 'cost' && (
-                  <Line 
-                    type="monotone" 
-                    dataKey="cost" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                )}
-                {activeMetric === 'users' && (
-                  <Line 
-                    type="monotone" 
-                    dataKey="users" 
-                    stroke="#38bdf8" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                )}
-                {activeMetric === 'engagement' && (
-                  <Line 
-                    type="monotone" 
-                    dataKey="avgDuration" 
-                    stroke="#a855f7" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+              )}
+              {activeMetric === 'cost' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="cost" 
+                  stroke="#10b981" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
+              {activeMetric === 'users' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="users" 
+                  stroke="#38bdf8" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
+              {activeMetric === 'engagement' && (
+                <Line 
+                  type="monotone" 
+                  dataKey="avgDuration" 
+                  stroke="#a855f7" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </motion.div>
     </div>
   );

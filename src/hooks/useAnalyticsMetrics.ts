@@ -12,8 +12,16 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
   
   const supabase = getSupabaseClient(token || undefined);
 
-  // 1. Fetch Aggregated Trends from View
-  const { data: dailyMetrics, error: dailyError } = await supabase.from('daily_usage_summary').select('*').limit(30);
+  // 1. Fetch Aggregated Trends from View (Last 30 Days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const dateStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+  const { data: dailyMetrics, error: dailyError } = await supabase
+    .from('daily_usage_summary')
+    .select('*')
+    .gte('date', dateStr)
+    .order('date', { ascending: false });
   
   console.log('[DEBUG-ANALYTICS] Analytics Trends Raw:', dailyMetrics);
   if (dailyError) console.error('[DEBUG-ANALYTICS] Analytics Trends Error:', dailyError);
@@ -69,7 +77,11 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
   })).sort((a, b) => b.totalUses - a.totalUses);
 
   // 5. Fetch Session Metrics from View
-  const { data: sessionStats } = await supabase.from('session_metrics_summary').select('*').limit(30);
+  const { data: sessionStats } = await supabase
+    .from('session_metrics_summary')
+    .select('*')
+    .gte('date', dateStr)
+    .order('date', { ascending: false });
   
   const sessionDaily = (sessionStats || []).map(s => ({
     date: new Date(s.date).toISOString().split('T')[0],
