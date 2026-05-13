@@ -19,6 +19,7 @@ import {
   DollarSign,
   TrendingUp
 } from 'lucide-react';
+import ModelSelector from './ModelSelector';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -137,7 +138,10 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-[#1e1f24] p-4">
+        <div className="mt-auto border-t border-[#1e1f24] p-4 space-y-2">
+          {/* AI Model Switcher */}
+          <ModelSelector isCollapsed={!isSidebarOpen} />
+          
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-red-500/10 hover:text-red-400"

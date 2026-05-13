@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -11,6 +11,22 @@ export default function TokenEstimator() {
   const [inputType, setInputType] = useState('Tokens');
   const [currencyType, setCurrencyType] = useState('USD');
   const { trackEvent } = useAnalytics();
+  const [currentModelName, setCurrentModelName] = useState('Gemini 3.1 Flash Lite');
+
+  useEffect(() => {
+    const updateModelName = () => {
+      const saved = localStorage.getItem('heroic_global_model');
+      if (saved === 'deepseek') {
+        setCurrentModelName('Deepseek V4 Flash');
+      } else {
+        setCurrentModelName('Gemini 3.1 Flash Lite');
+      }
+    };
+
+    updateModelName();
+    window.addEventListener('heroic_model_changed', updateModelName);
+    return () => window.removeEventListener('heroic_model_changed', updateModelName);
+  }, []);
 
   const calculateCost = (value: string, type: string = currencyType) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
@@ -95,7 +111,7 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-[#8b8c94] mt-2 font-medium">Gemini 3.1 Flash</p>
+          <p className="text-xs text-[#8b8c94] mt-2 font-medium">{currentModelName}</p>
         </div>
 
         <div className="bg-[#141416] rounded-3xl border border-[#292a32] p-5 mt-4">
