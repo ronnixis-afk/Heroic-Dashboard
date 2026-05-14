@@ -118,4 +118,67 @@ All distinct sections on the dashboard (e.g., charts, lists, estimators) must be
 *   **Numbers & Metrics**: For primary metrics, use large typography (`text-3xl`) and bold weights (`font-bold`). For currency or special metrics, use accent colors to highlight status (e.g., `text-emerald-400` for spend metrics).
 *   **Dividers**: When separating content within a panel, use a border bottom with the primary border color (`border-b border-[#292a32]`).
 
+### 6. Tooltips & Hover Panels (`.tooltip-panel`)
+All tooltips, hover-triggered information panels, and dropdown popovers must follow the standardized `.tooltip-panel` styling to ensure consistency and a premium feel.
+*   **Class**: `tooltip-panel`
+*   **Background**: Brand surface (`#1d1e24`).
+*   **Border**: Primary border (`1px solid #292a32`).
+*   **Corner Radius**: `12px` (`rounded-xl`).
+*   **Shadow**: Large elevation shadow (`shadow-2xl`).
+*   **Typography**:
+    *   **Labels/Title**: Small font (`text-xs` or `11px`), bold, Title Cased.
+    *   **Values**: Default body size (`text-body` or `14px`), bold, often highlighted with accent colors.
+    *   **Descriptions**: Extra small (`text-xs`), muted color (`text-[#8b8c94]`), line-height `relaxed`.
+*   **Spacing**: Standard padding (`p-3`).
+*   **Interaction**: Use smooth transitions (`transition-all`) and subtle animations (e.g., Framer Motion `y` offset) when appearing.
+
 *End of Design System Document*
+
+## Database & Analytics Architecture
+
+The Heroic Dashboard is a "Read-Only" analytical layer. It does not modify game state but provides executive visibility into the AI engine's performance and costs.
+
+### Analytics Pipeline
+1. **Logging**: The RPG Engine logs every AI interaction to the `UsageLog` table (including `costUsd`, `tokens`, `model`).
+2. **Aggregation**: Supabase Postgres Views aggregate this raw data into summaries (daily, by model, by user).
+3. **Consumption**: The Dashboard queries these views via PostgREST for high-performance chart rendering.
+
+### Required SQL Views
+The following views must be maintained in Supabase. If the schema of `UsageLog` changes, these views must be dropped and recreated via SQL.
+
+```sql
+-- Aggregates total cost and count per AI model
+CREATE OR REPLACE VIEW model_usage_distribution AS
+SELECT model,
+   count(*) AS usage_count,
+   sum("inputTokens") AS total_input_tokens,
+   sum("outputTokens") AS total_output_tokens,
+   sum(tokens) AS total_tokens,
+   sum("costUsd") AS total_cost,
+   avg("durationMs") AS avg_latency
+  FROM "UsageLog"
+ GROUP BY model;
+
+-- Aggregates daily platform totals
+CREATE OR REPLACE VIEW daily_usage_summary AS
+SELECT date_trunc('day'::text, "createdAt") AS date,
+   sum(tokens) AS total_tokens,
+   sum("costUsd") AS total_cost,
+   count(DISTINCT "userId") AS active_users
+  FROM "UsageLog"
+ GROUP BY (date_trunc('day'::text, "createdAt"));
+
+-- Tracks real-time hourly performance (Last 24h)
+CREATE OR REPLACE VIEW real_time_hourly_stats AS
+SELECT date_trunc('hour'::text, "createdAt") AS hour,
+   count(DISTINCT "userId") AS active_users,
+   sum("costUsd") AS total_cost,
+   avg("durationMs") AS avg_latency
+  FROM "UsageLog"
+ WHERE "createdAt" > (now() - '24:00:00'::interval)
+ GROUP BY (date_trunc('hour'::text, "createdAt"))
+ ORDER BY (date_trunc('hour'::text, "createdAt"));
+```
+
+> [!IMPORTANT]
+> Always run `GRANT SELECT ON "view_name" TO anon, authenticated, service_role;` after creating or updating a view to ensure the Dashboard can access the data.
