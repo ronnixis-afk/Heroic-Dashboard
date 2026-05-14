@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
-async function fetchUsers(getToken: () => Promise<string | null>) {
+async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
     token = await getToken({ template: 'supabase' });

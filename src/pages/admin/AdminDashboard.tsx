@@ -32,10 +32,10 @@ export default function AdminDashboard() {
  
   return (
     <div className="space-y-6 text-white pb-8">
-      <h1 className="mb-8">Admin Dashboard</h1>
+      <h1 className="text-2xl md:text-h1 mb-4 md:mb-8">Admin Dashboard</h1>
       
       {/* Top Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="lg:col-span-2">
           <RevenueOverview 
             totalRevenue={totalRevenue} 
@@ -46,15 +46,17 @@ export default function AdminDashboard() {
             isLoading={loading}
           />
         </div>
-        <NetProfitWidget 
-          netProfit={netProfit} 
-          profitMargin={profitMargin} 
-          isLoading={loading}
-        />
+        <div className="lg:col-span-2">
+          <NetProfitWidget 
+            netProfit={netProfit} 
+            profitMargin={profitMargin} 
+            isLoading={loading}
+          />
+        </div>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <UserAcquisition 
           acquisitionData={acquisitionData} 
           isLoading={loading}

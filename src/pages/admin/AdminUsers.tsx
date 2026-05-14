@@ -37,7 +37,7 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6 relative overflow-hidden">
-      <h1 className="mb-8">User Management</h1>
+      <h1 className="text-2xl md:text-h1 mb-4 md:mb-8">User Management</h1>
       <UsersFilterBar 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -52,8 +52,13 @@ export default function AdminUsers() {
 
       <AnimatePresence>
         {showFilters && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass-panel p-4">
-            <p className="text-sm text-brand-text-muted">Placeholder for advanced filters (Tier, Credits, Date Range).</p>
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -10 }} 
+            className="glass-panel p-4"
+          >
+            <p className="text-xs md:text-sm text-brand-text-muted">Placeholder for advanced filters (Tier, Credits, Date Range).</p>
           </motion.div>
         )}
       </AnimatePresence>

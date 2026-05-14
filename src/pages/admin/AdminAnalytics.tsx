@@ -105,11 +105,11 @@ export default function AdminAnalytics() {
   } = useAnalyticsMetrics();
 
   return (
-    <div className="space-y-8">
-      <h1>Real-Time Analytics</h1>
+    <div className="space-y-6 md:space-y-8">
+      <h1 className="text-2xl md:text-h1">Real-Time Analytics</h1>
       
       {/* Real-time Stats Row */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 
           title="Active Sessions (Live)" 
           value={activeSessionsCount} 
@@ -145,7 +145,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Top Row: Detailed Metrics */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,20 +158,20 @@ export default function AdminAnalytics() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-panel p-6"
+          className="glass-panel p-4 md:p-6"
         >
-          <h3 className="mb-6 text-brand-accent">Usage Leaderboard</h3>
-          <div className="space-y-6">
+          <h3 className="mb-4 md:mb-6 text-brand-accent">Usage Leaderboard</h3>
+          <div className="space-y-4 md:space-y-6">
             {topUsers.map((user, idx) => (
               <div key={user.email} className="flex items-center justify-between border-b border-brand-primary/10 pb-3 last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-brand-text-muted">#{idx + 1}</span>
-                  <div className="flex flex-col">
-                    <span className="text-body font-medium">{user.email}</span>
-                    <span className="text-xs text-brand-text-muted">{user.usages} Total Invocations</span>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <span className="text-xs font-mono text-brand-text-muted flex-shrink-0">#{idx + 1}</span>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-body font-medium truncate">{user.email}</span>
+                    <span className="text-[10px] text-brand-text-muted">{user.usages} Total Invocations</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   <span className="text-xs font-bold text-brand-accent">{user.tokens}</span>
                   <p className="text-[8px] text-brand-text-muted">Tokens</p>
                 </div>
@@ -186,14 +186,14 @@ export default function AdminAnalytics() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="glass-panel p-6"
+        className="glass-panel p-4 md:p-6"
       >
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3>Performance Trends</h3>
-            <p className="text-body text-brand-text-muted">Analysis of consumption and engagement over time</p>
+            <p className="text-xs md:text-body text-brand-text-muted">Analysis of consumption and engagement over time</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {[
               { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
               { id: 'cost', label: 'USD Cost', color: '#10b981' },
@@ -203,7 +203,7 @@ export default function AdminAnalytics() {
               <button 
                 key={m.id}
                 onClick={() => setActiveMetric(m.id as any)}
-                className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${activeMetric === m.id ? 'bg-brand-primary/20' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
+                className={`rounded-lg px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold transition-colors ${activeMetric === m.id ? 'bg-brand-primary/20' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
                 style={{ color: activeMetric === m.id ? m.color : undefined }}
               >
                 {m.label}
@@ -211,17 +211,17 @@ export default function AdminAnalytics() {
             ))}
           </div>
         </div>
-        <div className="h-[400px] w-full">
+        <div className="h-[300px] md:h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart 
               data={(activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[]}
-              margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
+              margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
               <XAxis 
                 dataKey="date" 
                 stroke="#8E8E93" 
-                fontSize={10} 
+                fontSize={9} 
                 tickLine={false} 
                 axisLine={false} 
                 tickFormatter={(val) => {
@@ -229,9 +229,9 @@ export default function AdminAnalytics() {
                   return isNaN(d.getTime()) ? val : d.getDate().toString();
                 }}
               />
-              <YAxis stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8E8E93" fontSize={9} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', fontSize: '10px' }}
                 labelFormatter={(label) => {
                   const d = new Date(label);
                   return isNaN(d.getTime()) ? label : d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
@@ -248,8 +248,7 @@ export default function AdminAnalytics() {
                   const currDate = new Date(data[i].date);
                   
                   if (prevDate.getMonth() !== currDate.getMonth()) {
-                    const monthName = currDate.toLocaleDateString(undefined, { month: 'long' });
-                    // Title Case is handled by toLocaleDateString, but we'll ensure it here
+                    const monthName = currDate.toLocaleDateString(undefined, { month: 'short' });
                     const formattedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
                     
                     monthMarkers.push(
@@ -262,7 +261,7 @@ export default function AdminAnalytics() {
                           value: formattedMonth, 
                           position: 'top', 
                           fill: '#3ecf8e', 
-                          fontSize: 12, 
+                          fontSize: 10, 
                           fontWeight: 'bold',
                           offset: 10
                         }} 
@@ -278,9 +277,9 @@ export default function AdminAnalytics() {
                   type="monotone" 
                   dataKey="tokens" 
                   stroke="#3ecf8e" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#3ecf8e', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#3ecf8e', strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               )}
               {activeMetric === 'cost' && (
@@ -288,9 +287,9 @@ export default function AdminAnalytics() {
                   type="monotone" 
                   dataKey="cost" 
                   stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               )}
               {activeMetric === 'users' && (
@@ -298,9 +297,9 @@ export default function AdminAnalytics() {
                   type="monotone" 
                   dataKey="users" 
                   stroke="#38bdf8" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               )}
               {activeMetric === 'engagement' && (
@@ -308,9 +307,9 @@ export default function AdminAnalytics() {
                   type="monotone" 
                   dataKey="avgDuration" 
                   stroke="#a855f7" 
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#a855f7', strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               )}
             </LineChart>

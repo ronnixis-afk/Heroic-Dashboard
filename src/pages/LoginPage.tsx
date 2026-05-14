@@ -70,12 +70,12 @@ export default function LoginPage() {
             appearance={{
               elements: {
                 rootBox: "mx-auto w-full",
-                card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl w-full",
-                headerTitle: "text-white font-bold text-xl",
+                card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl w-full p-2 sm:p-4",
+                headerTitle: "text-white font-bold text-xl sm:text-2xl",
                 headerSubtitle: "text-[#8b8c94] text-sm font-medium",
                 socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
                 socialButtonsBlockButtonText: "text-white font-bold text-sm",
-                formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm",
+                formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm normal-case",
                 formFieldLabel: "text-[#8b8c94] text-[10px] font-bold",
                 formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00b2ff] transition-all",
                 footerActionLink: "text-[#00b2ff] hover:text-white transition-colors text-sm font-bold",

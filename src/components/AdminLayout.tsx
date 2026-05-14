@@ -63,8 +63,31 @@ export default function AdminLayout() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(window.innerWidth >= 1024);
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 1024);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar on navigation on mobile
+  React.useEffect(() => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   const handleLogout = async () => {
     await signOut();
@@ -72,39 +95,54 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-[#111114] text-white">
+    <div className="flex h-screen bg-[#111114] text-white overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobile && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside 
         initial={false}
-        animate={{ width: isSidebarOpen ? 240 : 80 }}
-        className="relative flex flex-col bg-[#111114] z-50 transition-colors border-r border-[#1e1f24]"
+        animate={{ 
+          width: isMobile ? (isSidebarOpen ? 280 : 0) : (isSidebarOpen ? 240 : 80),
+          x: isMobile && !isSidebarOpen ? -280 : 0
+        }}
+        className={cn(
+          "relative flex flex-col bg-[#111114] z-50 transition-colors border-r border-[#1e1f24]",
+          isMobile ? "fixed inset-y-0 left-0 shadow-2xl" : "relative"
+        )}
       >
         <div className="flex h-20 items-center justify-between px-6">
           <AnimatePresence mode="wait">
-            {isSidebarOpen ? (
+            {(isSidebarOpen || !isMobile) ? (
               <motion.div 
-                key="logo-full"
+                key={isSidebarOpen ? "logo-full" : "logo-short"}
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-3"
+                className={cn("flex items-center gap-3", !isSidebarOpen && "mx-auto")}
               >
                 <div className="h-8 w-8 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500 overflow-hidden">
                    {/* Logo mock */}
                 </div>
-                <span className="font-sans text-lg font-bold tracking-tight text-white">Heroic Dashboard</span>
+                {isSidebarOpen && <span className="font-sans text-lg font-bold tracking-tight text-white">Heroic Dashboard</span>}
               </motion.div>
-            ) : (
-              <motion.div 
-                key="logo-short"
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                className="mx-auto h-8 w-8 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500"
-              >
-              </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
+          {isMobile && (
+            <button onClick={() => setIsSidebarOpen(false)} className="text-[#8b8c94] hover:text-white">
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 space-y-6 px-4 py-6 overflow-y-auto custom-scrollbar">
@@ -125,7 +163,8 @@ export default function AdminLayout() {
                       "flex items-center gap-4 rounded-[1.5rem] px-4 py-3 transition-all duration-200",
                       isActive 
                         ? "bg-[#292a32] text-white shadow-lg" 
-                        : "text-[#8b8c94] hover:bg-[#1a1b21] hover:text-white"
+                        : "text-[#8b8c94] hover:bg-[#1a1b21] hover:text-white",
+                      !isSidebarOpen && "justify-center px-0"
                     )}
                   >
                     <item.icon size={18} className={cn(isActive ? "text-brand-accent" : "")} />
@@ -138,10 +177,21 @@ export default function AdminLayout() {
         </nav>
 
         <div className="mt-auto border-t border-[#1e1f24] p-4 space-y-2">
-          
+          {!isMobile && (
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-[#1a1b21] hover:text-white"
+            >
+              <Menu size={20} />
+              {isSidebarOpen && <span className="text-sm font-medium">Collapse</span>}
+            </button>
+          )}
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-red-500/10 hover:text-red-400"
+            className={cn(
+              "flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-red-500/10 hover:text-red-400",
+              !isSidebarOpen && "justify-center px-0"
+            )}
           >
             <LogOut size={20} />
             {isSidebarOpen && <span className="text-sm font-medium">Logout</span>}
@@ -151,9 +201,27 @@ export default function AdminLayout() {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="relative flex-1 overflow-y-auto bg-[#141416] m-4 rounded-[2rem] border border-[#1e1f24] inner-shadow-sm flex flex-col">
-        <header className="sticky top-0 z-40 bg-[#141416]/90 backdrop-blur-md rounded-t-[2rem] relative py-6 px-8 flex justify-end">
-          <div className="flex items-center gap-6 relative">
+      <main className={cn(
+        "relative flex-1 overflow-y-auto bg-[#141416] transition-all duration-300 flex flex-col",
+        isMobile ? "m-0 rounded-none border-0" : "m-4 rounded-[2rem] border border-[#1e1f24] inner-shadow-sm"
+      )}>
+        <header className={cn(
+          "sticky top-0 z-40 bg-[#141416]/90 backdrop-blur-md relative py-4 px-4 sm:px-8 flex items-center justify-between",
+          !isMobile && "rounded-t-[2rem]"
+        )}>
+          <div className="flex items-center gap-4">
+            {isMobile && (
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 text-[#8b8c94] hover:text-white transition-colors"
+              >
+                <Menu size={24} />
+              </button>
+            )}
+            <h2 className="text-lg font-bold text-white lg:hidden">Heroic</h2>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 relative">
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -186,17 +254,17 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-white">{user?.fullName || 'Administrator'}</p>
-                <p className="text-[10px] text-[#8b8c94]">{user?.primaryEmailAddress?.emailAddress}</p>
+                <p className="text-sm font-bold text-white truncate max-w-[120px]">{user?.fullName || 'Administrator'}</p>
+                <p className="text-[10px] text-[#8b8c94] truncate max-w-[120px]">{user?.primaryEmailAddress?.emailAddress}</p>
               </div>
-              <div className="h-10 w-10 overflow-hidden rounded-full border border-[#292a32] shadow-xl">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 overflow-hidden rounded-full border border-[#292a32] shadow-xl">
                 <img src={user?.imageUrl || `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}&background=3ecf8e&color=fff`} alt="User" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl mx-auto w-full flex-1">
+        <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex-1">
           <Outlet />
         </div>
       </main>
