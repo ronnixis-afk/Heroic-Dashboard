@@ -52,10 +52,11 @@ export default function UserAcquisition({ acquisitionData, isLoading = false }: 
               dy={10}
             />
             <Tooltip 
-              cursor={{fill: '#292a32', opacity: 0.2}} 
-              contentStyle={{ backgroundColor: '#1d1e24', border: 'none', borderRadius: '8px' }}
-              itemStyle={{ fontSize: '12px' }}
-              formatter={(value: any) => [value, 'Users']}
+              cursor={{fill: '#292a32', opacity: 0.1}} 
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+              labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
+              formatter={(value: any) => [value, 'Total Users']}
             />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
               {acquisitionData.map((entry: any, index: number) => (

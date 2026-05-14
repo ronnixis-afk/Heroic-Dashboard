@@ -57,9 +57,9 @@ export function SessionLengthChart() {
             />
             <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
-              itemStyle={{ color: '#ffffff' }}
-              labelStyle={{ color: '#8b8c94', marginBottom: '4px' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+              labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
             />
             <Area type="monotone" dataKey="p95DurationMin" name="95th Percentile" stroke="#ff5a36" fillOpacity={0} strokeWidth={1} strokeDasharray="3 3" />
             <Area type="monotone" dataKey="avgDurationMin" name="Average" stroke="#3ecf8e" fill="url(#colorAvg)" strokeWidth={2} />
@@ -81,8 +81,9 @@ export function SessionLengthChart() {
           <BarChart data={isLoading ? [] : data.distribution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <XAxis dataKey="range" stroke="#8E8E93" fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
-              itemStyle={{ color: '#ffffff' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+              labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
             />
             <Bar dataKey="percentage" name="% of Sessions" radius={[2, 2, 0, 0]}>

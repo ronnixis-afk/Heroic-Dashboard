@@ -118,7 +118,9 @@ export default function EngineHealthDashboard() {
                                 <XAxis dataKey="phase" stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+                                    labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
                                 <Bar dataKey="avgTokens" fill="#00b2ff" radius={[4, 4, 0, 0]} />
                             </BarChart>
@@ -158,7 +160,9 @@ export default function EngineHealthDashboard() {
                                     }}
                                 />
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+                                    labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
                                 <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
                             </BarChart>
@@ -192,7 +196,9 @@ export default function EngineHealthDashboard() {
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+                                    labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
                                 <Legend verticalAlign="bottom" height={36}/>
                             </PieChart>

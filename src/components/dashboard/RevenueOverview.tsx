@@ -72,7 +72,7 @@ export default function RevenueOverview({
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-brand-text-muted">
+          <div className="flex items-center gap-4 text-[10px] font-bold text-brand-text-muted">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
               Revenue

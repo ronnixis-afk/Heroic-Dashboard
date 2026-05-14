@@ -1,3 +1,19 @@
+/**
+ * ANALYTICS METRICS HOOK
+ * 
+ * This hook aggregates complex platform metrics by querying specialized Postgres Views.
+ * 
+ * DEPENDENCIES (Supabase Views):
+ * - daily_usage_summary: Aggregates tokens, cost, and active users per day.
+ * - model_usage_distribution: Breakdown of calls and costs by AI model.
+ * - top_consumers_summary: Identifies highest spending/usage users.
+ * - feature_usage_distribution: Tracks usage across game phases (Narrator, etc).
+ * - real_time_hourly_stats: Last 24h performance metrics.
+ * 
+ * CRITICAL: These views must be managed via SQL in Supabase. If you add a new model 
+ * or change the cost logic in the RPG engine, ensure these views are updated 
+ * to reflect the new schema.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';

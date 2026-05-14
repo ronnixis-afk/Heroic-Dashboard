@@ -231,7 +231,9 @@ export default function AdminAnalytics() {
               />
               <YAxis stroke="#8E8E93" fontSize={9} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', fontSize: '10px' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+                labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                 labelFormatter={(label) => {
                   const d = new Date(label);
                   return isNaN(d.getTime()) ? label : d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });

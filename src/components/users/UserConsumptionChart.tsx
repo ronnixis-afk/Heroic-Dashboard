@@ -90,11 +90,11 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
                 tickFormatter={(value) => `$${value.toFixed(2)}`}
               />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
-                labelStyle={{ fontSize: '10px', color: '#8b8c94', marginBottom: '4px' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+                labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                 formatter={(value: number, name: string, props: any) => [
-                  `$${value.toFixed(2)} (${props.payload.tokens.toLocaleString()} tokens)`, 
+                  `$${value.toFixed(2)} (${props.payload.tokens.toLocaleString()} Tokens)`, 
                   'Cost'
                 ]}
                 cursor={{ stroke: '#00b2ff', strokeWidth: 1 }}

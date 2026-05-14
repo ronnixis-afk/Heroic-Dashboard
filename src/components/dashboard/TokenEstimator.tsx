@@ -80,7 +80,7 @@ export default function TokenEstimator() {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-full mt-2 w-32 rounded-xl bg-[#1d1e24] border border-[#292a32] shadow-xl overflow-hidden z-10"
+                    className="tooltip-panel absolute right-0 top-full mt-2 w-32 !p-0 overflow-hidden z-10"
                   >
                     {['Tokens', 'Words', 'Chars'].map(type => (
                       <button 
@@ -125,7 +125,7 @@ export default function TokenEstimator() {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-full mt-2 w-32 rounded-xl bg-[#1d1e24] border border-[#292a32] shadow-xl overflow-hidden z-10"
+                    className="tooltip-panel absolute right-0 top-full mt-2 w-32 !p-0 overflow-hidden z-10"
                   >
                     {['USD', 'EUR', 'Credits'].map(type => (
                       <button 

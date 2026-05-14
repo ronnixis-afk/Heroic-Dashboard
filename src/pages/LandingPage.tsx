@@ -163,7 +163,7 @@ export default function LandingPage() {
                   </div>
                 )}
                 <div className="p-6 flex-1 flex flex-col">
-                  <span className="text-[10px] font-bold text-[#00b2ff] mb-2 uppercase tracking-wider">Announcement</span>
+                  <span className="text-[10px] font-bold text-[#00b2ff] mb-2">Announcement</span>
                   <h3 className="text-xl font-bold mb-3">{item.title}</h3>
                   <p className="text-sm text-[#8b8c94] font-medium line-clamp-3 mb-6">
                     {item.content}

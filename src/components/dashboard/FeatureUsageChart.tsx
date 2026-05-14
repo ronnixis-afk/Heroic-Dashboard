@@ -65,15 +65,15 @@ export function FeatureUsageChart() {
                   const desc = descriptions[data.feature] || 'Miscellaneous AI requests and system prompts.';
                   
                   return (
-                    <div className="glass-panel p-4 shadow-2xl border border-brand-primary/50 w-[280px] pointer-events-none">
+                    <div className="tooltip-panel pointer-events-none min-w-[240px]">
                       <div className="flex justify-between items-start mb-3">
-                        <p className="text-xs font-bold text-brand-text m-0">{data.feature}</p>
+                        <p className="text-xs font-bold text-white m-0">{data.feature}</p>
                         <p className="text-xs font-bold text-emerald-400 m-0">${data.totalCost.toFixed(2)}</p>
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-baseline gap-2">
                           <p className="text-lg font-bold text-white m-0">{data.percentage}%</p>
-                          <p className="text-[10px] text-brand-text-muted m-0">of total usage</p>
+                          <p className="text-[10px] text-brand-text-muted m-0">Of Total Usage</p>
                         </div>
                         <p className="text-[10px] leading-relaxed text-brand-text-muted italic border-t border-brand-primary/20 pt-2 block whitespace-normal">
                           {desc}

@@ -1,3 +1,17 @@
+/**
+ * COST ANALYTICS CARD
+ * 
+ * Displays detailed API cost distribution and daily trends.
+ * 
+ * DATA SOURCE:
+ * This component queries 'daily_usage_summary' and 'model_usage_distribution' views.
+ * These are NOT standard tables; they are Postgres Views that aggregate data from 'UsageLog'.
+ * 
+ * MAINTENANCE:
+ * If bars are missing or costs are 0, check the 'model_usage_distribution' view definition
+ * in Supabase. It must include 'total_cost', 'total_input_tokens', 'total_output_tokens',
+ * and 'avg_latency' columns.
+ */
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../lib/AuthContext';
@@ -46,11 +60,11 @@ export function CostAnalyticsCard() {
           })),
           byModel: (byModel || []).map(m => ({
             model: m.model,
-            calls: m.usage_count || 0,
-            totalInputTokens: 0,
-            totalOutputTokens: 0,
+            calls: Number(m.usage_count) || 0,
+            totalInputTokens: Number(m.total_input_tokens) || 0,
+            totalOutputTokens: Number(m.total_output_tokens) || 0,
             totalCost: Number(m.total_cost) || 0,
-            avgLatencyMs: 0
+            avgLatencyMs: Number(m.avg_latency) || 0
           }))
         });
       } catch (error) {
@@ -113,8 +127,9 @@ export function CostAnalyticsCard() {
             <XAxis dataKey="model" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
             <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={val => `$${Number(val).toFixed(2)}`} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
-              itemStyle={{ color: '#ffffff' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+              labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
               formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Total Cost']}
             />
             <Bar dataKey="totalCost" fill="#00b2ff" radius={[4, 4, 0, 0]} />

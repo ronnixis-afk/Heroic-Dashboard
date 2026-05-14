@@ -83,24 +83,24 @@ export function PageVisitChart() {
                   const label = PAGE_LABELS[entry.page] || toTitleCase(entry.page);
                   
                   return (
-                    <div className="glass-panel p-4 shadow-2xl border border-brand-primary/50 w-[240px] pointer-events-none">
-                      <p className="text-xs font-bold text-brand-text m-0 mb-2">{label}</p>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-[10px] text-brand-text-muted">Total Visits</span>
-                          <span className="text-xs font-bold text-white">{entry.visits.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[10px] text-brand-text-muted">Share</span>
-                          <span className="text-xs font-bold text-brand-accent">{entry.percentage}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[10px] text-brand-text-muted">Unique Users</span>
-                          <span className="text-xs font-bold text-purple-400">{entry.uniqueUsers}</span>
+                    <div className="tooltip-panel pointer-events-none w-[240px]">
+                        <p className="text-xs font-bold text-white m-0 mb-3">{label}</p>
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-medium text-brand-text-muted">Total Visits</span>
+                            <span className="text-xs font-bold text-white">{entry.visits.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-medium text-brand-text-muted">Usage Share</span>
+                            <span className="text-xs font-bold text-brand-accent">{entry.percentage}%</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-medium text-brand-text-muted">Unique Users</span>
+                            <span className="text-xs font-bold text-purple-400">{entry.uniqueUsers}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
+                    );
                 }
                 return null;
               }}

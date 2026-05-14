@@ -50,12 +50,12 @@ export function MessagesPerUserChart() {
             />
             <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', borderColor: '#292a32', borderRadius: '8px' }}
-              itemStyle={{ color: '#ffffff' }}
-              labelStyle={{ color: '#8b8c94', marginBottom: '4px' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
+              labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
             />
-            <Bar dataKey="msgsPerUser" name="Msgs / User" fill="#00b2ff" radius={[4, 4, 0, 0]} barSize={30} />
-            <Line type="monotone" dataKey="average" name="7-Day Avg" stroke="#3ecf8e" strokeWidth={2} dot={false} strokeDasharray="4 4" />
+            <Bar dataKey="msgsPerUser" name="Messages / User" fill="#00b2ff" radius={[4, 4, 0, 0]} barSize={30} />
+            <Line type="monotone" dataKey="average" name="7-Day Average" stroke="#3ecf8e" strokeWidth={2} dot={false} strokeDasharray="4 4" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
