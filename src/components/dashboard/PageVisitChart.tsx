@@ -72,6 +72,7 @@ export function PageVisitChart() {
               axisLine={false} 
               tickLine={false}
               width={110}
+              interval={0}
               tickFormatter={(val) => PAGE_LABELS[val] || toTitleCase(val)}
             />
             <Tooltip 
