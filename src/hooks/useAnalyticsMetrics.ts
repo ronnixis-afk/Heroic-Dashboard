@@ -61,6 +61,22 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
     color: colors[idx % colors.length]
   }));
 
+  const modelCostData = (modelData || []).map(m => ({
+    model: m.model || 'Unknown',
+    calls: Number(m.usage_count) || 0,
+    totalInputTokens: Number(m.total_input_tokens) || 0,
+    totalOutputTokens: Number(m.total_output_tokens) || 0,
+    totalCost: Number(m.total_cost) || 0,
+    avgLatencyMs: Number(m.avg_latency) || 0
+  }));
+
+  const dailyCostData = (dailyMetrics || []).map(m => ({
+    date: m.date,
+    activeUsers: m.active_users || 0,
+    totalCost: Number(m.total_cost) || 0,
+    costPerUser: m.active_users > 0 ? (m.total_cost / m.active_users) : 0
+  }));
+
   // 3. Fetch Top Consumers from View
   const { data: topConsumersData } = await supabase.from('top_consumers_summary').select('*').limit(5);
   const topUserIds = (topConsumersData || []).map(u => u.userId);
@@ -156,7 +172,9 @@ async function fetchAnalyticsMetrics(getToken: (options?: any) => Promise<string
     realTimeTrends,
     costComparison,
     avgLatency: realTimeTrends.length > 0 ? Math.round(realTimeTrends.reduce((acc, curr) => acc + curr.latency, 0) / realTimeTrends.length) : 342,
-    pageVisitUsage
+    pageVisitUsage,
+    modelCostData,
+    dailyCostData
   };
 }
 
@@ -172,6 +190,8 @@ export function useAnalyticsMetrics() {
     loading,
     usageTrends: data?.usageTrends || [],
     modelDistribution: data?.modelDistribution || [],
+    modelCostData: data?.modelCostData || [],
+    dailyCostData: data?.dailyCostData || [],
     topUsers: data?.topUsers || [],
     activeSessionsCount: data?.activeSessionsCount || 0,
     avgSessionLength: data?.avgSessionLength || 0,

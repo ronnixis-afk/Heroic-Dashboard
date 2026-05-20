@@ -63,7 +63,7 @@ export function useUsers() {
     setIsSyncing(true);
     setSyncMessage('');
     try {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
+      const token = await getToken().catch(() => null);
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       

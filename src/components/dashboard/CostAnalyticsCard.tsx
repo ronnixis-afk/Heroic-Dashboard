@@ -4,83 +4,19 @@
  * Displays detailed API cost distribution and daily trends.
  * 
  * DATA SOURCE:
- * This component queries 'daily_usage_summary' and 'model_usage_distribution' views.
- * These are NOT standard tables; they are Postgres Views that aggregate data from 'UsageLog'.
- * 
- * MAINTENANCE:
- * If bars are missing or costs are 0, check the 'model_usage_distribution' view definition
- * in Supabase. It must include 'total_cost', 'total_input_tokens', 'total_output_tokens',
- * and 'avg_latency' columns.
+ * This component consumes processed data from 'useAnalyticsMetrics'.
  */
-import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useAuth } from '../../lib/AuthContext';
-import { getSupabaseClient } from '../../lib/supabase';
+import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 import { SkeletonText } from '../Skeleton';
 
-interface CostDaily {
-  date: string;
-  activeUsers: number;
-  totalCost: number;
-  costPerUser: number;
-}
-
-interface CostByModel {
-  model: string;
-  calls: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  totalCost: number;
-  avgLatencyMs: number;
-}
-
 export function CostAnalyticsCard() {
-  const [data, setData] = useState<{ daily: CostDaily[], byModel: CostByModel[] } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { getToken } = useAuth();
+  const { modelCostData: byModel = [], dailyCostData: daily = [], loading } = useAnalyticsMetrics();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = await getToken({ template: 'supabase' });
-        const supabase = getSupabaseClient(token || undefined);
-        
-        // Fetch daily metrics for cost-per-user
-        const { data: daily } = await supabase.from('daily_usage_summary').select('*').order('date', { ascending: false }).limit(30);
-        
-        // Fetch model distribution
-        const { data: byModel } = await supabase.from('model_usage_distribution').select('*');
-        
-        setData({
-          daily: (daily || []).map(m => ({
-            date: m.date,
-            activeUsers: m.active_users || 0,
-            totalCost: Number(m.total_cost) || 0,
-            costPerUser: m.active_users > 0 ? (m.total_cost / m.active_users) : 0
-          })),
-          byModel: (byModel || []).map(m => ({
-            model: m.model,
-            calls: Number(m.usage_count) || 0,
-            totalInputTokens: Number(m.total_input_tokens) || 0,
-            totalOutputTokens: Number(m.total_output_tokens) || 0,
-            totalCost: Number(m.total_cost) || 0,
-            avgLatencyMs: Number(m.avg_latency) || 0
-          }))
-        });
-      } catch (error) {
-        console.error('Error fetching cost analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchData();
-  }, [getToken]);
-
-  const isLoading = loading || !data;
-  const today = data?.daily?.[0] || { totalCost: 0, costPerUser: 0 };
-  const totalCost30d = data?.byModel?.reduce((acc, m) => acc + m.totalCost, 0) || 0;
-  const totalCalls30d = data?.byModel?.reduce((acc, m) => acc + m.calls, 0) || 0;
+  const isLoading = loading;
+  const today = daily?.[0] || { totalCost: 0, costPerUser: 0 };
+  const totalCost30d = byModel?.reduce((acc, m) => acc + m.totalCost, 0) || 0;
+  const totalCalls30d = byModel?.reduce((acc, m) => acc + m.calls, 0) || 0;
   const costPerMessage = totalCalls30d > 0 ? totalCost30d / totalCalls30d : 0;
 
   return (
@@ -122,7 +58,7 @@ export function CostAnalyticsCard() {
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={isLoading ? [] : data?.byModel} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+          <BarChart data={isLoading ? [] : byModel} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" vertical={false} />
             <XAxis dataKey="model" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
             <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={val => `$${Number(val).toFixed(2)}`} />
