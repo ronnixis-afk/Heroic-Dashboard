@@ -12,25 +12,37 @@ interface RetentionData {
 export function RetentionTable() {
   const [data, setData] = useState<RetentionData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { getToken } = useAuth();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = await getToken({ template: 'supabase' });
-        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/retention`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (Array.isArray(json)) {
-          setData(json);
-        }
-      } catch (error) {
-        console.error('Error fetching retention analytics:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/retention`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
       }
+      const json = await res.json();
+      if (json && json.error) {
+        throw new Error(json.error);
+      }
+      if (Array.isArray(json)) {
+        setData(json);
+        setError(null);
+      } else {
+        throw new Error('Invalid data format returned by server.');
+      }
+    } catch (err: any) {
+      console.error('Error fetching retention analytics:', err);
+      setError(err.message || 'Failed to fetch retention analytics.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [getToken]);
 
@@ -43,6 +55,27 @@ export function RetentionTable() {
         ))}
       </div>
     </div>;
+  }
+
+  if (error) {
+    return (
+      <div className="glass-panel p-6 h-80 flex flex-col justify-center items-center text-center">
+        <h3 className="text-lg font-medium text-brand-text mb-4">User Retention</h3>
+        <div className="text-brand-text-muted mb-4 font-medium max-w-xs">
+          {error}
+        </div>
+        <button 
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            fetchData();
+          }}
+          className="btn-primary px-4 py-2 text-xs font-bold"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   const getHeatmapColor = (percentage: number) => {

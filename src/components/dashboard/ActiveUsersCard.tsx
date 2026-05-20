@@ -12,24 +12,37 @@ interface ActiveUsersData {
 export function ActiveUsersCard() {
   const [data, setData] = useState<ActiveUsersData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { getToken } = useAuth();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = await getToken({ template: 'supabase' });
-        const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await response.json();
-        setData(json);
-      } catch (error) {
-        console.error('Failed to fetch active users:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
       }
-    };
+      const json = await response.json();
+      if (json && json.error) {
+        throw new Error(json.error);
+      }
+      if (json && typeof json.activeNow === 'number') {
+        setData(json);
+        setError(null);
+      } else {
+        throw new Error('Invalid data format returned by server.');
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch active users:', err);
+      setError(err.message || 'Failed to fetch active users.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 60000); // 60s auto-refresh
     return () => clearInterval(interval);
@@ -40,6 +53,26 @@ export function ActiveUsersCard() {
       <div className="glass-panel p-6 animate-pulse flex flex-col">
         <div className="h-6 w-32 bg-[#292a32] rounded mb-4"></div>
         <div className="h-12 w-24 bg-[#292a32] rounded"></div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="glass-panel p-6 flex flex-col justify-center items-center text-center">
+        <div className="text-brand-text-muted mb-3 text-sm font-medium">
+          {error || 'Failed to load active users.'}
+        </div>
+        <button 
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            fetchData();
+          }}
+          className="btn-primary px-3 py-1.5 text-xs font-bold"
+        >
+          Retry
+        </button>
       </div>
     );
   }

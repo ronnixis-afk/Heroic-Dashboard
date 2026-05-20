@@ -24,27 +24,40 @@ interface ChurnSummary {
 export function ChurnSignalsTable() {
   const [data, setData] = useState<{ atRiskUsers: AtRiskUser[], summary: ChurnSummary } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { getToken } = useAuth();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = await getToken({ template: 'supabase' });
-        const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        setData(json);
-      } catch (error) {
-        console.error('Error fetching churn signals analytics:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
       }
+      const json = await res.json();
+      if (json && json.error) {
+        throw new Error(json.error);
+      }
+      if (!json || !json.summary || !json.atRiskUsers) {
+        throw new Error('Invalid data format returned by server.');
+      }
+      setData(json);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error fetching churn signals analytics:', err);
+      setError(err.message || 'Failed to fetch churn signals.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [getToken]);
 
-  if (loading || !data) {
+  if (loading) {
     return <div className="glass-panel p-6 h-96 animate-pulse flex flex-col">
       <div className="h-6 w-48 bg-[#292a32] rounded mb-6"></div>
       <div className="flex gap-4 mb-8">
@@ -55,6 +68,27 @@ export function ChurnSignalsTable() {
         {[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-full bg-[#292a32]/30 rounded"></div>)}
       </div>
     </div>;
+  }
+
+  if (error || !data) {
+    return (
+      <div className="glass-panel p-6 h-[500px] flex flex-col justify-center items-center text-center">
+        <h3 className="text-lg font-medium text-brand-text mb-4">Churn Signals</h3>
+        <div className="text-brand-text-muted mb-4 font-medium max-w-xs">
+          {error || 'No churn signals data available.'}
+        </div>
+        <button 
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            fetchData();
+          }}
+          className="btn-primary px-4 py-2 text-xs font-bold"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   const getScoreColor = (score: number) => {
