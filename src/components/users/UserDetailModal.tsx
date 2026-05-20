@@ -95,11 +95,45 @@ export default function UserDetailModal({
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-brand-text-muted">Status</span>
-                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Active
-                    </span>
+                    {(() => {
+                      const lastSession = selectedUser.UserSession?.[0];
+                      const isOnline = lastSession && 
+                                       !lastSession.endTime && 
+                                       (new Date().getTime() - new Date(lastSession.lastPing).getTime() < 5 * 60 * 1000);
+                      if (isOnline) {
+                        return (
+                          <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Online
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="flex items-center gap-1.5 text-brand-text-muted font-bold">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-text-muted/60" />
+                          Offline
+                        </span>
+                      );
+                    })()}
                   </div>
+                  {(() => {
+                    const lastSession = selectedUser.UserSession?.[0];
+                    if (!lastSession) return null;
+                    return (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-brand-text-muted">Last Seen</span>
+                        <span className="text-white font-medium">
+                          {new Date(lastSession.lastPing).toLocaleString(undefined, { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

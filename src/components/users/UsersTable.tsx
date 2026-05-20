@@ -127,12 +127,37 @@ export default function UsersTable({
                     <td>
                       {isLoading ? (
                         <SkeletonText width={60} className="h-3 opacity-50" />
-                      ) : (
-                        <span className="text-xs font-bold text-brand-text-muted flex items-center gap-1">
-                          <Calendar size={10} />
-                          {user.updatedAt ? new Date(user.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'Online'}
-                        </span>
-                      )}
+                      ) : (() => {
+                        const lastSession = user.UserSession?.[0];
+                        const isOnline = lastSession && 
+                                         !lastSession.endTime && 
+                                         (new Date().getTime() - new Date(lastSession.lastPing).getTime() < 5 * 60 * 1000);
+                        
+                        if (isOnline) {
+                          return (
+                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Online
+                            </span>
+                          );
+                        }
+                        
+                        if (lastSession) {
+                          return (
+                            <span className="text-xs font-medium text-brand-text-muted flex items-center gap-1">
+                              <Calendar size={10} />
+                              {new Date(lastSession.lastPing).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                              {new Date(lastSession.lastPing).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          );
+                        }
+                        
+                        return (
+                          <span className="text-xs font-medium text-brand-text-muted/50 italic flex items-center gap-1">
+                            Never
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="text-right">
                       {!isLoading && (

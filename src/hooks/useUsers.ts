@@ -15,8 +15,10 @@ async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
   
   const { data, error } = await supabase
     .from('User')
-    .select('*')
-    .order('createdAt', { ascending: false });
+    .select('*, UserSession(lastPing, endTime, startTime)')
+    .order('createdAt', { ascending: false })
+    .order('lastPing', { foreignTable: 'UserSession', ascending: false })
+    .limit(1, { foreignTable: 'UserSession' });
   
   if (error) {
     console.error('[UsersAudit] Supabase error:', error);
