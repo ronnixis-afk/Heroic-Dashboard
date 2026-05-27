@@ -51,9 +51,60 @@ SELECT date_trunc('hour'::text, "createdAt") AS hour,
 ```
 
 > [!IMPORTANT]
-> Always grant appropriate select permissions on newly created views so that the client application can fetch data:
+> **Data API Schema Exposure Update (Supabase May/October 2026)**
+> In new Supabase projects created after May 30, 2026 (and existing projects starting October 30, 2026), tables and views are not exposed to the Data API (PostgREST) by default. You must explicitly run `GRANT` statements for all tables and views that the client queries via `supabase-js`.
+> 
+> Execute the following SQL script in the Supabase SQL Editor. This script uses a PL/pgSQL block to verify whether each table or view exists in your database before executing the `GRANT` statement, ensuring it runs without any errors even if some views or tables are not yet created:
+> 
 > ```sql
-> GRANT SELECT ON "model_usage_distribution" TO anon, authenticated, service_role;
-> GRANT SELECT ON "daily_usage_summary" TO anon, authenticated, service_role;
-> GRANT SELECT ON "real_time_hourly_stats" TO anon, authenticated, service_role;
+> DO $$
+> DECLARE
+>   relation_name text;
+>   relations text[] := ARRAY[
+>     'active_users_by_tier',
+>     'user_tier_distribution',
+>     'daily_usage_summary',
+>     'monthly_usage_summary',
+>     'top_consumers_summary',
+>     'model_usage_distribution',
+>     'feature_usage_distribution',
+>     'session_metrics_summary',
+>     'real_time_hourly_stats',
+>     'page_visit_summary',
+>     'global_usage_stats',
+>     'user_daily_usage_summary'
+>   ];
+>   tables text[] := ARRAY[
+>     'News',
+>     'User',
+>     'UsageLog',
+>     'UserSession',
+>     'CreditAdjustment',
+>     'EngineTelemetry',
+>     'PageVisit'
+>   ];
+> BEGIN
+>   -- 1. Grant SELECT Access to Views for the Analytical Dashboard
+>   FOREACH relation_name IN ARRAY relations
+>   LOOP
+>     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = relation_name AND (relkind = 'v' OR relkind = 'm')) THEN
+>       EXECUTE format('GRANT SELECT ON public.%I TO anon, authenticated, service_role', relation_name);
+>     END IF;
+>   END LOOP;
+> 
+>   -- 2. Grant CRUD Access to Underlying Tables
+>   FOREACH relation_name IN ARRAY tables
+>   LOOP
+>     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = relation_name AND relkind = 'r') THEN
+>       IF relation_name = 'News' THEN
+>         -- News needs SELECT granted to anon for public feed access
+>         EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO anon, authenticated, service_role', relation_name);
+>       ELSE
+>         EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO authenticated, service_role', relation_name);
+>       END IF;
+>     END IF;
+>   END LOOP;
+> END $$;
 > ```
+
+
