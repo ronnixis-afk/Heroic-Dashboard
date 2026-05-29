@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Zap, Globe, Clock, Activity, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
+import { useAnalyticsMetrics, formatComparison } from '../../hooks/useAnalyticsMetrics';
 import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
 import ModelUsagePie from '../../components/analytics/ModelUsagePie';
 
@@ -33,7 +33,8 @@ interface TrendCardProps {
 }
 
 function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon, comparison }: TrendCardProps) {
-  const isPositive = comparison.startsWith('+');
+  const isNeutral = comparison === '—';
+  const isPositive = !isNeutral && comparison.startsWith('+');
   
   return (
     <motion.div 
@@ -49,8 +50,10 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
           ) : (
             <div className="flex items-baseline gap-3">
               <h4 className="text-h1 font-bold text-white tracking-tight">{value}</h4>
-              <div className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                {isPositive ? <ArrowUpRight size={10} className="mr-1" /> : <ArrowDownRight size={10} className="mr-1" />}
+              <div className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
+                isNeutral ? 'bg-brand-primary/20 text-brand-text-muted' : isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+              }`}>
+                {!isNeutral && (isPositive ? <ArrowUpRight size={10} className="mr-1" /> : <ArrowDownRight size={10} className="mr-1" />)}
                 {comparison}
               </div>
             </div>
@@ -101,6 +104,8 @@ export default function AdminAnalytics() {
     totalCost,
     realTimeTrends,
     costComparison,
+    sessionsComparison,
+    latencyComparison,
     avgLatency
   } = useAnalyticsMetrics();
 
@@ -118,7 +123,7 @@ export default function AdminAnalytics() {
           color="#00b2ff"
           loading={loading}
           icon={<Activity size={18} />}
-          comparison="+12%"
+          comparison={formatComparison(sessionsComparison)}
         />
 
         <RealTimeTrendCard 
@@ -129,7 +134,7 @@ export default function AdminAnalytics() {
           color="#3ecf8e"
           loading={loading}
           icon={<DollarSign size={18} />}
-          comparison={`${costComparison > 0 ? '+' : ''}${costComparison}%`}
+          comparison={formatComparison(costComparison)}
         />
 
         <RealTimeTrendCard 
@@ -140,7 +145,7 @@ export default function AdminAnalytics() {
           color="#a855f7"
           loading={loading}
           icon={<Zap size={18} />}
-          comparison="-4%"
+          comparison={formatComparison(latencyComparison)}
         />
       </div>
 
@@ -307,7 +312,7 @@ export default function AdminAnalytics() {
               {activeMetric === 'engagement' && (
                 <Line 
                   type="monotone" 
-                  dataKey="avgDuration" 
+                  dataKey="avgDurationMin" 
                   stroke="#a855f7" 
                   strokeWidth={2}
                   dot={{ r: 3, fill: '#a855f7', strokeWidth: 0 }}
@@ -317,6 +322,16 @@ export default function AdminAnalytics() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="space-y-4"
+      >
+        <h3 className="text-lg md:text-xl">Engine Health</h3>
+        <EngineHealthDashboard />
       </motion.div>
     </div>
   );

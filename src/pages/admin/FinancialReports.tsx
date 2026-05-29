@@ -89,9 +89,9 @@ export default function FinancialReports() {
           <div>
             <h3 className="text-white mb-2 text-lg">Profitability Insight</h3>
             <p className="text-xs md:text-body text-brand-text-muted leading-relaxed max-w-3xl">
-              Based on current token consumption and Gemini 3 Flash Lite pricing, your platform maintains a healthy profit margin. 
-              The most significant cost factor remains output token generation in high-narrative sessions. 
-              Consider implementing token caching or tiered credit limits for free users to further optimize margins.
+              Revenue is not connected to a payment provider, so net profit reflects API cost only. 
+              Based on current token consumption, the largest cost driver is output token generation in high-narrative sessions. 
+              Consider token caching or tiered credit limits for free users to optimize margins once billing is integrated.
             </p>
           </div>
         </div>

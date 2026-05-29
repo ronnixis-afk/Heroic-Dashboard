@@ -49,6 +49,7 @@ export default function RevenueOverview({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-brand-accent">Revenue & API Costs</h3>
+          <p className="text-[10px] text-brand-text-muted mt-1">Revenue (Not Connected) — payment data not integrated</p>
           <div className="mt-4">
             {isLoading ? (
               <SkeletonText width={180} className="h-9" />
@@ -75,11 +76,11 @@ export default function RevenueOverview({
           <div className="flex items-center gap-4 text-[10px] font-bold text-brand-text-muted">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
-              Revenue
+              Revenue (Not Connected)
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a36]"></span>
-              API Costs
+              API Cost
             </div>
           </div>
         </div>

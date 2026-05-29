@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, X, Zap, Activity, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserConsumptionChart from './UserConsumptionChart';
+import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData } from '../../services/EngineTelemetryService';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -26,16 +27,30 @@ export default function UserDetailModal({
 }: UserDetailModalProps) {
   const [telemetry, setTelemetry] = React.useState<TelemetryData | null>(null);
   const [loadingTelemetry, setLoadingTelemetry] = React.useState(false);
+  const { getToken } = useAuth();
 
   React.useEffect(() => {
-    if (selectedUser?.id) {
+    if (!selectedUser?.id) return;
+
+    let cancelled = false;
+    const loadTelemetry = async () => {
       setLoadingTelemetry(true);
-      telemetryService.getTelemetry(selectedUser.id)
-        .then(setTelemetry)
-        .catch(console.error)
-        .finally(() => setLoadingTelemetry(false));
-    }
-  }, [selectedUser]);
+      try {
+        const token = await getToken();
+        const data = await telemetryService.getTelemetry(token || undefined, selectedUser.id);
+        if (!cancelled) setTelemetry(data);
+      } catch (err) {
+        console.error('[UserDetailModal] Telemetry fetch failed:', err);
+      } finally {
+        if (!cancelled) setLoadingTelemetry(false);
+      }
+    };
+
+    loadTelemetry();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUser, getToken]);
 
   if (!selectedUser) return null;
 

@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { Zap, ShieldAlert, Users, TrendingUp, Filter } from 'lucide-react';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData, BehaviorData } from '../../services/EngineTelemetryService';
 
 const COLORS = ['#00b2ff', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
@@ -46,7 +46,7 @@ export default function EngineHealthDashboard() {
             }
         };
         fetchData();
-    }, []);
+    }, [getToken]);
 
     const isLoading = loading; // Alias for clarity within JSX
 
