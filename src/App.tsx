@@ -11,6 +11,8 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminFeedback from './pages/admin/AdminFeedback';
+
 
 import AudienceReports from './pages/admin/AudienceReports';
 import UsageReports from './pages/admin/UsageReports';
@@ -80,6 +82,7 @@ export default function App() {
                 <Route path="news" element={<AdminNews />} />
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="feedback" element={<AdminFeedback />} />
                 
                 {/* Reports Suite */}
                 <Route path="reports">
