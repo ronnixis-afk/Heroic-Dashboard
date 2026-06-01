@@ -35,14 +35,37 @@ export default function AdminFeedback() {
     try {
       const token = await getToken({ template: 'supabase' }).catch(() => null);
       const supabase = getSupabaseClient(token || undefined);
-      
-      const { data, error: dbError } = await supabase
+
+      const { data: rows, error: dbError } = await supabase
         .from('Feedback')
-        .select('*, User(email)')
+        .select('*')
         .order('createdAt', { ascending: false });
 
       if (dbError) throw dbError;
-      setFeedback(data || []);
+
+      const userIds = [...new Set((rows || []).map((r) => r.userId).filter(Boolean))];
+      const emailByUserId: Record<string, string> = {};
+
+      if (userIds.length > 0) {
+        const { data: users, error: userError } = await supabase
+          .from('User')
+          .select('id, email')
+          .in('id', userIds);
+
+        if (userError) throw userError;
+        for (const u of users || []) {
+          emailByUserId[u.id] = u.email;
+        }
+      }
+
+      setFeedback(
+        (rows || []).map((row) => ({
+          ...row,
+          User: row.userId && emailByUserId[row.userId]
+            ? { email: emailByUserId[row.userId] }
+            : undefined,
+        }))
+      );
     } catch (err: any) {
       console.error('[AdminFeedback] Fetch error:', err);
       setError(err.message || 'Failed to retrieve feedback data.');
