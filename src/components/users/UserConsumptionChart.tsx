@@ -67,8 +67,8 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#20cce0" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#20cce0" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#292a32" vertical={false} />
@@ -96,12 +96,12 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
                   `$${value.toFixed(2)} (${props.payload.tokens.toLocaleString()} Tokens)`, 
                   'Cost'
                 ]}
-                cursor={{ stroke: '#00e5ff', strokeWidth: 1 }}
+                cursor={{ stroke: '#20cce0', strokeWidth: 1 }}
               />
               <Area 
                 type="monotone" 
                 dataKey="cost" 
-                stroke="#00e5ff" 
+                stroke="#20cce0" 
                 strokeWidth={3} 
                 fillOpacity={1} 
                 fill="url(#colorCost)" 

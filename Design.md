@@ -24,8 +24,8 @@ The application uses Tailwind CSS v4 with custom tokens defined in [index.css](f
 * **Borders & Dividers:**
   * `--color-brand-primary` (`#292a32`): Used for borders, list hover backgrounds, and subtle outlines.
 * **Brand Accents:**
-  * `--color-brand-accent` (`#00e5ff`): Primary call-to-action color, used for active states, main charts, and focus rings.
-  * `--color-brand-accent-hover` (`#00ccff`): Hover state for accent elements.
+  * `--color-brand-accent` (`#20cce0`): Primary call-to-action color, used for active states, main charts, and focus rings.
+  * `--color-brand-accent-hover` (`#1ba3b4`): Hover state for accent elements.
   * *Secondary Accents (used in graphics but not mapped globally):* Orange (`#ff5a36`), Emerald (`#3ecf8e`), Indigo (`indigo-500`).
 * **Typography:**
   * `--color-brand-text` (`#ffffff`): Primary text color for headings and high-emphasis content.
@@ -118,7 +118,7 @@ All distinct sections on the dashboard (e.g., charts, lists, estimators) must be
 
 ### 5. Charts & Data Visualization
 
-* **Area Charts (Revenue & API Costs):** Use smooth monotone curves. The lines should be solid (`#00e5ff` and `#ff5a36`) with a faded gradient fill underneath to the bottom of the chart.
+* **Area Charts (Revenue & API Costs):** Use smooth monotone curves. The lines should be solid (`#20cce0` and `#ff5a36`) with a faded gradient fill underneath to the bottom of the chart.
 * **Bar Charts (New Signups):** Use slim, rounded-top bars with distinct accent colors for each category.
 
 ### 6. Tooltips & Hover Panels

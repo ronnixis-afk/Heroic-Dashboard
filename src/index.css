@@ -6,8 +6,8 @@
   --color-brand-bg: #141416;
   --color-brand-surface: #1d1e24;
   --color-brand-primary: #292a32;
-  --color-brand-accent: #00e5ff;
-  --color-brand-accent-hover: #00ccff;
+  --color-brand-accent: #20cce0;
+  --color-brand-accent-hover: #1ba3b4;
   --color-brand-text: #ffffff;
   --color-brand-text-muted: #8b8c94;
   --color-sidebar-bg: #111114;
@@ -108,7 +108,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #00e5ff;
+    background: #20cce0;
     border-radius: 10px;
   }
 

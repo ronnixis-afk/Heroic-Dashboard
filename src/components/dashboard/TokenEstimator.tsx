@@ -68,8 +68,8 @@ export default function TokenEstimator() {
                 onClick={() => setShowInputDropdown(!showInputDropdown)}
                 className="shrink-0 flex items-center gap-2 bg-[#1d1e24] border border-[#292a32] px-3 py-1.5 rounded-full text-sm font-medium"
               >
-                <span className="w-4 h-4 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-sm"></div>
+                <span className="w-4 h-4 rounded-full bg-brand-accent/20 flex items-center justify-center overflow-hidden">
+                  <div className="w-2 h-2 bg-brand-accent rounded-sm"></div>
                 </span>
                 {inputType} <ChevronDown size={14} className="text-[#8b8c94]"/>
               </button>

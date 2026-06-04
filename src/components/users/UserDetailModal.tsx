@@ -82,7 +82,7 @@ export default function UserDetailModal({
 
         <div className="space-y-8">
           <div className="flex items-center gap-6">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-indigo-400">
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent">
               <Mail size={32} />
             </div>
             <div className="space-y-1 flex-1 min-w-0">
@@ -206,8 +206,8 @@ export default function UserDetailModal({
                         <AreaChart data={telemetry.avgTokensByPhase}>
                             <defs>
                                 <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#20cce0" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#20cce0" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
                             <XAxis dataKey="phase" hide />
@@ -216,7 +216,7 @@ export default function UserDetailModal({
                                 itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                 labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                             />
-                            <Area type="monotone" dataKey="avgTokens" stroke="#00e5ff" fillOpacity={1} fill="url(#colorTokens)" />
+                            <Area type="monotone" dataKey="avgTokens" stroke="#20cce0" fillOpacity={1} fill="url(#colorTokens)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>

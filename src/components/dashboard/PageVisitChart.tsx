@@ -40,7 +40,7 @@ export function PageVisitChart() {
   const { pageVisitUsage: data, loading } = useAnalyticsMetrics();
 
   const getBarColor = (percentage: number) => {
-    if (percentage >= 25) return '#00e5ff'; // Primary
+    if (percentage >= 25) return '#20cce0'; // Primary
     if (percentage >= 10) return '#3ecf8e'; // Secondary
     if (percentage >= 5) return '#a855f7';  // Moderate
     return '#8b8c94';                       // Low usage

@@ -53,8 +53,8 @@ export default function UsersTable({
                     <td>
                       <div className="flex items-center gap-4">
                         <div className="relative group/avatar">
-                          <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                          <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-colors">
+                          <div className="absolute inset-0 bg-brand-accent/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
+                          <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent group-hover:border-brand-accent/50 transition-colors">
                             {isLoading ? (
                               <Skeleton width="100%" height="100%" className="rounded-xl" />
                             ) : (
@@ -104,7 +104,7 @@ export default function UsersTable({
                           <>
                              <div className="w-20 h-1.5 rounded-full bg-brand-primary/30 overflow-hidden">
                               <div 
-                                className="h-full bg-brand-accent transition-all shadow-[0_0_8px_rgba(0,178,255,0.4)]" 
+                                className="h-full bg-brand-accent transition-all shadow-[0_0_8px_rgba(32, 204, 224,0.4)]" 
                                 style={{ width: `${Math.min(100, ((user.currentCredits || 0) / (user.maxCredits || 1000)) * 100)}%` }} 
                               />
                             </div>

@@ -16,7 +16,7 @@ export function FeatureUsageChart() {
   const isLoading = loading;
 
   const getBarColor = (percentage: number) => {
-    if (percentage >= 20) return '#00e5ff'; // Core
+    if (percentage >= 20) return '#20cce0'; // Core
     if (percentage >= 5) return '#3ecf8e'; // Secondary
     return '#ff5a36'; // Underused
   };

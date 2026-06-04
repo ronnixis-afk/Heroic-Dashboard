@@ -120,7 +120,7 @@ export default function AdminAnalytics() {
           value={activeSessionsCount} 
           trend={realTimeTrends} 
           dataKey="users"
-          color="#00e5ff"
+          color="#20cce0"
           loading={loading}
           icon={<Activity size={18} />}
           comparison={formatComparison(sessionsComparison)}

@@ -17,7 +17,7 @@ import { Zap, ShieldAlert, Users, TrendingUp, Filter } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData, BehaviorData } from '../../services/EngineTelemetryService';
 
-const COLORS = ['#00e5ff', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
+const COLORS = ['#20cce0', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
 
 import { Skeleton, ChartSkeleton, SkeletonText } from '../Skeleton';
 
@@ -122,7 +122,7 @@ export default function EngineHealthDashboard() {
                                     itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                     labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
-                                <Bar dataKey="avgTokens" fill="#00e5ff" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="avgTokens" fill="#20cce0" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

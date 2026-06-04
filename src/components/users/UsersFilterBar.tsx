@@ -43,7 +43,7 @@ export default function UsersFilterBar({
           className={cn(
             "flex items-center gap-2 rounded-xl border px-3 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-sm font-bold transition-all duration-200 flex-1 sm:flex-none justify-center",
             showFilters 
-              ? "bg-brand-accent/10 text-brand-accent border-brand-accent/50 shadow-[0_0_15px_rgba(0,178,255,0.1)]" 
+              ? "bg-brand-accent/10 text-brand-accent border-brand-accent/50 shadow-[0_0_15px_rgba(32, 204, 224,0.1)]" 
               : "border-brand-primary bg-brand-surface/50 text-brand-text-muted hover:text-white hover:border-brand-primary/80"
           )}
         >

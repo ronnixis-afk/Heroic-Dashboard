@@ -34,7 +34,7 @@ export default function LoginPage() {
         className="relative z-10 w-full max-w-md"
       >
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-6 h-12 w-12 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-indigo-500 overflow-hidden shadow-[0_0_30px_rgba(0,178,255,0.3)]">
+          <div className="mb-6 h-12 w-12 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-[#1ba3b4] overflow-hidden shadow-[0_0_30px_rgba(32, 204, 224,0.3)]">
              {/* Logo */}
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Heroic Dashboard</h1>
@@ -77,12 +77,12 @@ export default function LoginPage() {
                 socialButtonsBlockButtonText: "text-white font-bold text-sm",
                 formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm normal-case",
                 formFieldLabel: "text-[#8b8c94] text-[10px] font-bold",
-                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00e5ff] transition-all",
-                footerActionLink: "text-[#00e5ff] hover:text-white transition-colors text-sm font-bold",
+                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#20cce0] transition-all",
+                footerActionLink: "text-[#20cce0] hover:text-white transition-colors text-sm font-bold",
                 dividerLine: "bg-[#292a32]/50",
                 dividerText: "text-[#8b8c94] text-[10px]",
                 identityPreviewText: "text-white font-bold",
-                identityPreviewEditButtonIcon: "text-[#00e5ff]"
+                identityPreviewEditButtonIcon: "text-[#20cce0]"
               }
             }}
             routing="path"

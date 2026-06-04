@@ -98,8 +98,8 @@ export default function RevenueOverview({
           <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#20cce0" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="#20cce0" stopOpacity={0}/>
               </linearGradient>
               <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#ff5a36" stopOpacity={0.15}/>
@@ -159,7 +159,7 @@ export default function RevenueOverview({
                       label={{ 
                         value: formattedMonth, 
                         position: 'top', 
-                        fill: '#00e5ff', 
+                        fill: '#20cce0', 
                         fontSize: 10, 
                         fontWeight: 'bold',
                         offset: 10
@@ -171,7 +171,7 @@ export default function RevenueOverview({
               return markers;
             })()}
 
-            <Area type="monotone" dataKey="revenue" stroke="#00e5ff" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" animationDuration={1500} />
+            <Area type="monotone" dataKey="revenue" stroke="#20cce0" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" animationDuration={1500} />
             <Area type="monotone" dataKey="apiCost" stroke="#ff5a36" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" animationDuration={1500} />
           </AreaChart>
         </ResponsiveContainer>
