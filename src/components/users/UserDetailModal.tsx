@@ -206,8 +206,8 @@ export default function UserDetailModal({
                         <AreaChart data={telemetry.avgTokensByPhase}>
                             <defs>
                                 <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#00b2ff" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#00b2ff" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#00e5ff" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
                             <XAxis dataKey="phase" hide />
@@ -216,7 +216,7 @@ export default function UserDetailModal({
                                 itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                 labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                             />
-                            <Area type="monotone" dataKey="avgTokens" stroke="#00b2ff" fillOpacity={1} fill="url(#colorTokens)" />
+                            <Area type="monotone" dataKey="avgTokens" stroke="#00e5ff" fillOpacity={1} fill="url(#colorTokens)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>

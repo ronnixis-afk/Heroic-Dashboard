@@ -68,7 +68,7 @@ export function CostAnalyticsCard() {
               labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
               formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Total Cost']}
             />
-            <Bar dataKey="totalCost" fill="#00b2ff" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="totalCost" fill="#00e5ff" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -63,7 +63,7 @@ export function SessionLengthChart() {
             />
             <Area type="monotone" dataKey="p95DurationMin" name="95th Percentile" stroke="#ff5a36" fillOpacity={0} strokeWidth={1} strokeDasharray="3 3" />
             <Area type="monotone" dataKey="avgDurationMin" name="Average" stroke="#3ecf8e" fill="url(#colorAvg)" strokeWidth={2} />
-            <Area type="monotone" dataKey="medianDurationMin" name="Median" stroke="#00b2ff" fillOpacity={0} strokeWidth={2} />
+            <Area type="monotone" dataKey="medianDurationMin" name="Median" stroke="#00e5ff" fillOpacity={0} strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -88,7 +88,7 @@ export function SessionLengthChart() {
             />
             <Bar dataKey="percentage" name="% of Sessions" radius={[2, 2, 0, 0]}>
               {!isLoading && data.distribution.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill="#00b2ff" />
+                <Cell key={`cell-${index}`} fill="#00e5ff" />
               ))}
             </Bar>
           </BarChart>

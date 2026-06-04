@@ -16,7 +16,7 @@ export default function UserAcquisition({ acquisitionData, isLoading = false }: 
     const tier = name.toLowerCase();
     if (tier.includes('super')) return '#6366f1'; // Indigo (Secondary Accent)
     if (tier.includes('hero')) return '#3ecf8e';  // Emerald (Secondary Accent)
-    if (tier.includes('adventurer')) return '#00b2ff'; // Brand Accent
+    if (tier.includes('adventurer')) return '#00e5ff'; // Brand Accent
     return '#ff5a36'; // Orange (Secondary Accent)
   };
 

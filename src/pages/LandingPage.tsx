@@ -83,7 +83,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 rounded-full border border-[#00b2ff]/20 bg-[#00b2ff]/5 px-4 py-1.5 text-[10px] font-bold text-[#00b2ff] mb-8"
+            className="inline-flex items-center gap-2 rounded-full border border-[#00e5ff]/20 bg-[#00e5ff]/5 px-4 py-1.5 text-[10px] font-bold text-[#00e5ff] mb-8"
           >
             <Sparkles size={14} />
             Powered by Gemini 1.5 Pro
@@ -96,7 +96,7 @@ export default function LandingPage() {
             className="font-serif text-4xl md:text-6xl font-bold tracking-tight mb-6 md:mb-8 leading-tight"
           >
             Your Story. Your Rules. <br />
-            <span className="text-[#00b2ff]">Infinite Worlds.</span>
+            <span className="text-[#00e5ff]">Infinite Worlds.</span>
           </motion.h1>
           
           <motion.p 
@@ -133,7 +133,7 @@ export default function LandingPage() {
               <h2 className="text-3xl md:text-4xl font-serif font-bold">Latest Chronicles</h2>
               <p className="text-sm text-[#8b8c94] font-medium mt-1">Updates from the world of Heroic RPG</p>
             </div>
-            <button className="text-sm font-bold text-[#00b2ff] flex items-center gap-2 hover:underline w-fit">
+            <button className="text-sm font-bold text-[#00e5ff] flex items-center gap-2 hover:underline w-fit">
               View History <ArrowRight size={16} />
             </button>
           </div>
@@ -163,14 +163,14 @@ export default function LandingPage() {
                   </div>
                 )}
                 <div className="p-6 flex-1 flex flex-col">
-                  <span className="text-[10px] font-bold text-[#00b2ff] mb-2">Announcement</span>
+                  <span className="text-[10px] font-bold text-[#00e5ff] mb-2">Announcement</span>
                   <h3 className="text-xl font-bold mb-3">{item.title}</h3>
                   <p className="text-sm text-[#8b8c94] font-medium line-clamp-3 mb-6">
                     {item.content}
                   </p>
                   <div className="mt-auto pt-4 border-t border-[#292a32]/50 flex items-center justify-between text-xs text-[#8b8c94]">
                     <span>{item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Today'}</span>
-                    <button className="font-bold text-white hover:text-[#00b2ff] transition-colors">Read More</button>
+                    <button className="font-bold text-white hover:text-[#00e5ff] transition-colors">Read More</button>
                   </div>
                 </div>
               </motion.article>
@@ -192,17 +192,17 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="glass-panel md:col-span-2 p-6 md:p-8 flex flex-col justify-end min-h-[250px] md:min-h-[300px] relative overflow-hidden group">
-            <Sword className="absolute -top-4 -right-4 size-24 md:size-32 text-[#00b2ff]/10 rotate-12 group-hover:scale-110 transition-transform" />
+            <Sword className="absolute -top-4 -right-4 size-24 md:size-32 text-[#00e5ff]/10 rotate-12 group-hover:scale-110 transition-transform" />
             <h3 className="text-2xl md:text-3xl font-bold mb-2">Dynamic Combat</h3>
             <p className="text-sm text-[#8b8c94] font-medium">No fixed damage numbers. Describe your strike, and the AI calculates the outcome based on surroundings.</p>
           </div>
           <div className="glass-panel p-6 md:p-8 flex flex-col justify-end min-h-[200px] md:min-h-[300px]">
-            <Zap className="text-[#00b2ff] mb-4" size={32} />
+            <Zap className="text-[#00e5ff] mb-4" size={32} />
             <h3 className="text-xl font-bold mb-2">Instant Response</h3>
             <p className="text-sm text-[#8b8c94] font-medium">Sub-second generation for smooth storytelling.</p>
           </div>
           <div className="glass-panel p-6 md:p-8 flex flex-col justify-end min-h-[200px] md:min-h-[300px]">
-             <Users className="text-[#00b2ff] mb-4" size={32} />
+             <Users className="text-[#00e5ff] mb-4" size={32} />
             <h3 className="text-xl font-bold mb-2">Guild Support</h3>
             <p className="text-sm text-[#8b8c94] font-medium">Collaborate with allies in shared world instances.</p>
           </div>
@@ -212,14 +212,14 @@ export default function LandingPage() {
       <footer className="border-t border-[#292a32]/30 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
           <div className="flex items-center gap-3">
-            <Shield size={20} className="text-[#00b2ff]" />
+            <Shield size={20} className="text-[#00e5ff]" />
             <span className="font-serif font-bold">Heroic AI RPG</span>
           </div>
           <p className="text-xs text-[#8b8c94] font-medium">© 2026 Ghost Dimension Games. Built with Gemini AI.</p>
           <div className="flex gap-6 text-xs font-bold text-[#8b8c94]">
-            <a href="#" className="hover:text-[#00b2ff] transition-colors">Privacy</a>
-            <a href="#" className="hover:text-[#00b2ff] transition-colors">Terms</a>
-            <a href="#" className="hover:text-[#00b2ff] transition-colors">Discord</a>
+            <a href="#" className="hover:text-[#00e5ff] transition-colors">Privacy</a>
+            <a href="#" className="hover:text-[#00e5ff] transition-colors">Terms</a>
+            <a href="#" className="hover:text-[#00e5ff] transition-colors">Discord</a>
           </div>
         </div>
       </footer>

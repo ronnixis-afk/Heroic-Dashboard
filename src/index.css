@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -5,8 +6,8 @@
   --color-brand-bg: #141416;
   --color-brand-surface: #1d1e24;
   --color-brand-primary: #292a32;
-  --color-brand-accent: #00b2ff;
-  --color-brand-accent-hover: #009ce0;
+  --color-brand-accent: #00e5ff;
+  --color-brand-accent-hover: #00ccff;
   --color-brand-text: #ffffff;
   --color-brand-text-muted: #8b8c94;
   --color-sidebar-bg: #111114;
@@ -14,7 +15,7 @@
   /* Typography Scale */
   --text-h1: 2.25rem;
   --text-h1--line-height: 2.5rem;
-  --text-h2: 1.5rem;
+  --text-h2: 27px;
   --text-h2--line-height: 2rem;
   --text-h3: 1.25rem;
   --text-h3--line-height: 1.75rem;
@@ -41,7 +42,7 @@
 
   /* Fonts */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Merriweather', serif;
+  --font-serif: 'Bangers', cursive;
 }
 
 @layer base {
@@ -107,7 +108,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #00b2ff;
+    background: #00e5ff;
     border-radius: 10px;
   }
 
@@ -146,4 +147,11 @@
 
 .skeleton-box {
   @apply shimmer rounded-lg;
+}
+
+@utility font-serif {
+  font-family: var(--font-serif);
+  font-size: 1.25em;
+  letter-spacing: normal !important;
+  font-weight: 400 !important;
 }

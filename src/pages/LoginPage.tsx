@@ -77,12 +77,12 @@ export default function LoginPage() {
                 socialButtonsBlockButtonText: "text-white font-bold text-sm",
                 formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm normal-case",
                 formFieldLabel: "text-[#8b8c94] text-[10px] font-bold",
-                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00b2ff] transition-all",
-                footerActionLink: "text-[#00b2ff] hover:text-white transition-colors text-sm font-bold",
+                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#00e5ff] transition-all",
+                footerActionLink: "text-[#00e5ff] hover:text-white transition-colors text-sm font-bold",
                 dividerLine: "bg-[#292a32]/50",
                 dividerText: "text-[#8b8c94] text-[10px]",
                 identityPreviewText: "text-white font-bold",
-                identityPreviewEditButtonIcon: "text-[#00b2ff]"
+                identityPreviewEditButtonIcon: "text-[#00e5ff]"
               }
             }}
             routing="path"
