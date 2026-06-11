@@ -1,14 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
-import { SkeletonText } from '../Skeleton';
-
-interface UsageData {
-  feature: string;
-  totalUses: number;
-  percentage: number;
-  uniqueUsers: number;
-  avgDurationMs: number;
-}
 
 export function FeatureUsageChart() {
   const { featureUsage: data, loading } = useAnalyticsMetrics();
@@ -16,43 +7,41 @@ export function FeatureUsageChart() {
   const isLoading = loading;
 
   const getBarColor = (percentage: number) => {
-    if (percentage >= 20) return '#20cce0'; // Core
-    if (percentage >= 5) return '#3ecf8e'; // Secondary
-    return '#ff5a36'; // Underused
+    if (percentage >= 20) return '#20cce0';
+    if (percentage >= 5) return '#3ecf8e';
+    return '#ff5a36';
   };
 
   return (
-    <div className="glass-panel p-6 h-96 flex flex-col">
-      <div className="flex justify-between items-start mb-6">
-        <h3 className="text-lg font-medium text-brand-text m-0">Feature Usage (30 Days)</h3>
-      </div>
+    <div className="card p-3.5 h-80 flex flex-col">
+      <h3 className="card-title mb-3">Feature Usage (30 Days)</h3>
       
       <div className="flex-1 w-full min-h-0 relative">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex flex-col gap-3 px-2 py-4 opacity-20 pointer-events-none">
+          <div className="absolute inset-0 z-10 flex flex-col gap-2 px-2 py-4 opacity-20 pointer-events-none">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="shimmer h-5 rounded-md" style={{ width: `${Math.random() * 60 + 20}%` }} />
+              <div key={i} className="shimmer h-4 rounded-md" style={{ width: `${Math.random() * 60 + 20}%` }} />
             ))}
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={isLoading ? [] : data.usage} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" horizontal={false} />
-            <XAxis type="number" stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}%`} />
+            <XAxis type="number" stroke="#8E8E93" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(val) => `${val}%`} />
             <YAxis 
               dataKey="feature" 
               type="category" 
               stroke="#8E8E93" 
-              fontSize={11} 
+              fontSize={10} 
               axisLine={false} 
               tickLine={false}
-              width={100}
+              width={90}
             />
             <Tooltip 
               cursor={{ fill: 'rgba(255,255,255,0.05)' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
-                  const data = payload[0].payload;
+                  const item = payload[0].payload;
                   const descriptions: Record<string, string> = {
                     'Response': 'Standard AI dialogue and story narration. Primary interaction method for players.',
                     'World Building': 'Generates new locations, lore, and background details. Helps expand the universe dynamically.',
@@ -62,20 +51,20 @@ export function FeatureUsageChart() {
                     'Profile Picture': 'Generates visual portraits for characters and NPCs. Adds a visual layer to the experience.',
                     'Quest Narration': 'Specialized AI updates on quest progression. Acts as the overarching storyteller for the journey.'
                   };
-                  const desc = descriptions[data.feature] || 'Miscellaneous AI requests and system prompts.';
+                  const desc = descriptions[item.feature] || 'Miscellaneous AI requests and system prompts.';
                   
                   return (
-                    <div className="tooltip-panel pointer-events-none min-w-[240px]">
-                      <div className="flex justify-between items-start mb-3">
-                        <p className="text-xs font-bold text-white m-0">{data.feature}</p>
-                        <p className="text-xs font-bold text-emerald-400 m-0">${data.totalCost.toFixed(2)}</p>
+                    <div className="tooltip-panel pointer-events-none min-w-[220px]">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs font-semibold text-white m-0">{item.feature}</p>
+                        <p className="text-xs font-semibold text-emerald-400 m-0">${item.totalCost.toFixed(2)}</p>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div className="flex items-baseline gap-2">
-                          <p className="text-lg font-bold text-white m-0">{data.percentage}%</p>
-                          <p className="text-[10px] text-brand-text-muted m-0">Of Total Usage</p>
+                          <p className="card-metric m-0">{item.percentage}%</p>
+                          <p className="text-xs text-brand-text-muted m-0">Of Total Usage</p>
                         </div>
-                        <p className="text-[10px] leading-relaxed text-brand-text-muted italic border-t border-brand-primary/20 pt-2 block whitespace-normal">
+                        <p className="text-xs leading-relaxed text-brand-text-muted italic border-t border-brand-primary/20 pt-2 block whitespace-normal">
                           {desc}
                         </p>
                       </div>
@@ -85,7 +74,7 @@ export function FeatureUsageChart() {
                 return null;
               }}
             />
-            <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={20}>
+            <Bar dataKey="percentage" radius={[0, 4, 4, 0]} barSize={16}>
               {!isLoading && data.usage.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.percentage)} />
               ))}

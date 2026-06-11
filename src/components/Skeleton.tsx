@@ -8,41 +8,38 @@ interface SkeletonProps {
   circle?: boolean;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({ 
-  className, 
-  width, 
-  height, 
-  circle = false 
+export const Skeleton: React.FC<SkeletonProps> = ({
+  className,
+  width,
+  height,
+  circle = false,
 }) => {
   return (
-    <div 
-      className={cn(
-        "shimmer", 
-        circle ? "rounded-full" : "rounded-xl",
-        className
-      )}
+    <div
+      className={cn('shimmer', circle ? 'rounded-full' : 'rounded-md', className)}
       style={{ width, height }}
     />
   );
 };
 
-export const SkeletonText: React.FC<{ width?: string | number; className?: string }> = ({ width = "100%", className }) => (
-  <Skeleton width={width} height={16} className={cn("rounded-md", className)} />
-);
+export const SkeletonText: React.FC<{ width?: string | number; className?: string }> = ({
+  width = '100%',
+  className,
+}) => <Skeleton width={width} height={11} className={cn('rounded', className)} />;
 
-export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({ 
-  rows = 5, 
-  cols = 5 
+export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
+  rows = 5,
+  cols = 5,
 }) => {
   return (
-    <div className="glass-panel overflow-hidden">
+    <div className="card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr>
               {Array.from({ length: cols }).map((_, i) => (
                 <th key={i}>
-                  <Skeleton width="60%" height={12} className="opacity-50" />
+                  <Skeleton width="60%" height={11} className="opacity-50" />
                 </th>
               ))}
             </tr>
@@ -52,7 +49,7 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
               <tr key={rowIndex}>
                 {Array.from({ length: cols }).map((_, colIndex) => (
                   <td key={colIndex}>
-                    <Skeleton width={colIndex === 0 ? "80%" : "60%"} height={14} />
+                    <Skeleton width={colIndex === 0 ? '80%' : '60%'} height={11} />
                   </td>
                 ))}
               </tr>
@@ -64,43 +61,39 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
   );
 };
 
-export const CardSkeleton: React.FC<{ height?: number | string }> = ({ height = 300 }) => {
+export const CardSkeleton: React.FC<{ height?: number | string }> = ({ height = 260 }) => {
   return (
-    <div className="glass-panel p-6 flex flex-col gap-4" style={{ height }}>
-      <div className="flex justify-between items-center mb-2">
-        <Skeleton width="40%" height={24} />
-        <Skeleton width={80} height={32} className="rounded-full" />
+    <div className="card p-3.5 flex flex-col gap-3" style={{ height }}>
+      <div className="flex justify-between items-center">
+        <Skeleton width="40%" height={14} />
+        <Skeleton width={56} height={28} className="rounded-md" />
       </div>
-      <Skeleton width="100%" height={20} className="opacity-30" />
-      <div className="flex-1 flex flex-col gap-3 mt-4">
-        <Skeleton width="100%" height={40} className="rounded-xl" />
-        <Skeleton width="100%" height={40} className="rounded-xl" />
-        <Skeleton width="100%" height={40} className="rounded-xl" />
+      <Skeleton width="100%" height={11} className="opacity-30" />
+      <div className="flex-1 flex flex-col gap-2 mt-2">
+        <Skeleton width="100%" height={28} />
+        <Skeleton width="100%" height={28} />
+        <Skeleton width="100%" height={28} />
       </div>
     </div>
   );
 };
 
-export const ChartSkeleton: React.FC<{ height?: number | string }> = ({ height = 300 }) => {
+export const ChartSkeleton: React.FC<{ height?: number | string }> = ({ height = 260 }) => {
   return (
-    <div className="glass-panel p-6 flex flex-col gap-6" style={{ height }}>
+    <div className="card p-3.5 flex flex-col gap-3" style={{ height }}>
       <div className="flex justify-between items-center">
-        <div className="space-y-2 flex-1">
-          <Skeleton width="30%" height={24} />
-          <Skeleton width="50%" height={14} className="opacity-50" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton width="30%" height={14} />
+          <Skeleton width="50%" height={11} className="opacity-50" />
         </div>
-        <div className="flex gap-2">
-          <Skeleton width={60} height={24} className="rounded-lg" />
-          <Skeleton width={60} height={24} className="rounded-lg" />
+        <div className="flex gap-1.5">
+          <Skeleton width={48} height={24} className="rounded-md" />
+          <Skeleton width={48} height={24} className="rounded-md" />
         </div>
       </div>
-      <div className="flex-1 w-full relative flex items-end gap-2 px-2">
+      <div className="flex-1 w-full relative flex items-end gap-1.5 px-1">
         {Array.from({ length: 12 }).map((_, i) => (
-          <Skeleton 
-            key={i} 
-            className="flex-1 opacity-20" 
-            height={`${Math.random() * 60 + 20}%`} 
-          />
+          <Skeleton key={i} className="flex-1 opacity-20" height={`${Math.random() * 60 + 20}%`} />
         ))}
       </div>
     </div>
@@ -109,20 +102,19 @@ export const ChartSkeleton: React.FC<{ height?: number | string }> = ({ height =
 
 export const DashboardSkeleton = () => {
   return (
-    <div className="space-y-6 text-white pb-8">
-      {/* Top Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="page">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-2">
-          <ChartSkeleton height={350} />
+          <ChartSkeleton height={300} />
         </div>
-        <CardSkeleton height={350} />
+        <div className="lg:col-span-2">
+          <CardSkeleton height={300} />
+        </div>
       </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CardSkeleton height={340} />
-        <CardSkeleton height={340} />
-        <CardSkeleton height={340} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <CardSkeleton height={260} />
+        <CardSkeleton height={260} />
+        <CardSkeleton height={260} />
       </div>
     </div>
   );

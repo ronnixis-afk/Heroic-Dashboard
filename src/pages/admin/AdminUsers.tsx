@@ -5,13 +5,12 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 import UsersFilterBar from '../../components/users/UsersFilterBar';
 import UsersTable from '../../components/users/UsersTable';
 import UserDetailModal from '../../components/users/UserDetailModal';
-
-import { TableSkeleton } from '../../components/Skeleton';
+import { PageHeader } from '../../components/ui';
 
 export default function AdminUsers() {
   const { users, isSyncing, syncMessage, syncUsers, loading } = useUsers();
   const { trackEvent } = useAnalytics();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -30,15 +29,17 @@ export default function AdminUsers() {
     syncUsers();
   };
 
-  const filteredUsers = users.filter(user => 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.id?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="space-y-6 relative overflow-hidden">
-      <h1 className="text-2xl md:text-h1 mb-4 md:mb-8">User Management</h1>
-      <UsersFilterBar 
+    <div className="page">
+      <PageHeader title="User Management" />
+
+      <UsersFilterBar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         showFilters={showFilters}
@@ -52,18 +53,20 @@ export default function AdminUsers() {
 
       <AnimatePresence>
         {showFilters && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: -10 }} 
-            className="glass-panel p-4"
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="card p-3"
           >
-            <p className="text-xs md:text-sm text-brand-text-muted">Placeholder for advanced filters (Tier, Credits, Date Range).</p>
+            <p className="text-xs text-brand-text-muted">
+              Placeholder for advanced filters (Tier, Credits, Date Range).
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <UsersTable 
+      <UsersTable
         filteredUsers={filteredUsers}
         setSelectedUser={setSelectedUser}
         setShowManageAccess={setShowManageAccess}
@@ -71,7 +74,7 @@ export default function AdminUsers() {
         isLoading={loading}
       />
 
-      <UserDetailModal 
+      <UserDetailModal
         selectedUser={selectedUser}
         handleCloseModal={() => {
           setSelectedUser(null);

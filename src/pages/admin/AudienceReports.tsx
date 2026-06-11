@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import { ActiveUsersCard } from '../../components/dashboard/ActiveUsersCard';
 import RecentSignups from '../../components/dashboard/RecentSignups';
 import { RetentionTable } from '../../components/dashboard/RetentionTable';
 import { ChurnSignalsTable } from '../../components/dashboard/ChurnSignalsTable';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
-
+import { PageHeader } from '../../components/ui';
 import { Skeleton, ChartSkeleton, CardSkeleton, TableSkeleton } from '../../components/Skeleton';
 
 export default function AudienceReports() {
@@ -15,23 +15,23 @@ export default function AudienceReports() {
 
   if (loading) {
     return (
-      <div className="space-y-6 md:space-y-8 pb-12">
+      <div className="page pb-6">
         <div className="flex flex-col gap-2">
-          <Skeleton width={200} height={32} mdWidth={280} mdHeight={40} />
-          <Skeleton width="100%" height={16} mdWidth={450} className="opacity-50" />
+          <Skeleton width={200} height={24} mdWidth={240} mdHeight={28} />
+          <Skeleton width="100%" height={14} mdWidth={450} className="opacity-50" />
         </div>
-        <CardSkeleton height={200} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          <ChartSkeleton height={340} />
-          <CardSkeleton height={340} />
+        <CardSkeleton height={160} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <ChartSkeleton height={280} />
+          <CardSkeleton height={280} />
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-          <div className="space-y-4">
-            <Skeleton width={150} height={24} />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Skeleton width={150} height={18} />
             <TableSkeleton rows={6} cols={4} />
           </div>
-          <div className="space-y-4">
-            <Skeleton width={150} height={24} />
+          <div className="space-y-2">
+            <Skeleton width={150} height={18} />
             <TableSkeleton rows={6} cols={4} />
           </div>
         </div>
@@ -40,19 +40,18 @@ export default function AudienceReports() {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-h1">Audience Reports</h1>
-          <p className="text-xs md:text-body text-brand-text-muted mt-2">Analysis of user growth, behavior, and retention across the platform.</p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-brand-accent/10 rounded-full border border-brand-accent/20 w-fit">
-          <Users size={16} className="text-brand-accent" />
-          <span className="text-xs md:text-sm font-bold text-brand-accent">Audience Hub</span>
-        </div>
-      </div>
+    <div className="page pb-6">
+      <PageHeader
+        title="Audience Reports"
+        description="Analysis of user growth, behavior, and retention across the platform."
+        actions={
+          <span className="badge-accent flex items-center gap-1.5">
+            <Users size={12} />
+            Audience Hub
+          </span>
+        }
+      />
 
-      {/* Primary Metrics Row */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -60,8 +59,7 @@ export default function AudienceReports() {
         <ActiveUsersCard />
       </motion.div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,16 +77,15 @@ export default function AudienceReports() {
         </motion.div>
       </div>
 
-      {/* Advanced Tables Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="mb-4 flex items-center gap-2">
-            <TrendingUp size={20} className="text-emerald-500" />
-            <h3>User Retention</h3>
+          <div className="mb-2 flex items-center gap-2">
+            <TrendingUp size={14} className="text-emerald-500" />
+            <h3 className="section-title">User Retention</h3>
           </div>
           <div className="overflow-x-auto custom-scrollbar">
             <RetentionTable />
@@ -100,9 +97,9 @@ export default function AudienceReports() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle size={20} className="text-orange-500" />
-            <h3>Churn Signals</h3>
+          <div className="mb-2 flex items-center gap-2">
+            <AlertTriangle size={14} className="text-orange-500" />
+            <h3 className="section-title">Churn Signals</h3>
           </div>
           <div className="overflow-x-auto custom-scrollbar">
             <ChurnSignalsTable />

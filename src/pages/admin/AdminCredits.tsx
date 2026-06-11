@@ -3,6 +3,7 @@ import { useCredits } from '../../hooks/useCredits';
 import { cn } from '../../lib/utils';
 import { Coins, History, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PageHeader } from '../../components/ui';
 
 export default function AdminCredits() {
   const { history, loading, status, setStatus, isProcessing, adjustCredits } = useCredits();
@@ -23,50 +24,50 @@ export default function AdminCredits() {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <h1 className="text-2xl md:text-h1">Credit Monitoring</h1>
-      <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
-        {/* Adjustment Form */}
+    <div className="page">
+      <PageHeader title="Credit Monitoring" />
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <div className="glass-panel p-4 md:p-6">
-            <h2 className="mb-4 md:mb-6 flex items-center gap-2 text-xl">
-              <Coins className="text-brand-accent" size={24} />
+          <div className="card p-3.5">
+            <h2 className="section-title mb-3 flex items-center gap-2">
+              <Coins className="text-brand-accent" size={16} />
               Grant Credits
             </h2>
 
-            <form onSubmit={handleAdjust} className="space-y-4">
+            <form onSubmit={handleAdjust} className="space-y-3">
               <div>
-                <label className="mb-2 block text-xs font-bold text-brand-text-muted">Target User Email</label>
+                <label className="input-label">Target User Email</label>
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted" size={18} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted" size={14} />
                   <input 
                     type="text" 
                     required
                     value={formData.userEmail}
                     onChange={(e) => setFormData({ ...formData, userEmail: e.target.value })}
                     placeholder="ronnixis@gmail.com"
-                    className="input-field w-full !pl-12"
+                    className="input-field !pl-9"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-brand-text-muted">Amount</label>
-                <div className="flex flex-col gap-3">
+                <label className="input-label">Amount</label>
+                <div className="flex flex-col gap-2">
                   <input 
                     type="number" 
                     required
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: parseInt(e.target.value) || 0 })}
-                    className="input-field w-full"
+                    className="input-field"
                   />
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {[500, 1000, 5000].map(val => (
                       <button 
                         key={val}
                         type="button"
                         onClick={() => setFormData({ ...formData, amount: val })}
-                        className="flex-1 rounded-lg border border-brand-primary/20 bg-brand-bg px-3 py-2 text-[10px] md:text-xs font-bold hover:bg-brand-primary/20 transition-colors"
+                        className="btn-secondary btn-sm flex-1"
                       >
                         +{val}
                       </button>
@@ -76,11 +77,11 @@ export default function AdminCredits() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-brand-text-muted">Reason / Note</label>
+                <label className="input-label">Reason / Note</label>
                 <select 
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="input-field w-full"
+                  className="input-field"
                 >
                   <option>Regular Grant</option>
                   <option>System Replenishment</option>
@@ -97,11 +98,11 @@ export default function AdminCredits() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className={cn(
-                      'flex items-start gap-2 rounded-xl p-3 text-xs font-medium',
-                      status.type === 'success' ? 'bg-brand-accent/10 text-brand-accent' : 'bg-red-400/10 text-red-400'
+                      'flex items-start gap-2 rounded-lg p-2.5 text-xs font-medium',
+                      status.type === 'success' ? 'badge-accent' : 'badge-danger'
                     )}
                   >
-                    {status.type === 'success' ? <CheckCircle2 size={16} className="mt-0.5" /> : <AlertCircle size={16} className="mt-0.5" />}
+                    {status.type === 'success' ? <CheckCircle2 size={14} className="mt-0.5" /> : <AlertCircle size={14} className="mt-0.5" />}
                     <span className="flex-1">{status.msg}</span>
                   </motion.div>
                 )}
@@ -110,7 +111,7 @@ export default function AdminCredits() {
               <button 
                 type="submit" 
                 disabled={isProcessing}
-                className="btn-primary w-full shadow-[0_0_20px_rgba(62,207,142,0.2)] mt-2 disabled:opacity-50"
+                className="btn-primary w-full disabled:opacity-50"
               >
                 {isProcessing ? 'Processing...' : 'Process Adjustment'}
               </button>
@@ -118,12 +119,11 @@ export default function AdminCredits() {
           </div>
         </div>
 
-        {/* History Log */}
         <div className="lg:col-span-2">
-          <div className="glass-panel h-full overflow-hidden flex flex-col">
-            <div className="p-4 md:p-6 border-b border-brand-primary/10">
-              <h2 className="flex items-center gap-2 text-xl">
-                <History className="text-brand-text-muted" size={24} />
+          <div className="card h-full overflow-hidden flex flex-col">
+            <div className="p-3.5 border-b border-brand-primary/10">
+              <h2 className="section-title flex items-center gap-2">
+                <History className="text-brand-text-muted" size={16} />
                 Adjustment History
               </h2>
             </div>
@@ -151,14 +151,14 @@ export default function AdminCredits() {
                         </td>
                         <td>
                           <span className={cn(
-                            'font-bold',
+                            'font-semibold text-xs',
                             item.amount > 0 ? 'text-brand-accent' : 'text-red-400'
                           )}>
                             {item.amount > 0 ? '+' : ''}{item.amount}
                           </span>
                         </td>
                         <td className="text-xs font-medium whitespace-nowrap">{item.reason}</td>
-                        <td className="text-[10px] text-brand-text-muted whitespace-nowrap">
+                        <td className="text-xs text-brand-text-muted whitespace-nowrap">
                           {item.adminId ? `${item.adminId.slice(0, 15)}...` : 'Unknown'}
                         </td>
                       </tr>
@@ -167,12 +167,12 @@ export default function AdminCredits() {
                 </table>
               </div>
               {loading && (
-                <div className="py-20 text-center text-brand-text-muted italic">
+                <div className="py-12 text-center text-xs text-brand-text-muted italic">
                   Loading Adjustment History...
                 </div>
               )}
               {!loading && history.length === 0 && (
-                <div className="py-20 text-center text-brand-text-muted italic">
+                <div className="py-12 text-center text-xs text-brand-text-muted italic">
                   No Adjustments Recorded Yet.
                 </div>
               )}

@@ -6,39 +6,33 @@ import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import RecentSignups from '../../components/dashboard/RecentSignups';
 import TopConsumers from '../../components/dashboard/TopConsumers';
-
-import { Activity } from 'lucide-react';
-
-import { DashboardSkeleton } from '../../components/Skeleton';
+import { PageHeader } from '../../components/ui';
 
 export default function AdminDashboard() {
-  const { 
-    loading, 
-    totalRevenue, 
+  const {
+    loading,
+    totalRevenue,
     dailyData,
     weeklyData,
     monthlyData,
     yearlyData,
-    recentSignups, 
-    topConsumers, 
+    recentSignups,
+    topConsumers,
     acquisitionData,
-    activeSessionsCount,
     netProfit,
-    profitMargin
+    profitMargin,
   } = useDashboardMetrics();
-  
-  // Track page view
+
   useAnalytics();
- 
+
   return (
-    <div className="space-y-6 text-white pb-8">
-      <h1 className="text-2xl md:text-h1 mb-4 md:mb-8">Admin Dashboard</h1>
-      
-      {/* Top Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+    <div className="page">
+      <PageHeader title="Admin Dashboard" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-2">
-          <RevenueOverview 
-            totalRevenue={totalRevenue} 
+          <RevenueOverview
+            totalRevenue={totalRevenue}
             dailyData={dailyData}
             weeklyData={weeklyData}
             monthlyData={monthlyData}
@@ -47,28 +41,18 @@ export default function AdminDashboard() {
           />
         </div>
         <div className="lg:col-span-2">
-          <NetProfitWidget 
-            netProfit={netProfit} 
-            profitMargin={profitMargin} 
+          <NetProfitWidget
+            netProfit={netProfit}
+            profitMargin={profitMargin}
             isLoading={loading}
           />
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <UserAcquisition 
-          acquisitionData={acquisitionData} 
-          isLoading={loading}
-        />
-        <RecentSignups 
-          recentSignups={recentSignups} 
-          isLoading={loading}
-        />
-        <TopConsumers 
-          topConsumers={topConsumers} 
-          isLoading={loading}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <UserAcquisition acquisitionData={acquisitionData} isLoading={loading} />
+        <RecentSignups recentSignups={recentSignups} isLoading={loading} />
+        <TopConsumers topConsumers={topConsumers} isLoading={loading} />
       </div>
     </div>
   );

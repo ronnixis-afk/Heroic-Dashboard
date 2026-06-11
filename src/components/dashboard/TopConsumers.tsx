@@ -11,29 +11,24 @@ export default function TopConsumers({ topConsumers, isLoading = false }: TopCon
   const navigate = useNavigate();
 
   return (
-    <div className="glass-panel p-6 h-[340px] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <h3>Top Consumers</h3>
-        <button 
-          onClick={() => navigate('/admin/analytics')}
-          className="btn-primary px-4 py-1.5 text-xs"
-        >
+    <div className="card p-3.5 h-[260px] flex flex-col">
+      <div className="card-header mb-2">
+        <h3 className="card-title">Top Consumers</h3>
+        <button onClick={() => navigate('/admin/analytics')} className="btn-primary btn-sm">
           View All
         </button>
       </div>
-      
-      <div className="pr-1">
-        <div className="grid grid-cols-[1fr_80px] items-center text-xs font-bold text-brand-text-muted mb-4 pb-2 border-b border-brand-primary px-2">
-          <span className="pr-2">Customer</span>
-          <span className="text-right">Spend</span>
-        </div>
+
+      <div className="grid grid-cols-[1fr_64px] items-center text-xs font-medium text-brand-text-muted mb-2 pb-1.5 border-b border-brand-primary px-1">
+        <span>Customer</span>
+        <span className="text-right">Spend</span>
       </div>
-      
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+
+      <div className="flex-1 overflow-y-auto space-y-0.5">
         {(isLoading ? Array.from({ length: 5 }) : topConsumers).map((tx, idx) => (
-          <div key={isLoading ? idx : tx.id} className={`grid grid-cols-[1fr_80px] items-center p-2 rounded-xl transition-colors ${idx === 1 && !isLoading ? 'bg-brand-primary' : 'hover:bg-brand-primary'}`}>
-            <div className="flex items-center gap-3 min-w-0 pr-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#292a32] shrink-0">
+          <div key={isLoading ? idx : tx.id} className="grid grid-cols-[1fr_64px] items-center list-item px-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-brand-primary shrink-0">
                 {isLoading ? (
                   <Skeleton width="100%" height="100%" circle />
                 ) : (
@@ -41,15 +36,19 @@ export default function TopConsumers({ topConsumers, isLoading = false }: TopCon
                 )}
               </div>
               {isLoading ? (
-                <SkeletonText width={100} className="h-3" />
+                <SkeletonText width={80} className="h-3" />
               ) : (
-                <span className="text-body font-medium text-brand-text truncate" title={tx.user}>{tx.user}</span>
+                <span className="text-xs font-medium truncate" title={tx.user}>
+                  {tx.user}
+                </span>
               )}
             </div>
             {isLoading ? (
-              <SkeletonText width={50} className="h-3 ml-auto" />
+              <SkeletonText width={40} className="h-3 ml-auto" />
             ) : (
-              <span className="text-body font-bold text-emerald-400 text-right">${tx.cost.toFixed(2)}</span>
+              <span className="text-xs font-semibold text-emerald-400 text-right">
+                ${tx.cost.toFixed(2)}
+              </span>
             )}
           </div>
         ))}

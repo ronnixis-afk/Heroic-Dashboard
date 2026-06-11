@@ -11,51 +11,55 @@ export default function RecentSignups({ recentSignups, isLoading = false }: Rece
   const navigate = useNavigate();
 
   return (
-    <div className="glass-panel p-6 h-[340px] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <h3>Recent Signups</h3>
-        <button 
-          onClick={() => navigate('/admin/users')}
-          className="btn-primary px-4 py-1.5 text-xs"
-        >
+    <div className="card p-3.5 h-[260px] flex flex-col">
+      <div className="card-header mb-2">
+        <h3 className="card-title">Recent Signups</h3>
+        <button onClick={() => navigate('/admin/users')} className="btn-primary btn-sm">
           View All
         </button>
       </div>
-      
-      <div className="pr-1">
-        <div className="grid grid-cols-[1fr_96px_80px] items-center text-xs font-bold text-brand-text-muted mb-4 pb-2 border-b border-brand-primary px-2">
-          <span className="pr-2">User</span>
-          <span className="text-center">Time</span>
-          <span className="text-right">Plan</span>
-        </div>
+
+      <div className="grid grid-cols-[1fr_72px_64px] items-center text-xs font-medium text-brand-text-muted mb-2 pb-1.5 border-b border-brand-primary px-1">
+        <span>User</span>
+        <span className="text-center">Time</span>
+        <span className="text-right">Plan</span>
       </div>
-      
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+
+      <div className="flex-1 overflow-y-auto space-y-0.5">
         {(isLoading ? Array.from({ length: 5 }) : recentSignups).map((signup, i) => (
-          <div key={isLoading ? i : signup.id} className="grid grid-cols-[1fr_96px_80px] items-center p-2 rounded-xl hover:bg-brand-primary transition-colors group">
-            <div className="flex items-center gap-3 min-w-0 pr-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#292a32] shrink-0">
+          <div
+            key={isLoading ? i : signup.id}
+            className="grid grid-cols-[1fr_72px_64px] items-center list-item px-1"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-brand-primary shrink-0">
                 {isLoading ? (
                   <Skeleton width="100%" height="100%" circle />
                 ) : (
-                  <img src={signup.icon} alt={signup.user} className="w-full h-full object-cover" />
+                  <img
+                    src={signup.icon}
+                    alt={signup.user}
+                    className="w-full h-full object-cover"
+                  />
                 )}
               </div>
               {isLoading ? (
-                <SkeletonText width={100} className="h-3" />
+                <SkeletonText width={80} className="h-3" />
               ) : (
-                <span className="text-body font-medium text-brand-text truncate" title={signup.user}>{signup.user}</span>
+                <span className="text-xs font-medium truncate" title={signup.user}>
+                  {signup.user}
+                </span>
               )}
             </div>
             {isLoading ? (
-              <SkeletonText width={60} className="h-3 mx-auto" />
+              <SkeletonText width={48} className="h-3 mx-auto" />
             ) : (
               <span className="text-xs text-brand-text-muted text-center">{signup.date}</span>
             )}
             {isLoading ? (
-              <SkeletonText width={50} className="h-3 ml-auto" />
+              <SkeletonText width={40} className="h-3 ml-auto" />
             ) : (
-              <span className="text-body font-bold text-white text-right">{signup.plan}</span>
+              <span className="text-xs font-medium text-right">{signup.plan}</span>
             )}
           </div>
         ))}

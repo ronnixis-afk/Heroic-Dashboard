@@ -35,7 +35,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 }) => {
   const { user, loading, isAdmin } = useAuth();
   
-  if (loading) return <div className="flex h-screen items-center justify-center bg-[#0A0A0A] text-white">Loading...</div>;
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-brand-bg text-brand-text">
+      <div className="h-6 w-6 shimmer rounded-full opacity-50" />
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/login" replace />;
   
@@ -45,13 +49,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
 export default function App() {
   if (!CLERK_PUBLISHABLE_KEY) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0A0A0A] p-4 text-center">
-        <div className="max-w-md rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-white shadow-xl backdrop-blur-sm">
-          <h1 className="mb-4 text-2xl font-bold text-red-400">Configuration Error</h1>
-          <p className="mb-2 text-gray-300">
-            The application failed to start because the <code className="rounded bg-black/50 px-2 py-1 text-red-300">VITE_CLERK_PUBLISHABLE_KEY</code> environment variable is missing.
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-brand-bg p-4 text-center">
+        <div className="card max-w-md p-3.5 border-red-500/30 bg-red-500/10">
+          <h1 className="text-header font-semibold text-red-400 mb-3">Configuration Error</h1>
+          <p className="text-xs text-brand-text-muted mb-2">
+            The application failed to start because the <code className="rounded bg-brand-bg px-1.5 py-0.5 text-red-300">VITE_CLERK_PUBLISHABLE_KEY</code> environment variable is missing.
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-xs text-brand-text-muted">
             If you are viewing this on Vercel, please add this variable in your project's Environment Variables settings and redeploy.
           </p>
         </div>

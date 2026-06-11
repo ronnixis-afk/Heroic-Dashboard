@@ -1,33 +1,19 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 
-interface SessionDaily {
-  date: string;
-  totalSessions: number;
-  avgDurationMin: number;
-  medianDurationMin: number;
-  p95DurationMin: number;
-}
-
-interface SessionDistribution {
-  range: string;
-  count: number;
-  percentage: number;
-}
-
 export function SessionLengthChart() {
   const { sessionLengths: data, loading } = useAnalyticsMetrics();
 
   const isLoading = loading || !data;
 
   return (
-    <div className="glass-panel p-6 h-[500px] flex flex-col">
-      <h3 className="text-lg font-medium text-brand-text mb-6">Session Lengths (30 Days)</h3>
+    <div className="card p-3.5 h-[400px] flex flex-col">
+      <h3 className="card-title mb-3">Session Lengths (30 Days)</h3>
       
-      <div className="flex-1 w-full min-h-0 mb-6 relative">
-        <h4 className="text-sm font-medium text-brand-text-muted mb-2">Trend (Minutes)</h4>
+      <div className="flex-1 w-full min-h-0 mb-4 relative">
+        <h4 className="input-label mb-1">Trend (Minutes)</h4>
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-end gap-1 px-2 pb-8 opacity-10 pointer-events-none mt-6">
+          <div className="absolute inset-0 z-10 flex items-end gap-1 px-2 pb-8 opacity-10 pointer-events-none mt-4">
             {Array.from({ length: 30 }).map((_, i) => (
               <div key={i} className="shimmer flex-1 rounded-t-sm" style={{ height: `${Math.random() * 50 + 20}%` }} />
             ))}
@@ -45,8 +31,8 @@ export function SessionLengthChart() {
             <XAxis 
               dataKey="date" 
               stroke="#8E8E93" 
-              fontSize={11} 
-              tickMargin={10}
+              fontSize={10} 
+              tickMargin={8}
               axisLine={false}
               tickLine={false}
               tickFormatter={(val) => {
@@ -55,9 +41,9 @@ export function SessionLengthChart() {
                 return `${d.getMonth() + 1}/${d.getDate()}`;
               }}
             />
-            <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
+            <YAxis stroke="#8E8E93" fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
               itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
               labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
             />
@@ -68,10 +54,10 @@ export function SessionLengthChart() {
         </ResponsiveContainer>
       </div>
 
-      <div className="h-32 w-full mt-4 border-t border-[#292a32] pt-4 relative">
-        <h4 className="text-sm font-medium text-brand-text-muted mb-2">Distribution</h4>
+      <div className="h-28 w-full border-t border-brand-border pt-3 relative">
+        <h4 className="input-label mb-1">Distribution</h4>
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-end gap-2 px-4 pb-4 opacity-20 pointer-events-none mt-10">
+          <div className="absolute inset-0 z-10 flex items-end gap-2 px-4 pb-4 opacity-20 pointer-events-none mt-8">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="shimmer flex-1 rounded-t-lg" style={{ height: `${Math.random() * 80 + 10}%` }} />
             ))}
@@ -81,7 +67,7 @@ export function SessionLengthChart() {
           <BarChart data={isLoading ? [] : data.distribution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <XAxis dataKey="range" stroke="#8E8E93" fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
               itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
               labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}

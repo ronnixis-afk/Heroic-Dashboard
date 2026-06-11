@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { getSupabaseClient } from '../../lib/supabase';
-import { MessageSquare, ShieldAlert, Sparkles, HelpCircle, Search, Calendar, Monitor, Globe, Compass, Cpu, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ShieldAlert, Sparkles, HelpCircle, Search, Calendar, Monitor, Globe, Compass, Cpu, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PageHeader } from '../../components/ui';
 
 interface FeedbackItem {
   id: string;
@@ -23,7 +24,6 @@ export default function AdminFeedback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Filtering & Search states
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
@@ -77,7 +77,6 @@ export default function AdminFeedback() {
   useEffect(() => {
     fetchFeedback();
     
-    // Setup real-time updates
     const setupSubscription = async () => {
       try {
         const token = await getToken({ template: 'supabase' }).catch(() => null);
@@ -142,7 +141,6 @@ export default function AdminFeedback() {
 
   const filteredItems = getFilteredFeedback();
 
-  // Categories list based on selected filter type
   const getCategoriesList = () => {
     if (filterType === 'Bug Report') {
       return ['Gameplay', 'UI & Visuals', 'Performance', 'Audio', 'Other'];
@@ -156,60 +154,56 @@ export default function AdminFeedback() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'Bug Report':
-        return <ShieldAlert className="text-red-400" size={16} />;
+        return <ShieldAlert className="text-red-400" size={12} />;
       case 'Suggestion':
-        return <Sparkles className="text-emerald-400" size={16} />;
+        return <Sparkles className="text-emerald-400" size={12} />;
       default:
-        return <HelpCircle className="text-zinc-400" size={16} />;
+        return <HelpCircle className="text-zinc-400" size={12} />;
     }
   };
 
-  const getTypeBadgeStyles = (type: string) => {
+  const getTypeBadgeClass = (type: string) => {
     switch (type) {
       case 'Bug Report':
-        return 'bg-red-500/10 text-red-400 border border-red-500/20';
+        return 'badge-danger';
       case 'Suggestion':
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        return 'badge-success';
       default:
-        return 'bg-zinc-800 text-zinc-400 border border-zinc-700/50';
+        return 'badge-muted';
     }
   };
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl md:text-h1">User Feedback</h1>
-        <button
-          onClick={fetchFeedback}
-          className="btn-primary sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5"
-        >
-          Refresh Feed
-        </button>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="User Feedback"
+        actions={
+          <button onClick={fetchFeedback} className="btn-primary">
+            Refresh Feed
+          </button>
+        }
+      />
 
-      {/* Filter and Search Bar */}
-      <div className="glass-panel p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Search */}
+      <div className="card p-3.5 grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-text-muted" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted" size={14} />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search Messages Or Users..."
-            className="input-field w-full !pl-11"
+            className="input-field !pl-9"
           />
         </div>
 
-        {/* Type Filter */}
         <div>
           <select
             value={filterType}
             onChange={(e) => {
               setFilterType(e.target.value);
-              setFilterCategory('All'); // Reset category filter on type change
+              setFilterCategory('All');
             }}
-            className="input-field w-full bg-[#18181c] border border-[#292a32] text-white py-2 px-4 rounded-xl cursor-pointer"
+            className="input-field cursor-pointer"
           >
             <option value="All">All Types</option>
             <option value="Bug Report">Bug Report</option>
@@ -218,12 +212,11 @@ export default function AdminFeedback() {
           </select>
         </div>
 
-        {/* Category Filter */}
         <div>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="input-field w-full bg-[#18181c] border border-[#292a32] text-white py-2 px-4 rounded-xl cursor-pointer"
+            className="input-field cursor-pointer"
           >
             <option value="All">All Categories</option>
             {getCategoriesList().map(cat => (
@@ -234,18 +227,17 @@ export default function AdminFeedback() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-2xl text-red-400 text-sm text-center">
+        <div className="card p-3 badge-danger text-center text-xs">
           {error}
         </div>
       )}
 
-      {/* Feedback Feed */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center px-1 text-xs text-brand-text-muted font-bold">
+      <div className="space-y-3">
+        <div className="flex justify-between items-center px-1 text-xs text-brand-text-muted font-medium">
           <span>Results: {filteredItems.length}</span>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           <AnimatePresence>
             {!loading && filteredItems.map((item) => {
               const isExpanded = expandedId === item.id;
@@ -257,56 +249,51 @@ export default function AdminFeedback() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="glass-panel p-4 md:p-6 transition-all hover:bg-brand-primary/5 space-y-4"
+                  className="card p-3.5 transition-all hover:bg-brand-primary/5 space-y-3"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      {/* Top Badges & Meta */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5 ${getTypeBadgeStyles(item.type)}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`badge ${getTypeBadgeClass(item.type)}`}>
                           {getTypeIcon(item.type)}
                           {item.type}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-brand-primary/20 text-brand-text border border-white/5 rounded-full">
+                        <span className="badge-muted">
                           {item.category}
                         </span>
-                        <span className="text-[10px] text-brand-text-muted flex items-center gap-1 ml-auto">
-                          <Calendar size={12} />
+                        <span className="text-xs text-brand-text-muted flex items-center gap-1 ml-auto">
+                          <Calendar size={10} />
                           {new Date(item.createdAt).toLocaleString()}
                         </span>
                       </div>
 
-                      {/* User Info */}
-                      <div className="text-sm font-bold text-white">
-                        {item.User?.email || <span className="text-brand-text-muted text-xs italic">Anonymous ({item.userId})</span>}
+                      <div className="text-xs font-semibold text-white">
+                        {item.User?.email || <span className="text-brand-text-muted italic">Anonymous ({item.userId})</span>}
                       </div>
 
-                      {/* Message Content */}
-                      <p className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap pt-1">
+                      <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-wrap pt-0.5">
                         {item.message}
                       </p>
                     </div>
 
-                    {/* Delete button */}
                     <div className="flex-shrink-0">
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="rounded-lg p-2 text-brand-text-muted hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
+                        className="btn-icon hover:text-red-400 hover:bg-red-500/10"
                         title="Delete Feedback"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Metadata Context Expansion */}
                   {hasMetadata && (
-                    <div className="border-t border-[#1e1f24] pt-3">
+                    <div className="border-t border-brand-border pt-2">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                        className="flex items-center gap-1 text-[11px] font-bold text-brand-text-muted hover:text-white transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-xs font-medium text-brand-text-muted hover:text-white transition-colors cursor-pointer"
                       >
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         <span>Game Context & Environment</span>
                       </button>
 
@@ -316,19 +303,19 @@ export default function AdminFeedback() {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden mt-3"
+                            className="overflow-hidden mt-2"
                           >
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-[#0c0c0e] rounded-2xl border border-white/5 text-[11px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-brand-bg rounded-lg border border-brand-border text-xs">
                               {item.metadata.worldName && (
                                 <div className="flex items-center gap-2">
-                                  <Compass size={12} className="text-zinc-500" />
+                                  <Compass size={10} className="text-zinc-500" />
                                   <span className="text-zinc-500">World:</span>
                                   <span className="text-zinc-300 font-medium">{item.metadata.worldName}</span>
                                 </div>
                               )}
                               {item.metadata.location && (
                                 <div className="flex items-center gap-2">
-                                  <Globe size={12} className="text-zinc-500" />
+                                  <Globe size={10} className="text-zinc-500" />
                                   <span className="text-zinc-500">Location:</span>
                                   <span className="text-zinc-300 font-medium">
                                     {[item.metadata.locale, item.metadata.location].filter(Boolean).join(', ')}
@@ -337,14 +324,14 @@ export default function AdminFeedback() {
                               )}
                               {item.metadata.skillConfiguration && (
                                 <div className="flex items-center gap-2">
-                                  <Cpu size={12} className="text-zinc-500" />
+                                  <Cpu size={10} className="text-zinc-500" />
                                   <span className="text-zinc-500">Genre/Skills:</span>
                                   <span className="text-zinc-300 font-medium">{item.metadata.skillConfiguration}</span>
                                 </div>
                               )}
                               {item.metadata.userAgent && (
                                 <div className="flex items-start gap-2 sm:col-span-2">
-                                  <Monitor size={12} className="text-zinc-500 mt-0.5" />
+                                  <Monitor size={10} className="text-zinc-500 mt-0.5" />
                                   <span className="text-zinc-500 whitespace-nowrap">Agent:</span>
                                   <span className="text-zinc-300 truncate font-mono" title={item.metadata.userAgent}>
                                     {item.metadata.userAgent}
@@ -363,13 +350,13 @@ export default function AdminFeedback() {
           </AnimatePresence>
 
           {loading && (
-            <div className="py-20 text-center glass-panel text-brand-text-muted italic">
+            <div className="py-12 text-center card text-xs text-brand-text-muted italic">
               Loading Feedback Feed...
             </div>
           )}
 
           {!loading && filteredItems.length === 0 && (
-            <div className="py-20 text-center glass-panel text-brand-text-muted italic">
+            <div className="py-12 text-center card text-xs text-brand-text-muted italic">
               No Feedback Entries Found.
             </div>
           )}

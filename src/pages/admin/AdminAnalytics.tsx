@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -14,12 +14,12 @@ import {
   ReferenceLine
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Globe, Clock, Activity, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Zap, Activity, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useAnalyticsMetrics, formatComparison } from '../../hooks/useAnalyticsMetrics';
 import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
 import ModelUsagePie from '../../components/analytics/ModelUsagePie';
-
-import { Skeleton, ChartSkeleton, SkeletonText } from '../../components/Skeleton';
+import { PageHeader, FilterTabs } from '../../components/ui';
+import { SkeletonText } from '../../components/Skeleton';
 
 interface TrendCardProps {
   title: string;
@@ -40,31 +40,31 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel overflow-hidden flex flex-col h-48 relative"
+      className="card overflow-hidden flex flex-col h-36 relative"
     >
-      <div className="p-6 pb-0 flex justify-between items-start z-10">
+      <div className="p-3.5 pb-0 flex justify-between items-start z-10">
         <div>
-          <p className="text-xs font-bold text-brand-text-muted mb-1">{title}</p>
+          <p className="input-label mb-0">{title}</p>
           {loading ? (
-            <SkeletonText width={80} className="h-8 mt-2" />
+            <SkeletonText width={80} className="h-5 mt-1" />
           ) : (
-            <div className="flex items-baseline gap-3">
-              <h4 className="text-h1 font-bold text-white tracking-tight">{value}</h4>
-              <div className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
-                isNeutral ? 'bg-brand-primary/20 text-brand-text-muted' : isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="card-metric">{value}</span>
+              <div className={`badge ${
+                isNeutral ? 'badge-muted' : isPositive ? 'badge-success' : 'badge-danger'
               }`}>
-                {!isNeutral && (isPositive ? <ArrowUpRight size={10} className="mr-1" /> : <ArrowDownRight size={10} className="mr-1" />)}
+                {!isNeutral && (isPositive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />)}
                 {comparison}
               </div>
             </div>
           )}
         </div>
-        <div className="h-10 w-10 rounded-xl bg-brand-primary/30 border border-brand-primary/50 flex items-center justify-center text-brand-text-muted">
+        <div className="w-7 h-7 rounded-md bg-brand-primary/30 border border-brand-primary/50 flex items-center justify-center text-brand-text-muted">
           {icon}
         </div>
       </div>
 
-      <div className="flex-1 mt-4 relative">
+      <div className="flex-1 mt-2 relative">
         {!loading && trend.length > 0 && (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trend} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -91,6 +91,13 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
   );
 }
 
+const METRIC_OPTIONS = [
+  { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
+  { id: 'cost', label: 'USD Cost', color: '#10b981' },
+  { id: 'users', label: 'Active Users', color: '#38bdf8' },
+  { id: 'engagement', label: 'Engagement', color: '#a855f7' }
+] as const;
+
 export default function AdminAnalytics() {
   const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'cost'>('tokens');
   const { 
@@ -110,11 +117,10 @@ export default function AdminAnalytics() {
   } = useAnalyticsMetrics();
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <h1 className="text-2xl md:text-h1">Real-Time Analytics</h1>
+    <div className="page">
+      <PageHeader title="Real-Time Analytics" />
       
-      {/* Real-time Stats Row */}
-      <div className="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 
           title="Active Sessions (Live)" 
           value={activeSessionsCount} 
@@ -122,7 +128,7 @@ export default function AdminAnalytics() {
           dataKey="users"
           color="#20cce0"
           loading={loading}
-          icon={<Activity size={18} />}
+          icon={<Activity size={14} />}
           comparison={formatComparison(sessionsComparison)}
         />
 
@@ -133,7 +139,7 @@ export default function AdminAnalytics() {
           dataKey="cost"
           color="#3ecf8e"
           loading={loading}
-          icon={<DollarSign size={18} />}
+          icon={<DollarSign size={14} />}
           comparison={formatComparison(costComparison)}
         />
 
@@ -144,13 +150,12 @@ export default function AdminAnalytics() {
           dataKey="latency"
           color="#a855f7"
           loading={loading}
-          icon={<Zap size={18} />}
+          icon={<Zap size={14} />}
           comparison={formatComparison(latencyComparison)}
         />
       </div>
 
-      {/* Top Row: Detailed Metrics */}
-      <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -163,22 +168,22 @@ export default function AdminAnalytics() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-panel p-4 md:p-6"
+          className="card p-3.5"
         >
-          <h3 className="mb-4 md:mb-6 text-brand-accent">Usage Leaderboard</h3>
-          <div className="space-y-4 md:space-y-6">
+          <h3 className="card-title mb-3">Usage Leaderboard</h3>
+          <div className="space-y-2">
             {topUsers.map((user, idx) => (
-              <div key={user.email} className="flex items-center justify-between border-b border-brand-primary/10 pb-3 last:border-0">
-                <div className="flex items-center gap-3 overflow-hidden">
+              <div key={user.email} className="list-item justify-between border-b border-brand-primary/10 pb-2 last:border-0">
+                <div className="flex items-center gap-2 overflow-hidden">
                   <span className="text-xs font-mono text-brand-text-muted flex-shrink-0">#{idx + 1}</span>
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-body font-medium truncate">{user.email}</span>
-                    <span className="text-[10px] text-brand-text-muted">{user.usages} Total Invocations</span>
+                    <span className="text-xs font-medium truncate">{user.email}</span>
+                    <span className="text-xs text-brand-text-muted">{user.usages} Total Invocations</span>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className="text-xs font-bold text-brand-accent">{user.tokens}</span>
-                  <p className="text-[8px] text-brand-text-muted">Tokens</p>
+                  <span className="text-xs font-semibold text-brand-accent">{user.tokens}</span>
+                  <p className="text-xs text-brand-text-muted">Tokens</p>
                 </div>
               </div>
             ))}
@@ -186,37 +191,27 @@ export default function AdminAnalytics() {
         </motion.div>
       </div>
 
-      {/* Consumption Trend Line Chart */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="glass-panel p-4 md:p-6"
+        className="card p-3.5"
       >
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="card-header">
           <div>
-            <h3>Performance Trends</h3>
-            <p className="text-xs md:text-body text-brand-text-muted">Analysis of consumption and engagement over time</p>
+            <h3 className="card-title">Performance Trends</h3>
+            <p className="card-subtitle">Analysis of consumption and engagement over time</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
-              { id: 'cost', label: 'USD Cost', color: '#10b981' },
-              { id: 'users', label: 'Active Users', color: '#38bdf8' },
-              { id: 'engagement', label: 'Engagement', color: '#a855f7' }
-            ].map(m => (
-              <button 
-                key={m.id}
-                onClick={() => setActiveMetric(m.id as any)}
-                className={`rounded-lg px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold transition-colors ${activeMetric === m.id ? 'bg-brand-primary/20' : 'text-brand-text-muted hover:bg-brand-primary/10'}`}
-                style={{ color: activeMetric === m.id ? m.color : undefined }}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <FilterTabs
+            options={METRIC_OPTIONS.map(m => m.label)}
+            value={METRIC_OPTIONS.find(m => m.id === activeMetric)?.label || 'Tokens'}
+            onChange={(label) => {
+              const match = METRIC_OPTIONS.find(m => m.label === label);
+              if (match) setActiveMetric(match.id);
+            }}
+          />
         </div>
-        <div className="h-[300px] md:h-[400px] w-full">
+        <div className="h-[260px] md:h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart 
               data={(activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[]}
@@ -236,7 +231,7 @@ export default function AdminAnalytics() {
               />
               <YAxis stroke="#8E8E93" fontSize={9} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                 labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                 labelFormatter={(label) => {
@@ -245,7 +240,6 @@ export default function AdminAnalytics() {
                 }}
               />
               
-              {/* Detect and render Month Transitions */}
               {(() => {
                 const data = (activeMetric === 'engagement' ? sessionTrends : usageTrends) as any[];
                 const monthMarkers: React.ReactNode[] = [];
@@ -328,9 +322,9 @@ export default function AdminAnalytics() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="space-y-4"
+        className="space-y-3"
       >
-        <h3 className="text-lg md:text-xl">Engine Health</h3>
+        <h3 className="section-title">Engine Health</h3>
         <EngineHealthDashboard />
       </motion.div>
     </div>

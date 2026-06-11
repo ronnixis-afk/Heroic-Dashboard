@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useUserUsage } from '../../hooks/useUserUsage';
+import { FilterTabs } from '../ui';
 
 interface UserConsumptionChartProps {
   userId: string;
@@ -30,16 +31,16 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
   }, [chartData]);
 
   if (loading) {
-    return <ChartSkeleton height={350} />;
+    return <ChartSkeleton height={280} />;
   }
 
   return (
-    <div className="glass-panel p-6 flex flex-col w-full h-[350px]">
-      <div className="flex items-center justify-between mb-6">
+    <div className="card p-3.5 flex flex-col w-full h-[280px]">
+      <div className="card-header mb-2">
         <div>
-          <h4 className="text-sm font-bold text-brand-text-muted mb-1">Actual API Cost</h4>
-          <div className="flex items-baseline gap-3">
-            <p className="text-2xl font-bold text-white">
+          <h4 className="card-title">Actual API Cost</h4>
+          <div className="flex items-baseline gap-2 mt-1">
+            <p className="card-metric">
               ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-brand-text-muted">
@@ -48,17 +49,11 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
           </div>
         </div>
         
-        <div className="flex bg-[#141416] rounded-xl p-1 border border-[#292a32]">
-          {['Day', 'Week', 'Month'].map(f => (
-            <button 
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${filter === f ? 'bg-white text-black shadow-lg' : 'text-[#8b8c94] hover:text-white'}`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <FilterTabs
+          options={['Day', 'Week', 'Month']}
+          value={filter}
+          onChange={setFilter}
+        />
       </div>
       
       <div className="flex-1 w-full">
@@ -89,7 +84,7 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
                 tickFormatter={(value) => `$${value.toFixed(2)}`}
               />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
                 itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                 labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                 formatter={(value: number, name: string, props: any) => [
@@ -102,7 +97,7 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
                 type="monotone" 
                 dataKey="cost" 
                 stroke="#20cce0" 
-                strokeWidth={3} 
+                strokeWidth={2} 
                 fillOpacity={1} 
                 fill="url(#colorCost)" 
                 animationDuration={1500}
@@ -111,11 +106,11 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
           </ResponsiveContainer>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-brand-text-muted">
-            <p className="text-sm italic">No actual usage data found for this period.</p>
+            <p className="text-xs italic">No actual usage data found for this period.</p>
             <div className="flex flex-col items-center mt-2 opacity-50 space-y-1">
-              <p className="text-[10px]">Checked window: {filter === 'Day' ? 'Last 30 Days' : filter === 'Week' ? 'Last 12 Weeks' : 'Last 12 Months'}</p>
-              <p className="text-[10px]">Total user logs found: {logCount}</p>
-              <p className="text-[10px]">Total tokens across all time: {totalTokens.toLocaleString()}</p>
+              <p className="text-xs">Checked window: {filter === 'Day' ? 'Last 30 Days' : filter === 'Week' ? 'Last 12 Weeks' : 'Last 12 Months'}</p>
+              <p className="text-xs">Total user logs found: {logCount}</p>
+              <p className="text-xs">Total tokens across all time: {totalTokens.toLocaleString()}</p>
             </div>
           </div>
         )}
@@ -123,6 +118,3 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
     </div>
   );
 }
-
-
-

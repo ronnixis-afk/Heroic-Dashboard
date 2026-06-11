@@ -1,44 +1,56 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bangers&display=swap');
 @import "tailwindcss";
 
 @theme {
   /* Colors */
   --color-brand-bg: #141416;
-  --color-brand-surface: #1d1e24;
+  --color-brand-surface: #1a1b20;
   --color-brand-primary: #292a32;
   --color-brand-accent: #20cce0;
   --color-brand-accent-hover: #1ba3b4;
   --color-brand-text: #ffffff;
   --color-brand-text-muted: #8b8c94;
   --color-sidebar-bg: #111114;
-  
-  /* Typography Scale */
-  --text-h1: 2.25rem;
-  --text-h1--line-height: 2.5rem;
-  --text-h2: 27px;
-  --text-h2--line-height: 2rem;
-  --text-h3: 1.25rem;
-  --text-h3--line-height: 1.75rem;
-  --text-h4: 1.125rem;
-  --text-h4--line-height: 1.5rem;
-  --text-body: 0.875rem;
-  --text-body--line-height: 1.25rem;
-  --text-small: 0.75rem;
-  --text-small--line-height: 1rem;
+  --color-brand-border: #1e1f24;
+  --color-brand-hover: #22232a;
+
+  /* Typography — 11px base, 14px titles, 18px headers */
   --text-xs: 0.6875rem;
-  --text-xs--line-height: 0.875rem;
+  --text-xs--line-height: 1rem;
+  --text-body: 0.6875rem;
+  --text-body--line-height: 1rem;
+  --text-title: 0.875rem;
+  --text-title--line-height: 1.25rem;
+  --text-header: 1.125rem;
+  --text-header--line-height: 1.5rem;
+
+  /* Legacy aliases mapped to new scale */
+  --text-h1: 1.125rem;
+  --text-h1--line-height: 1.5rem;
+  --text-h2: 0.875rem;
+  --text-h2--line-height: 1.25rem;
+  --text-h3: 0.875rem;
+  --text-h3--line-height: 1.25rem;
+  --text-h4: 0.875rem;
+  --text-h4--line-height: 1.25rem;
+  --text-small: 0.6875rem;
+  --text-small--line-height: 1rem;
 
   /* Font Weights */
-  --font-weight-light: 300;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
   /* Icon Sizes */
-  --size-icon-sm: 0.875rem;
-  --size-icon-md: 1.125rem;
-  --size-icon-lg: 1.5rem;
+  --size-icon-sm: 0.75rem;
+  --size-icon-md: 0.875rem;
+  --size-icon-lg: 1.125rem;
+
+  /* Spacing */
+  --spacing-page: 1rem;
+  --spacing-section: 0.75rem;
+  --spacing-card: 0.875rem;
 
   /* Fonts */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -50,50 +62,175 @@
     @apply bg-brand-bg text-brand-text font-sans antialiased text-body;
   }
 
-  h1 { @apply text-h1 font-bold tracking-tight; }
-  h2 { @apply text-h2 font-bold tracking-tight; }
-  h3 { @apply text-h3 font-bold; }
-  h4 { @apply text-h4 font-semibold; }
+  h1 { @apply text-header font-semibold tracking-tight; }
+  h2 { @apply text-title font-semibold tracking-tight; }
+  h3 { @apply text-title font-medium; }
+  h4 { @apply text-title font-medium; }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
 }
 
-/* Custom UI Components - Dark Dashboard Style */
-.glass-panel {
-  @apply bg-brand-surface rounded-3xl shadow-sm transition-all;
+/* ─── Panels & Cards ─── */
+.glass-panel,
+.card {
+  @apply bg-brand-surface border border-brand-border rounded-lg transition-colors;
+}
+
+.card-header {
+  @apply flex items-center justify-between gap-3 mb-3;
+}
+
+.card-title {
+  @apply text-title font-semibold text-brand-text;
+}
+
+.card-subtitle {
+  @apply text-xs text-brand-text-muted mt-0.5;
+}
+
+.card-body {
+  @apply flex flex-col gap-3;
+}
+
+.card-metric {
+  @apply text-header font-semibold text-brand-text tracking-tight;
 }
 
 .tooltip-panel {
-  @apply bg-brand-surface border border-brand-primary rounded-xl shadow-2xl p-3 transition-all;
+  @apply bg-brand-surface border border-brand-primary rounded-lg shadow-lg p-2.5 transition-all;
 }
 
+/* ─── Buttons ─── */
 .btn-primary {
-  @apply bg-white text-black px-6 py-2.5 rounded-full font-bold text-body transition-all hover:bg-gray-200 active:scale-[0.98] disabled:opacity-50 disabled:scale-100 shadow-sm;
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-8 px-3 bg-white text-black hover:bg-gray-200 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
 }
 
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-8 px-3 bg-brand-hover border border-brand-primary text-brand-text hover:border-brand-text-muted/50 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-8 px-3 text-brand-text-muted hover:text-brand-text hover:bg-brand-hover transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
+}
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-8 px-3 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
+}
+
+.btn-icon {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-7 w-7 p-0 text-brand-text-muted hover:text-brand-text hover:bg-brand-hover transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-sm {
+  @apply !h-7 !px-2.5;
+}
+
+.btn-lg {
+  @apply !h-9 !px-4;
+}
+
+/* ─── Inputs ─── */
 .input-field {
-  @apply bg-[#141416] border border-brand-primary rounded-xl px-4 py-2.5 text-body focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all text-white placeholder-brand-text-muted;
+  @apply bg-brand-bg border border-brand-primary rounded-md px-3 h-8 text-xs focus:border-brand-accent focus:ring-1 focus:ring-brand-accent outline-none transition-all text-white placeholder-brand-text-muted w-full;
 }
 
+.input-label {
+  @apply block text-xs font-medium text-brand-text-muted mb-1;
+}
+
+/* ─── Filter Pills ─── */
+.filter-group {
+  @apply inline-flex bg-brand-bg rounded-md p-0.5 border border-brand-primary;
+}
+
+.filter-pill {
+  @apply px-2.5 py-1 text-xs font-medium rounded-[5px] transition-colors text-brand-text-muted hover:text-brand-text;
+}
+
+.filter-pill-active {
+  @apply bg-white text-black shadow-sm;
+}
+
+/* ─── Badges ─── */
+.badge-accent {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-brand-accent/10 text-brand-accent border border-brand-accent/20;
+}
+
+.badge-muted {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-brand-primary/30 text-brand-text-muted border border-brand-primary/40;
+}
+
+.badge-success {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+}
+
+.badge-warning {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20;
+}
+
+.badge-danger {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20;
+}
+
+/* ─── Page Layout ─── */
+.page {
+  @apply space-y-4 pb-6;
+}
+
+.page-header {
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1;
+}
+
+.page-title {
+  @apply text-header font-semibold text-brand-text;
+}
+
+.page-description {
+  @apply text-xs text-brand-text-muted mt-0.5;
+}
+
+.section-title {
+  @apply text-title font-semibold text-brand-text;
+}
+
+/* ─── Data Tables ─── */
 .data-table {
   @apply w-full text-left border-collapse;
 }
 
 .data-table th {
-  @apply pt-6 pb-4 px-6 text-xs font-bold text-brand-text-muted border-b border-brand-primary/50 transition-colors;
+  @apply py-2.5 px-3 text-xs font-medium text-brand-text-muted border-b border-brand-primary/50;
 }
 
 .data-table td {
-  @apply py-5 px-6 text-body border-b border-brand-primary/20 text-white transition-colors;
+  @apply py-2.5 px-3 text-xs border-b border-brand-primary/20 text-brand-text;
 }
 
 .data-table tr:last-child td {
   @apply border-b-0;
 }
 
-/* Custom Scrollbar Styling */
+.data-table tbody tr {
+  @apply transition-colors duration-150;
+}
+
+.data-table tbody tr:hover {
+  @apply bg-brand-hover;
+}
+
+/* ─── List Items ─── */
+.list-item {
+  @apply flex items-center gap-2 p-1.5 rounded-md hover:bg-brand-hover transition-colors duration-150;
+}
+
+/* ─── Scrollbar ─── */
 @layer base {
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
@@ -102,51 +239,43 @@
 
   ::-webkit-scrollbar-thumb {
     background: #292a32;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background-clip: content-box;
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: #20cce0;
-    border-radius: 10px;
   }
 
-  /* Firefox Support */
   * {
     scrollbar-width: thin;
     scrollbar-color: #292a32 transparent;
   }
 }
 
-/* Ensure auto-hide behavior */
-.overflow-y-auto, .overflow-x-auto {
+.overflow-y-auto,
+.overflow-x-auto {
   scrollbar-gutter: stable;
 }
 
-/* Shimmer Animation */
+/* ─── Shimmer ─── */
 @keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
 }
 
 @utility shimmer {
   background: linear-gradient(
     90deg,
-    rgba(29, 30, 36, 1) 25%,
+    rgba(26, 27, 32, 1) 25%,
     rgba(41, 42, 50, 1) 50%,
-    rgba(29, 30, 36, 1) 75%
+    rgba(26, 27, 32, 1) 75%
   );
   background-size: 1000px 100%;
   animation: shimmer 2.5s infinite linear;
 }
 
 .skeleton-box {
-  @apply shimmer rounded-lg;
+  @apply shimmer rounded-md;
 }
 
 @utility font-serif {

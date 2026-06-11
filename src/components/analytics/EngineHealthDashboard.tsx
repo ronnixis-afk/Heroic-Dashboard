@@ -16,10 +16,7 @@ import { motion } from 'framer-motion';
 import { Zap, ShieldAlert, Users, TrendingUp, Filter } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData, BehaviorData } from '../../services/EngineTelemetryService';
-
-const COLORS = ['#20cce0', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
-
-import { Skeleton, ChartSkeleton, SkeletonText } from '../Skeleton';
+import { SkeletonText } from '../Skeleton';
 
 export default function EngineHealthDashboard() {
     const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
@@ -48,63 +45,61 @@ export default function EngineHealthDashboard() {
         fetchData();
     }, [getToken]);
 
-    const isLoading = loading; // Alias for clarity within JSX
+    const isLoading = loading;
 
     return (
-        <div className="space-y-8">
-            {/* Engine Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel p-6 border-l-4 border-brand-accent">
+        <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card p-3.5 border-l-4 border-brand-accent">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted">Median Latency</p>
+                            <p className="input-label mb-0">Median Latency</p>
                             {isLoading ? (
-                                <SkeletonText width={80} className="h-9 mt-2" />
+                                <SkeletonText width={80} className="h-5 mt-1" />
                             ) : (
-                                <h3 className="text-3xl font-bold text-white mt-2">{telemetry?.latency.p50}ms</h3>
+                                <p className="card-metric mt-1">{telemetry?.latency.p50}ms</p>
                             )}
                         </div>
-                        <Zap className="text-brand-accent" size={20} />
+                        <Zap className="text-brand-accent" size={14} />
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="glass-panel p-6 border-l-4 border-purple-500">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="card p-3.5 border-l-4 border-purple-500">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted">Tail Latency (P95)</p>
+                            <p className="input-label mb-0">Tail Latency (P95)</p>
                             {isLoading ? (
-                                <SkeletonText width={80} className="h-9 mt-2" />
+                                <SkeletonText width={80} className="h-5 mt-1" />
                             ) : (
-                                <h3 className="text-3xl font-bold text-white mt-2">{telemetry?.latency.p95}ms</h3>
+                                <p className="card-metric mt-1">{telemetry?.latency.p95}ms</p>
                             )}
                         </div>
-                        <TrendingUp className="text-purple-500" size={20} />
+                        <TrendingUp className="text-purple-500" size={14} />
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="glass-panel p-6 border-l-4 border-emerald-500">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="card p-3.5 border-l-4 border-emerald-500">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-bold text-brand-text-muted">Intervention Rate</p>
+                            <p className="input-label mb-0">Intervention Rate</p>
                             {isLoading ? (
-                                <SkeletonText width={80} className="h-9 mt-2" />
+                                <SkeletonText width={80} className="h-5 mt-1" />
                             ) : (
-                                <h3 className="text-3xl font-bold text-white mt-2">{telemetry?.interventionRate}%</h3>
+                                <p className="card-metric mt-1">{telemetry?.interventionRate}%</p>
                             )}
                         </div>
-                        <ShieldAlert className="text-emerald-500" size={20} />
+                        <ShieldAlert className="text-emerald-500" size={14} />
                     </div>
                 </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Token Consumption by Phase */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6">
-                    <h4 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
-                        <Filter size={16} className="text-brand-accent" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card p-3.5">
+                    <h4 className="card-title mb-3 flex items-center gap-2">
+                        <Filter size={12} className="text-brand-accent" />
                         Token Load By Engine Phase
                     </h4>
-                    <div className="h-[300px] relative">
+                    <div className="h-[240px] relative">
                         {isLoading && (
                             <div className="absolute inset-0 z-10 flex items-end gap-2 px-2 pb-8 opacity-20 pointer-events-none">
                                 {Array.from({ length: 6 }).map((_, i) => (
@@ -118,7 +113,7 @@ export default function EngineHealthDashboard() {
                                 <XAxis dataKey="phase" stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#8E8E93" fontSize={10} tickLine={false} axisLine={false} />
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
                                     itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                     labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
@@ -128,17 +123,16 @@ export default function EngineHealthDashboard() {
                     </div>
                 </motion.div>
 
-                {/* Tutorial Conversion Funnel */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-panel p-6">
-                    <h4 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
-                        <Users size={16} className="text-emerald-400" />
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card p-3.5">
+                    <h4 className="card-title mb-3 flex items-center gap-2">
+                        <Users size={12} className="text-emerald-400" />
                         Tutorial Conversion Funnel
                     </h4>
-                    <div className="h-[300px] relative">
+                    <div className="h-[240px] relative">
                         {isLoading && (
                             <div className="absolute inset-0 z-10 flex flex-col gap-2 px-2 py-4 opacity-20 pointer-events-none">
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                    <div key={i} className="shimmer h-10 rounded-lg" style={{ width: `${100 - i * 15}%` }} />
+                                    <div key={i} className="shimmer h-8 rounded-lg" style={{ width: `${100 - i * 15}%` }} />
                                 ))}
                             </div>
                         )}
@@ -160,7 +154,7 @@ export default function EngineHealthDashboard() {
                                     }}
                                 />
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
                                     itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                     labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
@@ -170,13 +164,12 @@ export default function EngineHealthDashboard() {
                     </div>
                 </motion.div>
 
-                {/* GM Mode Preference */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-panel p-6">
-                    <h4 className="text-sm font-bold text-white mb-6">GM Interaction Preference</h4>
-                    <div className="h-[250px] relative">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card p-3.5">
+                    <h4 className="card-title mb-3">GM Interaction Preference</h4>
+                    <div className="h-[200px] relative">
                         {isLoading && (
                             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                                <div className="h-40 w-40 rounded-full shimmer opacity-20 border-[20px] border-[#292a32]" />
+                                <div className="h-32 w-32 rounded-full shimmer opacity-20 border-[16px] border-[#292a32]" />
                             </div>
                         )}
                         <ResponsiveContainer width="100%" height="100%">
@@ -185,8 +178,8 @@ export default function EngineHealthDashboard() {
                                     data={isLoading ? [] : behavior?.gmModeRatio}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
+                                    innerRadius={50}
+                                    outerRadius={65}
                                     paddingAngle={5}
                                     dataKey="count"
                                     nameKey="mode"
@@ -196,22 +189,21 @@ export default function EngineHealthDashboard() {
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
                                     itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
                                     labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
                                 />
-                                <Legend verticalAlign="bottom" height={36}/>
+                                <Legend verticalAlign="bottom" height={28}/>
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
                 </motion.div>
 
-                {/* Top Mechanics */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-panel p-6">
-                    <h4 className="text-sm font-bold text-white mb-6">Most Triggered Mechanics</h4>
-                    <div className="space-y-4">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card p-3.5">
+                    <h4 className="card-title mb-3">Most Triggered Mechanics</h4>
+                    <div className="space-y-2">
                         {(isLoading ? Array.from({ length: 4 }) : behavior?.topMechanics || []).map((item: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-brand-primary/10 border border-brand-primary/5">
+                            <div key={i} className="list-item justify-between p-2 rounded-md bg-brand-primary/10 border border-brand-primary/5">
                                 <span className="text-xs font-medium text-brand-text-muted">
                                     {isLoading ? (
                                         <SkeletonText width={120} className="h-3" />
@@ -225,7 +217,7 @@ export default function EngineHealthDashboard() {
                                 {isLoading ? (
                                     <SkeletonText width={40} className="h-3" />
                                 ) : (
-                                    <span className="text-xs font-bold text-brand-accent">{item.count}</span>
+                                    <span className="text-xs font-semibold text-brand-accent">{item.count}</span>
                                 )}
                             </div>
                         ))}

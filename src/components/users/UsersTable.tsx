@@ -22,9 +22,9 @@ export default function UsersTable({
   const displayUsers = isLoading ? Array.from({ length: 8 }) : filteredUsers;
 
   return (
-    <div className="glass-panel overflow-hidden">
+    <div className="card overflow-hidden">
       <div className="overflow-x-auto custom-scrollbar">
-        <div className="min-w-[800px]">
+        <div className="min-w-[700px]">
           <table className="data-table">
             <thead>
               <tr>
@@ -51,27 +51,26 @@ export default function UsersTable({
                     onClick={() => !isLoading && setSelectedUser(user)}
                   >
                     <td>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <div className="relative group/avatar">
-                          <div className="absolute inset-0 bg-brand-accent/20 rounded-full blur-md opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                          <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent group-hover:border-brand-accent/50 transition-colors">
+                          <div className="relative w-6 h-6 rounded-md bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent group-hover:border-brand-accent/50 transition-colors">
                             {isLoading ? (
-                              <Skeleton width="100%" height="100%" className="rounded-xl" />
+                              <Skeleton width="100%" height="100%" className="rounded-md" />
                             ) : (
-                              <Mail size={18} />
+                              <Mail size={12} />
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1 overflow-hidden">
+                        <div className="flex flex-col gap-0.5 overflow-hidden">
                           {isLoading ? (
                             <>
-                              <SkeletonText width={140} className="h-4" />
+                              <SkeletonText width={140} className="h-3" />
                               <SkeletonText width={80} className="h-2 opacity-50" />
                             </>
                           ) : (
                             <>
-                              <span className="text-sm md:text-body font-bold text-white group-hover:text-brand-accent transition-colors truncate">{user.email}</span>
-                              <span className="text-[10px] text-brand-text-muted font-mono tracking-tight">ID: {user.id?.slice(0, 8)}...</span>
+                              <span className="text-xs font-semibold text-white group-hover:text-brand-accent transition-colors truncate">{user.email}</span>
+                              <span className="text-xs text-brand-text-muted font-mono tracking-tight">ID: {user.id?.slice(0, 8)}...</span>
                             </>
                           )}
                         </div>
@@ -79,14 +78,14 @@ export default function UsersTable({
                     </td>
                     <td>
                       {isLoading ? (
-                        <SkeletonText width={80} className="h-6 rounded-full" />
+                        <SkeletonText width={80} className="h-5 rounded-full" />
                       ) : (
                         <span className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] sm:text-xs font-bold transition-all shadow-sm",
-                          user.tier === 'super_admin' ? "bg-indigo-500 text-white shadow-indigo-500/20" :
-                          user.tier === 'hero' ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-purple-500/5" :
-                          user.tier === 'adventurer' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-blue-500/5" :
-                          "bg-brand-primary/20 text-brand-text-muted border border-brand-primary/30"
+                          "badge",
+                          user.tier === 'super_admin' ? "bg-indigo-500 text-white" :
+                          user.tier === 'hero' ? "badge-accent bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                          user.tier === 'adventurer' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                          "badge-muted"
                         )}>
                           {user.tier === 'super_admin' && <ShieldCheck size={10} className="text-white" />}
                           {user.tier === 'super_admin' ? 'Super Admin' : user.tier.charAt(0).toUpperCase() + user.tier.slice(1)}
@@ -94,21 +93,21 @@ export default function UsersTable({
                       )}
                     </td>
                     <td>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         {isLoading ? (
                           <div className="flex items-center gap-2 w-full">
-                             <div className="w-20 h-1.5 rounded-full shimmer opacity-30 overflow-hidden" />
+                             <div className="w-16 h-1 rounded-full shimmer opacity-30 overflow-hidden" />
                              <SkeletonText width={40} className="h-3" />
                           </div>
                         ) : (
                           <>
-                             <div className="w-20 h-1.5 rounded-full bg-brand-primary/30 overflow-hidden">
+                             <div className="w-16 h-1 rounded-full bg-brand-primary/30 overflow-hidden">
                               <div 
-                                className="h-full bg-brand-accent transition-all shadow-[0_0_8px_rgba(32, 204, 224,0.4)]" 
+                                className="h-full bg-brand-accent transition-all" 
                                 style={{ width: `${Math.min(100, ((user.currentCredits || 0) / (user.maxCredits || 1000)) * 100)}%` }} 
                               />
                             </div>
-                            <span className="text-xs font-bold text-white">{user.currentCredits?.toLocaleString() || 0}</span>
+                            <span className="text-xs font-semibold text-white">{user.currentCredits?.toLocaleString() || 0}</span>
                           </>
                         )}
                       </div>
@@ -117,11 +116,9 @@ export default function UsersTable({
                       {isLoading ? (
                         <SkeletonText width={80} className="h-3 opacity-50" />
                       ) : (
-                        <div className="flex flex-col">
-                           <span className="text-xs font-medium text-brand-text-muted">
-                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                          </span>
-                        </div>
+                        <span className="text-xs text-brand-text-muted">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        </span>
                       )}
                     </td>
                     <td>
@@ -135,7 +132,7 @@ export default function UsersTable({
                         
                         if (isOnline) {
                           return (
-                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                               Online
                             </span>
@@ -144,7 +141,7 @@ export default function UsersTable({
                         
                         if (lastSession) {
                           return (
-                            <span className="text-xs font-medium text-brand-text-muted flex items-center gap-1">
+                            <span className="text-xs text-brand-text-muted flex items-center gap-1">
                               <Calendar size={10} />
                               {new Date(lastSession.lastPing).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
                               {new Date(lastSession.lastPing).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
@@ -153,7 +150,7 @@ export default function UsersTable({
                         }
                         
                         return (
-                          <span className="text-xs font-medium text-brand-text-muted/50 italic flex items-center gap-1">
+                          <span className="text-xs text-brand-text-muted/50 italic flex items-center gap-1">
                             Never
                           </span>
                         );
@@ -168,9 +165,9 @@ export default function UsersTable({
                             setShowManageAccess(false);
                             setShowSuspendConfirm(false);
                           }}
-                          className="rounded-lg p-2 text-brand-text-muted transition-all hover:bg-brand-primary/50 hover:text-white"
+                          className="btn-icon"
                         >
-                          <MoreHorizontal size={18} />
+                          <MoreHorizontal size={14} />
                         </button>
                       )}
                     </td>
@@ -181,7 +178,7 @@ export default function UsersTable({
           </table>
         </div>
         {!isLoading && filteredUsers.length === 0 && (
-          <div className="py-20 text-center text-brand-text-muted italic">
+          <div className="py-12 text-center text-xs text-brand-text-muted italic">
             No users found matching your search.
           </div>
         )}

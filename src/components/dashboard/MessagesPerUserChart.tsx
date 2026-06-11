@@ -1,13 +1,6 @@
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, ComposedChart, Line } from 'recharts';
 import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
 
-interface MessageData {
-  date: string;
-  activeUsers: number;
-  totalMessages: number;
-  msgsPerUser: number;
-}
-
 export function MessagesPerUserChart() {
   const { messagesPerUser: data, loading } = useAnalyticsMetrics();
 
@@ -23,8 +16,8 @@ export function MessagesPerUserChart() {
   }));
 
   return (
-    <div className="glass-panel p-6 h-96 flex flex-col">
-      <h3 className="text-lg font-medium text-brand-text mb-6">Messages Per User (7 Days)</h3>
+    <div className="card p-3.5 h-80 flex flex-col">
+      <h3 className="card-title mb-3">Messages Per User (7 Days)</h3>
       <div className="flex-1 w-full min-h-0 relative">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-end gap-2 px-2 pb-8 opacity-20 pointer-events-none">
@@ -39,8 +32,8 @@ export function MessagesPerUserChart() {
             <XAxis 
               dataKey="date" 
               stroke="#8E8E93" 
-              fontSize={11} 
-              tickMargin={10}
+              fontSize={10} 
+              tickMargin={8}
               axisLine={false}
               tickFormatter={(val) => {
                 if (!val) return '';
@@ -48,13 +41,13 @@ export function MessagesPerUserChart() {
                 return `${d.getMonth() + 1}/${d.getDate()}`;
               }}
             />
-            <YAxis stroke="#8E8E93" fontSize={11} axisLine={false} tickLine={false} />
+            <YAxis stroke="#8E8E93" fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+              contentStyle={{ backgroundColor: '#1d1e24', border: '1px solid #292a32', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
               itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}
               labelStyle={{ color: '#8b8c94', marginBottom: '4px', fontWeight: 'medium', fontSize: '10px' }}
             />
-            <Bar dataKey="msgsPerUser" name="Messages / User" fill="#20cce0" radius={[4, 4, 0, 0]} barSize={30} />
+            <Bar dataKey="msgsPerUser" name="Messages / User" fill="#20cce0" radius={[4, 4, 0, 0]} barSize={24} />
             <Line type="monotone" dataKey="average" name="7-Day Average" stroke="#3ecf8e" strokeWidth={2} dot={false} strokeDasharray="4 4" />
           </ComposedChart>
         </ResponsiveContainer>

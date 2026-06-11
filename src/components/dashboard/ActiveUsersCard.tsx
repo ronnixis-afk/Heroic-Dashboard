@@ -18,9 +18,10 @@ export function ActiveUsersCard() {
   const fetchData = async () => {
     try {
       const token = await getToken();
-      const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/active-users`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!response.ok) {
         throw new Error(`Server returned status ${response.status}`);
       }
@@ -44,32 +45,30 @@ export function ActiveUsersCard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000); // 60s auto-refresh
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, [getToken]);
 
   if (loading) {
     return (
-      <div className="glass-panel p-6 animate-pulse flex flex-col">
-        <div className="h-6 w-32 bg-[#292a32] rounded mb-4"></div>
-        <div className="h-12 w-24 bg-[#292a32] rounded"></div>
+      <div className="card p-3.5 animate-pulse flex flex-col">
+        <div className="h-4 w-24 bg-brand-primary rounded mb-2" />
+        <div className="h-5 w-16 bg-brand-primary rounded" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="glass-panel p-6 flex flex-col justify-center items-center text-center">
-        <div className="text-brand-text-muted mb-3 text-sm font-medium">
-          {error || 'Failed to load active users.'}
-        </div>
-        <button 
+      <div className="card p-3.5 flex flex-col justify-center items-center text-center">
+        <p className="text-xs text-brand-text-muted mb-2">{error || 'Failed to load active users.'}</p>
+        <button
           onClick={() => {
             setLoading(true);
             setError(null);
             fetchData();
           }}
-          className="btn-primary px-3 py-1.5 text-xs font-bold"
+          className="btn-primary btn-sm"
         >
           Retry
         </button>
@@ -81,42 +80,40 @@ export function ActiveUsersCard() {
   const isHighTraffic = activeNow > 0;
 
   return (
-    <div className="glass-panel p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#292a32] pb-4 md:pb-0 md:pr-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Activity className="w-4 h-4 text-brand-text-muted" />
-          <h4 className="text-sm font-medium text-brand-text-muted m-0">Active Right Now</h4>
+    <div className="card p-3.5 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex flex-col border-b md:border-b-0 md:border-r border-brand-primary pb-3 md:pb-0 md:pr-3">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Activity className="w-3.5 h-3.5 text-brand-text-muted" />
+          <h4 className="text-xs text-brand-text-muted">Active Right Now</h4>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className={`text-4xl font-bold ${isHighTraffic ? 'text-emerald-500' : 'text-brand-text'}`}>
+        <div className="flex items-baseline gap-1.5">
+          <span
+            className={`card-metric ${isHighTraffic ? 'text-emerald-500' : 'text-brand-text'}`}
+          >
             {activeNow}
           </span>
           <span className="text-xs text-brand-text-muted">users</span>
         </div>
       </div>
 
-      <div className="flex flex-col border-b md:border-b-0 md:border-r border-brand-primary/20 pb-4 md:pb-0 md:pr-4 md:pl-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Users className="w-4 h-4 text-brand-text-muted" />
-          <h4 className="text-sm font-medium text-brand-text-muted m-0">DAU</h4>
+      <div className="flex flex-col border-b md:border-b-0 md:border-r border-brand-primary pb-3 md:pb-0 md:pr-3 md:pl-3">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Users className="w-3.5 h-3.5 text-brand-text-muted" />
+          <h4 className="text-xs text-brand-text-muted">DAU</h4>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold text-brand-text">
-            {data?.dau?.toLocaleString() || 0}
-          </span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="card-metric">{data?.dau?.toLocaleString() || 0}</span>
           <span className="text-xs text-brand-text-muted">users today</span>
         </div>
       </div>
 
-      <div className="flex flex-col md:pl-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Target className="w-4 h-4 text-brand-text-muted" />
-          <h4 className="text-sm font-medium text-brand-text-muted m-0">Stickiness</h4>
+      <div className="flex flex-col md:pl-3">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Target className="w-3.5 h-3.5 text-brand-text-muted" />
+          <h4 className="text-xs text-brand-text-muted">Stickiness</h4>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold text-brand-text">
-            {data?.stickiness || 0}%
-          </span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="card-metric">{data?.stickiness || 0}%</span>
           <span className="text-xs text-brand-text-muted">DAU / MAU</span>
         </div>
       </div>

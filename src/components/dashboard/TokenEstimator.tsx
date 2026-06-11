@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -17,16 +17,13 @@ export default function TokenEstimator() {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
     
     if (type === 'Credits') {
-      // 1 Credit per 1000 tokens
       const credits = Math.max(1, Math.ceil(tokens / 1000));
       setEstimatedCost(credits.toString());
     } else if (type === 'EUR') {
-      // Assuming 0.92 USD to EUR conversion
       const costUsd = (tokens / 1000000) * 0.60;
       const costEur = costUsd * 0.92;
       setEstimatedCost(costEur.toFixed(2));
     } else {
-      // Assuming a blended rate of $0.60 per 1M tokens (avg of $0.25 input and $1.50 output)
       const cost = (tokens / 1000000) * 0.60;
       setEstimatedCost(cost.toFixed(2));
     }
@@ -46,13 +43,13 @@ export default function TokenEstimator() {
   };
 
   return (
-    <div className="glass-panel col-span-1 p-6 relative h-[380px] flex flex-col">
-      <h3 className="text-xl font-bold mb-6">Token Estimator</h3>
+    <div className="card col-span-1 p-3.5 relative h-[300px] flex flex-col">
+      <h3 className="text-header font-semibold mb-3">Token Estimator</h3>
       
-      <div className="flex-1 flex flex-col justify-between">
-        <div className="bg-[#141416] rounded-3xl border border-[#292a32] p-5 relative">
-          <label className="text-xs text-[#8b8c94] font-medium mb-1 block">Tokens Processed</label>
-          <div className="flex justify-between items-center mt-2">
+      <div className="flex-1 flex flex-col justify-between gap-2">
+        <div className="bg-brand-bg rounded-lg border border-brand-primary p-3 relative">
+          <label className="input-label mb-0">Tokens Processed</label>
+          <div className="flex justify-between items-center mt-1 gap-2">
             <input 
               type="text" 
               value={tokensProcessed}
@@ -61,17 +58,14 @@ export default function TokenEstimator() {
                 calculateCost(e.target.value);
               }}
               onBlur={() => trackEvent('token_cost_estimated', { tokens: tokensProcessed, cost: estimatedCost })}
-              className="bg-transparent text-3xl font-bold flex-1 min-w-0 mr-4 outline-none" 
+              className="bg-transparent card-metric flex-1 min-w-0 outline-none" 
             />
             <div className="relative">
               <button 
                 onClick={() => setShowInputDropdown(!showInputDropdown)}
-                className="shrink-0 flex items-center gap-2 bg-[#1d1e24] border border-[#292a32] px-3 py-1.5 rounded-full text-sm font-medium"
+                className="btn-secondary btn-sm shrink-0"
               >
-                <span className="w-4 h-4 rounded-full bg-brand-accent/20 flex items-center justify-center overflow-hidden">
-                  <div className="w-2 h-2 bg-brand-accent rounded-sm"></div>
-                </span>
-                {inputType} <ChevronDown size={14} className="text-[#8b8c94]"/>
+                {inputType} <ChevronDown size={12} className="text-brand-text-muted"/>
               </button>
               
               <AnimatePresence>
@@ -80,13 +74,13 @@ export default function TokenEstimator() {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="tooltip-panel absolute right-0 top-full mt-2 w-32 !p-0 overflow-hidden z-10"
+                    className="tooltip-panel absolute right-0 top-full mt-1 w-28 !p-0 overflow-hidden z-10"
                   >
                     {['Tokens', 'Words', 'Chars'].map(type => (
                       <button 
                         key={type}
                         onClick={() => handleInputTypeChange(type)}
-                        className="w-full text-left px-4 py-2 text-xs text-brand-text-muted hover:bg-[#292a32] hover:text-white transition-colors"
+                        className="w-full text-left px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-hover hover:text-white transition-colors"
                       >
                         {type}
                       </button>
@@ -96,27 +90,24 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-[#8b8c94] mt-2 font-medium">{currentModelName}</p>
+          <p className="text-xs text-brand-text-muted mt-1">{currentModelName}</p>
         </div>
 
-        <div className="bg-[#141416] rounded-3xl border border-[#292a32] p-5 mt-4">
-          <label className="text-xs text-[#8b8c94] font-medium mb-1 block">Estimated Cost</label>
-          <div className="flex justify-between items-center mt-2">
+        <div className="bg-brand-bg rounded-lg border border-brand-primary p-3">
+          <label className="input-label mb-0">Estimated Cost</label>
+          <div className="flex justify-between items-center mt-1 gap-2">
             <input 
               type="text" 
               value={estimatedCost} 
-              className="bg-transparent text-3xl font-bold flex-1 min-w-0 mr-4 outline-none" 
+              className="bg-transparent card-metric flex-1 min-w-0 outline-none" 
               readOnly
             />
             <div className="relative">
               <button 
                 onClick={() => setShowUsdDropdown(!showUsdDropdown)}
-                className="shrink-0 flex items-center gap-2 bg-[#1d1e24] border border-[#292a32] px-3 py-1.5 rounded-full text-sm font-medium"
+                className="btn-secondary btn-sm shrink-0"
               >
-                <span className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center relative overflow-hidden">
-                  <div className="text-[10px] font-bold text-emerald-400">{currencyType === 'USD' ? '$' : currencyType === 'EUR' ? '€' : 'C'}</div>
-                </span>
-                {currencyType} <ChevronDown size={14} className="text-[#8b8c94]"/>
+                {currencyType} <ChevronDown size={12} className="text-brand-text-muted"/>
               </button>
               
               <AnimatePresence>
@@ -125,13 +116,13 @@ export default function TokenEstimator() {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="tooltip-panel absolute right-0 top-full mt-2 w-32 !p-0 overflow-hidden z-10"
+                    className="tooltip-panel absolute right-0 top-full mt-1 w-28 !p-0 overflow-hidden z-10"
                   >
                     {['USD', 'EUR', 'Credits'].map(type => (
                       <button 
                         key={type}
                         onClick={() => handleCurrencyTypeChange(type)}
-                        className="w-full text-left px-4 py-2 text-xs text-brand-text-muted hover:bg-[#292a32] hover:text-white transition-colors"
+                        className="w-full text-left px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-hover hover:text-white transition-colors"
                       >
                         {type}
                       </button>
@@ -141,7 +132,7 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-[#8b8c94] mt-2 font-medium">~$0.60 / 1M tokens (Blended)</p>
+          <p className="text-xs text-brand-text-muted mt-1">~$0.60 / 1M Tokens (Blended)</p>
         </div>
       </div>
     </div>

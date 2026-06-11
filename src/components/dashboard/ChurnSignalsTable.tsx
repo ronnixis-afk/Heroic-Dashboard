@@ -58,23 +58,23 @@ export function ChurnSignalsTable() {
   }, [getToken]);
 
   if (loading) {
-    return <div className="glass-panel p-6 h-96 animate-pulse flex flex-col">
-      <div className="h-6 w-48 bg-[#292a32] rounded mb-6"></div>
-      <div className="flex gap-4 mb-8">
-        <div className="h-16 w-32 bg-[#292a32]/50 rounded"></div>
-        <div className="h-16 w-32 bg-[#292a32]/50 rounded"></div>
+    return <div className="card p-3.5 h-80 animate-pulse flex flex-col">
+      <div className="h-4 w-36 bg-brand-primary rounded mb-3"></div>
+      <div className="flex gap-3 mb-4">
+        <div className="h-12 w-24 bg-brand-primary/50 rounded-lg"></div>
+        <div className="h-12 w-24 bg-brand-primary/50 rounded-lg"></div>
       </div>
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-full bg-[#292a32]/30 rounded"></div>)}
+      <div className="space-y-2">
+        {[1, 2, 3, 4].map(i => <div key={i} className="h-8 w-full bg-brand-primary/30 rounded-md"></div>)}
       </div>
     </div>;
   }
 
   if (error || !data) {
     return (
-      <div className="glass-panel p-6 h-[500px] flex flex-col justify-center items-center text-center">
-        <h3 className="text-lg font-medium text-brand-text mb-4">Churn Signals</h3>
-        <div className="text-brand-text-muted mb-4 font-medium max-w-xs">
+      <div className="card p-3.5 h-[400px] flex flex-col justify-center items-center text-center">
+        <h3 className="text-title font-semibold text-brand-text mb-3">Churn Signals</h3>
+        <div className="text-xs text-brand-text-muted mb-3 font-medium max-w-xs">
           {error || 'No churn signals data available.'}
         </div>
         <button 
@@ -83,7 +83,7 @@ export function ChurnSignalsTable() {
             setError(null);
             fetchData();
           }}
-          className="btn-primary px-4 py-2 text-xs font-bold"
+          className="btn-primary btn-sm"
         >
           Retry
         </button>
@@ -92,67 +92,67 @@ export function ChurnSignalsTable() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-[#ff5a36]'; // High Risk (Orange per design)
-    if (score >= 60) return 'text-[#f59e0b]'; // Medium Risk
+    if (score >= 80) return 'text-[#ff5a36]';
+    if (score >= 60) return 'text-[#f59e0b]';
     return 'text-brand-text';
   };
 
   return (
-    <div className="glass-panel p-6 flex flex-col h-[500px]">
-      <h3 className="text-lg font-medium text-brand-text mb-4">Churn Signals</h3>
+    <div className="card p-3.5 flex flex-col h-[400px]">
+      <h3 className="card-title mb-3">Churn Signals</h3>
       
-      <div className="flex gap-6 mb-6 pb-6 border-b border-[#292a32]">
+      <div className="flex flex-wrap gap-4 mb-3 pb-3 border-b border-brand-border">
         <div>
-          <div className="text-xs font-medium text-[#8b8c94] mb-1">At-Risk Users</div>
-          <div className="text-3xl font-bold text-[#ff5a36]">{data.summary.totalAtRisk}</div>
+          <div className="input-label mb-0">At-Risk Users</div>
+          <div className="card-metric text-[#ff5a36]">{data.summary.totalAtRisk}</div>
         </div>
         <div>
-          <div className="text-xs font-medium text-[#8b8c94] mb-1">New This Week</div>
-          <div className="text-3xl font-bold text-[#f59e0b]">{data.summary.newThisWeek}</div>
+          <div className="input-label mb-0">New This Week</div>
+          <div className="card-metric text-[#f59e0b]">{data.summary.newThisWeek}</div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto custom-scroll pr-2">
-        <table className="w-full text-left data-table">
-          <thead className="sticky top-0 bg-[#1d1e24] z-10">
-            <tr className="border-b border-[#292a32]">
-              <th className="pb-3 px-2 text-[11px] font-medium text-[#8b8c94]">User</th>
-              <th className="pb-3 px-2 text-[11px] font-medium text-[#8b8c94] text-right">Score</th>
-              <th className="pb-3 px-2 text-[11px] font-medium text-[#8b8c94] text-right">Last Seen</th>
-              <th className="pb-3 px-2 text-[11px] font-medium text-[#8b8c94] text-center">7d Msgs</th>
+      <div className="flex-1 overflow-auto custom-scroll pr-1">
+        <table className="data-table">
+          <thead className="sticky top-0 bg-brand-surface z-10">
+            <tr>
+              <th>User</th>
+              <th className="text-right">Score</th>
+              <th className="text-right">Last Seen</th>
+              <th className="text-center">7d Msgs</th>
             </tr>
           </thead>
           <tbody>
             {data.atRiskUsers.map((user) => (
-              <tr key={user.id} className="border-b border-brand-primary/10 last:border-0 hover:bg-white/5 transition-colors group">
-                <td className="py-3 px-2">
+              <tr key={user.id} className="group">
+                <td>
                   <Link to={`/admin/users/${user.id}`} className="block">
-                    <div className="font-medium text-brand-text group-hover:text-brand-accent transition-colors">
+                    <div className="text-xs font-medium text-brand-text group-hover:text-brand-accent transition-colors">
                       {user.email.split('@')[0]}
                     </div>
-                    <div className="text-xs text-brand-text-muted flex items-center gap-2 mt-0.5">
+                    <div className="text-xs text-brand-text-muted flex items-center gap-1.5 mt-0.5">
                       <span className="capitalize">{user.tier}</span>
                       <span>•</span>
                       <span>{user.totalSessions} sessions</span>
                     </div>
                   </Link>
                 </td>
-                <td className="py-3 px-2 text-right">
-                  <span className={`font-bold ${getScoreColor(user.churnScore)}`}>
+                <td className="text-right">
+                  <span className={`text-xs font-semibold ${getScoreColor(user.churnScore)}`}>
                     {user.churnScore}
                   </span>
                 </td>
-                <td className="py-3 px-2 text-right text-brand-text-muted">
+                <td className="text-right text-xs text-brand-text-muted">
                   {user.daysSinceLastSession}d ago
                 </td>
-                <td className="py-3 px-2 text-center text-brand-text-muted">
+                <td className="text-center text-xs text-brand-text-muted">
                   {user.msgsLast7Days}
                 </td>
               </tr>
             ))}
             {data.atRiskUsers.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-brand-text-muted">
+                <td colSpan={4} className="py-6 text-center text-xs text-brand-text-muted">
                   No users currently identified at risk.
                 </td>
               </tr>

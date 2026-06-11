@@ -8,82 +8,76 @@ import { LogOut, ShieldAlert } from 'lucide-react';
 export default function LoginPage() {
   const { user, loading, isAdmin, signOut } = useAuth();
 
-  // If loading auth state, show a shimmer placeholder
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
-        <div className="h-8 w-8 shimmer rounded-full opacity-50" />
+      <div className="flex min-h-screen items-center justify-center bg-brand-bg">
+        <div className="h-6 w-6 shimmer rounded-full opacity-50" />
       </div>
     );
   }
 
-  // If already logged in and an admin, redirect to dashboard
   if (user && isAdmin) {
     return <Navigate to="/admin" replace />;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] p-6 relative overflow-hidden">
-      {/* Background Aesthetic */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-accent/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
+    <div className="flex min-h-screen items-center justify-center bg-brand-bg p-4 relative overflow-hidden">
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-accent/5 blur-[100px] rounded-full" />
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md"
+        className="relative z-10 w-full max-w-sm"
       >
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-6 h-12 w-12 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-[#1ba3b4] overflow-hidden shadow-[0_0_30px_rgba(32, 204, 224,0.3)]">
-             {/* Logo */}
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Heroic Dashboard</h1>
-          <p className="text-[#8b8c94] text-sm font-medium">Unified Admin Access Control</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4 h-8 w-8 rounded bg-gradient-to-tr from-brand-accent to-brand-accent-hover" />
+          <h1 className="text-header font-semibold text-brand-text mb-1">Heroic Dashboard</h1>
+          <p className="text-xs text-brand-text-muted">Unified Admin Access Control</p>
         </div>
 
         {user && !isAdmin ? (
-          /* Access Denied State */
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
+          <motion.div
+            initial={{ scale: 0.98, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="rounded-3xl border border-red-500/20 bg-[#141416] p-8 text-center shadow-2xl backdrop-blur-xl"
+            className="card p-5 text-center"
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-500">
-              <ShieldAlert size={32} />
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+              <ShieldAlert size={20} />
             </div>
-            <h2 className="mb-2 text-xl font-bold text-white">Access Denied</h2>
-            <p className="mb-6 text-sm text-[#8b8c94] font-medium">
-              Your account (<span className="text-white">{user.primaryEmailAddress?.emailAddress}</span>) 
-              does not have administrative privileges for this dashboard.
+            <h2 className="mb-1.5 text-title font-semibold">Access Denied</h2>
+            <p className="mb-4 text-xs text-brand-text-muted">
+              Your account (
+              <span className="text-brand-text">{user.primaryEmailAddress?.emailAddress}</span>) does
+              not have administrative privileges for this dashboard.
             </p>
-            <button
-              onClick={() => signOut()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 font-bold text-black transition-colors hover:bg-white/90"
-            >
-              <LogOut size={18} />
+            <button onClick={() => signOut()} className="btn-primary w-full">
+              <LogOut size={14} />
               Sign Out
             </button>
           </motion.div>
         ) : (
-          /* Sign In Form */
-          <SignIn 
+          <SignIn
             appearance={{
               elements: {
-                rootBox: "mx-auto w-full",
-                card: "bg-[#141416] border border-white/5 shadow-2xl rounded-3xl w-full p-2 sm:p-4",
-                headerTitle: "text-white font-bold text-xl sm:text-2xl",
-                headerSubtitle: "text-[#8b8c94] text-sm font-medium",
-                socialButtonsBlockButton: "bg-[#1d1e24] border border-[#292a32] hover:bg-[#292a32] text-white",
-                socialButtonsBlockButtonText: "text-white font-bold text-sm",
-                formButtonPrimary: "bg-white text-black hover:bg-white/90 transition-colors py-3 rounded-full font-bold text-sm normal-case",
-                formFieldLabel: "text-[#8b8c94] text-[10px] font-bold",
-                formFieldInput: "bg-[#0A0A0A] border-[#292a32] text-white rounded-xl focus:border-[#20cce0] transition-all",
-                footerActionLink: "text-[#20cce0] hover:text-white transition-colors text-sm font-bold",
-                dividerLine: "bg-[#292a32]/50",
-                dividerText: "text-[#8b8c94] text-[10px]",
-                identityPreviewText: "text-white font-bold",
-                identityPreviewEditButtonIcon: "text-[#20cce0]"
-              }
+                rootBox: 'mx-auto w-full',
+                card: 'bg-brand-surface border border-brand-border rounded-lg w-full p-3',
+                headerTitle: 'text-brand-text font-semibold text-header',
+                headerSubtitle: 'text-brand-text-muted text-xs',
+                socialButtonsBlockButton:
+                  'bg-brand-hover border border-brand-primary hover:bg-brand-primary text-brand-text h-8',
+                socialButtonsBlockButtonText: 'text-brand-text font-medium text-xs',
+                formButtonPrimary:
+                  'bg-white text-black hover:bg-gray-200 transition-colors h-8 rounded-md font-medium text-xs normal-case',
+                formFieldLabel: 'text-brand-text-muted text-xs font-medium',
+                formFieldInput:
+                  'bg-brand-bg border-brand-primary text-brand-text rounded-md h-8 text-xs focus:border-brand-accent transition-all',
+                footerActionLink:
+                  'text-brand-accent hover:text-brand-text transition-colors text-xs font-medium',
+                dividerLine: 'bg-brand-primary/50',
+                dividerText: 'text-brand-text-muted text-xs',
+                identityPreviewText: 'text-brand-text font-medium text-xs',
+                identityPreviewEditButtonIcon: 'text-brand-accent',
+              },
             }}
             routing="path"
             path="/login"

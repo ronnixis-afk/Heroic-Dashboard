@@ -1,24 +1,19 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Newspaper, 
-  Coins, 
-  BarChart3, 
-  LayoutDashboard, 
-  LogOut, 
-  Menu, 
+import {
+  Users,
+  Newspaper,
+  Coins,
+  LayoutDashboard,
+  LogOut,
+  Menu,
   X,
-  CreditCard,
-  Banknote,
   LineChart,
-  Settings,
   Bell,
   Search,
   Activity,
   DollarSign,
-  TrendingUp,
-  MessageSquare
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
@@ -27,38 +22,36 @@ import { motion, AnimatePresence } from 'framer-motion';
 const NAV_GROUPS = [
   {
     group: 'Main',
-    items: [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-    ]
+    items: [{ icon: LayoutDashboard, label: 'Dashboard', path: '/admin' }],
   },
   {
     group: 'Audience',
     items: [
       { icon: Users, label: 'Users', path: '/admin/users' },
       { icon: LineChart, label: 'Audience Reports', path: '/admin/reports/audience' },
-    ]
+    ],
   },
   {
     group: 'Intelligence',
     items: [
       { icon: Activity, label: 'Real-Time Analytics', path: '/admin/analytics' },
       { icon: Search, label: 'Usage Reports', path: '/admin/reports/usage' },
-    ]
+    ],
   },
   {
     group: 'Monetization',
     items: [
       { icon: DollarSign, label: 'Financial Reports', path: '/admin/reports/financial' },
       { icon: Coins, label: 'Credits', path: '/admin/credits' },
-    ]
+    ],
   },
   {
     group: 'Operations',
     items: [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
-    ]
-  }
+    ],
+  },
 ];
 
 export default function AdminLayout() {
@@ -84,7 +77,6 @@ export default function AdminLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close sidebar on navigation on mobile
   React.useEffect(() => {
     if (isMobile) {
       setIsSidebarOpen(false);
@@ -96,9 +88,14 @@ export default function AdminLayout() {
     navigate('/');
   };
 
+  const currentPage = NAV_GROUPS.flatMap((g) => g.items).find(
+    (item) =>
+      location.pathname === item.path ||
+      (item.path !== '/admin' && location.pathname.startsWith(item.path))
+  );
+
   return (
-    <div className="flex h-screen bg-[#111114] text-white overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
+    <div className="flex h-screen bg-sidebar-bg text-brand-text overflow-hidden">
       <AnimatePresence>
         {isMobile && isSidebarOpen && (
           <motion.div
@@ -106,71 +103,76 @@ export default function AdminLayout() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
-      <motion.aside 
+      <motion.aside
         initial={false}
-        animate={{ 
-          width: isMobile ? (isSidebarOpen ? 280 : 0) : (isSidebarOpen ? 240 : 80),
-          x: isMobile && !isSidebarOpen ? -280 : 0
+        animate={{
+          width: isMobile ? (isSidebarOpen ? 220 : 0) : isSidebarOpen ? 200 : 52,
+          x: isMobile && !isSidebarOpen ? -220 : 0,
         }}
         className={cn(
-          "relative flex flex-col bg-[#111114] z-50 transition-colors border-r border-[#1e1f24]",
-          isMobile ? "fixed inset-y-0 left-0 shadow-2xl" : "relative"
+          'relative flex flex-col bg-sidebar-bg z-50 border-r border-brand-border shrink-0',
+          isMobile ? 'fixed inset-y-0 left-0' : 'relative'
         )}
       >
-        <div className="flex h-20 items-center justify-between px-6">
+        <div className="flex h-11 items-center justify-between px-3 border-b border-brand-border">
           <AnimatePresence mode="wait">
-            {(isSidebarOpen || !isMobile) ? (
-              <motion.div 
-                key={isSidebarOpen ? "logo-full" : "logo-short"}
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
+            {(isSidebarOpen || !isMobile) && (
+              <motion.div
+                key={isSidebarOpen ? 'logo-full' : 'logo-short'}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className={cn("flex items-center gap-3", !isSidebarOpen && "mx-auto")}
+                className={cn('flex items-center gap-2 min-w-0', !isSidebarOpen && 'mx-auto')}
               >
-                <div className="h-8 w-8 rounded flex items-center justify-center -rotate-45 bg-gradient-to-tr from-brand-accent to-orange-500 overflow-hidden">
-                   {/* Logo mock */}
-                </div>
-                {isSidebarOpen && <span className="font-sans text-lg font-bold tracking-tight text-white">Heroic Dashboard</span>}
+                <div className="h-6 w-6 rounded bg-gradient-to-tr from-brand-accent to-orange-500 shrink-0" />
+                {isSidebarOpen && (
+                  <span className="text-title font-semibold text-brand-text truncate">
+                    Heroic Dashboard
+                  </span>
+                )}
               </motion.div>
-            ) : null}
+            )}
           </AnimatePresence>
           {isMobile && (
-            <button onClick={() => setIsSidebarOpen(false)} className="text-[#8b8c94] hover:text-white">
-              <X size={20} />
+            <button onClick={() => setIsSidebarOpen(false)} className="btn-icon">
+              <X size={14} />
             </button>
           )}
         </div>
 
-        <nav className="flex-1 space-y-6 px-4 py-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {NAV_GROUPS.map((group) => (
-            <div key={group.group} className="space-y-1">
+            <div key={group.group} className="space-y-0.5">
               {isSidebarOpen && (
-                <h3 className="px-4 text-xs font-bold text-brand-text-muted mb-2">
-                  {group.group}
-                </h3>
+                <p className="px-2 text-xs font-medium text-brand-text-muted mb-1">{group.group}</p>
               )}
               {group.items.map((item) => {
-                const isActive = location.pathname === item.path || (item.path === '/admin' && location.pathname === '/admin');
+                const isActive =
+                  location.pathname === item.path ||
+                  (item.path === '/admin' && location.pathname === '/admin');
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
+                    title={!isSidebarOpen ? item.label : undefined}
                     className={cn(
-                      "flex items-center gap-4 rounded-[1.5rem] px-4 py-3 transition-all duration-200",
-                      isActive 
-                        ? "bg-[#292a32] text-white shadow-lg" 
-                        : "text-[#8b8c94] hover:bg-[#1a1b21] hover:text-white",
-                      !isSidebarOpen && "justify-center px-0"
+                      'flex items-center gap-2.5 rounded-md px-2 h-8 text-xs font-medium transition-colors duration-150',
+                      isActive
+                        ? 'bg-brand-primary text-brand-text'
+                        : 'text-brand-text-muted hover:bg-brand-hover hover:text-brand-text',
+                      !isSidebarOpen && 'justify-center px-0'
                     )}
                   >
-                    <item.icon size={18} className={cn(isActive ? "text-brand-accent" : "")} />
-                    {isSidebarOpen && <span className="text-body font-medium">{item.label}</span>}
+                    <item.icon
+                      size={14}
+                      className={cn('shrink-0', isActive && 'text-brand-accent')}
+                    />
+                    {isSidebarOpen && <span className="truncate">{item.label}</span>}
                   </Link>
                 );
               })}
@@ -178,95 +180,101 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="mt-auto border-t border-[#1e1f24] p-4 space-y-2">
+        <div className="border-t border-brand-border p-2 space-y-0.5">
           {!isMobile && (
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-[#1a1b21] hover:text-white"
+              className="flex w-full items-center gap-2.5 rounded-md px-2 h-8 text-xs font-medium text-brand-text-muted hover:bg-brand-hover hover:text-brand-text transition-colors"
             >
-              <Menu size={20} />
-              {isSidebarOpen && <span className="text-sm font-medium">Collapse</span>}
+              <Menu size={14} />
+              {isSidebarOpen && <span>Collapse</span>}
             </button>
           )}
           <button
             onClick={handleLogout}
             className={cn(
-              "flex w-full items-center gap-4 rounded-[1.5rem] px-4 py-3 text-[#8b8c94] transition-all hover:bg-red-500/10 hover:text-red-400",
-              !isSidebarOpen && "justify-center px-0"
+              'flex w-full items-center gap-2.5 rounded-md px-2 h-8 text-xs font-medium text-brand-text-muted hover:bg-red-500/10 hover:text-red-400 transition-colors',
+              !isSidebarOpen && 'justify-center px-0'
             )}
           >
-            <LogOut size={20} />
-            {isSidebarOpen && <span className="text-sm font-medium">Logout</span>}
+            <LogOut size={14} />
+            {isSidebarOpen && <span>Logout</span>}
           </button>
         </div>
-
       </motion.aside>
 
-      {/* Main Content */}
-      <main className={cn(
-        "relative flex-1 overflow-y-auto bg-[#141416] transition-all duration-300 flex flex-col",
-        isMobile ? "m-0 rounded-none border-0" : "m-4 rounded-[2rem] border border-[#1e1f24] inner-shadow-sm"
-      )}>
-        <header className={cn(
-          "sticky top-0 z-40 bg-[#141416]/90 backdrop-blur-md relative py-4 px-4 sm:px-8 flex items-center justify-between",
-          !isMobile && "rounded-t-[2rem]"
-        )}>
-          <div className="flex items-center gap-4">
+      <main className="relative flex-1 overflow-y-auto bg-brand-bg flex flex-col min-w-0">
+        <header className="sticky top-0 z-30 bg-brand-bg/95 backdrop-blur-sm border-b border-brand-border h-11 px-3 sm:px-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
             {isMobile && (
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-[#8b8c94] hover:text-white transition-colors"
-              >
-                <Menu size={24} />
+              <button onClick={() => setIsSidebarOpen(true)} className="btn-icon">
+                <Menu size={14} />
               </button>
             )}
-            <h2 className="text-lg font-bold text-white lg:hidden">Heroic</h2>
+            <h2 className="text-title font-semibold text-brand-text truncate">
+              {currentPage?.label ?? 'Dashboard'}
+            </h2>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6 relative">
+          <div className="flex items-center gap-2 sm:gap-3 relative shrink-0">
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="text-[#8b8c94] hover:text-white transition-colors relative p-2"
+                className="btn-icon relative"
               >
-                 <Bell size={20} />
-                 <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#141416]"></span>
+                <Bell size={14} />
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
               </button>
-              
+
               <AnimatePresence>
                 {showNotifications && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-64 glass-panel p-4 z-50 border border-[#292a32] shadow-2xl"
+                    exit={{ opacity: 0, y: 6 }}
+                    className="absolute right-0 top-full mt-1.5 w-56 tooltip-panel z-50"
                   >
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-sm font-bold text-white">Notifications</h4>
-                      <button onClick={() => setShowNotifications(false)} className="text-[#8b8c94] hover:text-white">
-                        <X size={14} />
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-title font-semibold">Notifications</h4>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="btn-icon w-6 h-6"
+                      >
+                        <X size={12} />
                       </button>
                     </div>
-                    <div className="text-center py-6 text-xs text-[#8b8c94] italic bg-[#0A0A0B] rounded-xl">
-                      No new notifications.
-                    </div>
+                    <p className="text-center py-4 text-xs text-brand-text-muted">
+                      No New Notifications.
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-white truncate max-w-[120px]">{user?.fullName || 'Administrator'}</p>
-                <p className="text-[10px] text-[#8b8c94] truncate max-w-[120px]">{user?.primaryEmailAddress?.emailAddress}</p>
+                <p className="text-xs font-medium text-brand-text truncate max-w-[120px]">
+                  {user?.fullName || 'Administrator'}
+                </p>
+                <p className="text-xs text-brand-text-muted truncate max-w-[120px]">
+                  {user?.primaryEmailAddress?.emailAddress}
+                </p>
               </div>
-              <div className="h-8 w-8 sm:h-10 sm:w-10 overflow-hidden rounded-full border border-[#292a32] shadow-xl">
-                <img src={user?.imageUrl || `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}&background=3ecf8e&color=fff`} alt="User" className="w-full h-full object-cover" />
+              <div className="h-7 w-7 overflow-hidden rounded-full border border-brand-primary">
+                <img
+                  src={
+                    user?.imageUrl ||
+                    `https://ui-avatars.com/api/?name=${user?.firstName || 'A'}&background=3ecf8e&color=fff&size=28`
+                  }
+                  alt="User"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex-1">
+        <div className="p-3 sm:p-4 max-w-[1400px] mx-auto w-full flex-1">
           <Outlet />
         </div>
       </main>
