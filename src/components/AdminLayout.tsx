@@ -14,6 +14,7 @@ import {
   Activity,
   DollarSign,
   MessageSquare,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
@@ -50,6 +51,12 @@ const NAV_GROUPS = [
     items: [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
+    ],
+  },
+  {
+    group: 'System',
+    items: [
+      { icon: Settings, label: 'System Settings', path: '/admin/settings' },
     ],
   },
 ];

@@ -12,6 +12,7 @@ import AdminNews from './pages/admin/AdminNews';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminFeedback from './pages/admin/AdminFeedback';
+import AdminSettings from './pages/admin/AdminSettings';
 
 
 import AudienceReports from './pages/admin/AudienceReports';
@@ -87,6 +88,7 @@ export default function App() {
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="feedback" element={<AdminFeedback />} />
+                <Route path="settings" element={<AdminSettings />} />
                 
                 {/* Reports Suite */}
                 <Route path="reports">
@@ -108,3 +110,4 @@ export default function App() {
     </ClerkProvider>
   );
 }
+
