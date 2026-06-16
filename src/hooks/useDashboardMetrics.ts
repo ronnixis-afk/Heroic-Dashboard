@@ -111,10 +111,7 @@ async function fetchDashboardMetrics(getToken: (options?: any) => Promise<string
   const { data: tierData } = await supabase.from('user_tier_distribution').select('*');
   const acquisitionData = (tierData || []).map(t => ({
     name: t.tier.charAt(0).toUpperCase() + t.tier.slice(1),
-    count: t.user_count,
-    organic: 0, 
-    referral: 0,
-    paid: 0
+    count: t.user_count
   }));
 
   console.log('[DashboardAudit] Scalable calculation complete. Tier distribution enabled.');
