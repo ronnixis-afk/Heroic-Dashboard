@@ -1,11 +1,13 @@
 import React from 'react';
-import { Mail, X, Zap, Activity, ShieldAlert } from 'lucide-react';
+import { Mail, X, Zap, Activity, ShieldAlert, Database, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserConsumptionChart from './UserConsumptionChart';
 import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData } from '../../services/EngineTelemetryService';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { Skeleton } from '../Skeleton';
+import { getSupabaseClient } from '../../lib/supabase';
+import { formatBytes } from '../../lib/utils';
 
 interface UserDetailModalProps {
   selectedUser: any;
@@ -46,6 +48,39 @@ export default function UserDetailModal({
     };
 
     loadTelemetry();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUser, getToken]);
+
+  const [saves, setSaves] = React.useState<any[]>([]);
+  const [loadingSaves, setLoadingSaves] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!selectedUser?.id) return;
+
+    let cancelled = false;
+    const loadSaves = async () => {
+      setLoadingSaves(true);
+      try {
+        const token = await getToken({ template: 'supabase' }).catch(() => null);
+        const supabase = getSupabaseClient(token || undefined);
+        const { data, error } = await supabase
+          .from('game_save_metadata')
+          .select('*')
+          .eq('userId', selectedUser.id)
+          .order('updatedAt', { ascending: false });
+
+        if (error) throw error;
+        if (!cancelled) setSaves(data || []);
+      } catch (err) {
+        console.error('[UserDetailModal] Saves fetch failed:', err);
+      } finally {
+        if (!cancelled) setLoadingSaves(false);
+      }
+    };
+
+    loadSaves();
     return () => {
       cancelled = true;
     };
@@ -161,6 +196,59 @@ export default function UserDetailModal({
                 Suspend Access
               </button>
             </div>
+          </div>
+
+          {/* Cloud Saves Metadata */}
+          <div className="card p-3.5">
+            <h4 className="section-title mb-3 flex items-center gap-2">
+              <Database size={14} className="text-brand-accent" />
+              Cloud Save Files ({saves.length})
+            </h4>
+            
+            {loadingSaves ? (
+              <div className="space-y-2">
+                <Skeleton width="100%" height={40} className="rounded-md" />
+                <Skeleton width="100%" height={40} className="rounded-md" />
+              </div>
+            ) : saves.length > 0 ? (
+              <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                {saves.map((save) => (
+                  <div 
+                    key={save.id} 
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-md bg-brand-bg border border-brand-primary/45 hover:border-brand-accent/40 transition-all gap-1.5"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-white truncate" title={save.name}>
+                          {save.name}
+                        </span>
+                        <span className="badge-muted text-[9px] px-1 font-mono uppercase truncate max-w-[120px]" title={save.worldId}>
+                          {save.worldId}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-brand-text-muted flex items-center gap-1">
+                        <span>Last Saved:</span>
+                        <span>
+                          {new Date(save.updatedAt).toLocaleString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <span className="text-xs font-semibold font-mono text-brand-accent bg-brand-accent/5 px-2 py-0.5 rounded border border-brand-accent/10">
+                        {formatBytes(save.size_bytes)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-brand-text-muted italic py-1">No active cloud save files found.</p>
+            )}
           </div>
 
           <div>

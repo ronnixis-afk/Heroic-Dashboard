@@ -13,18 +13,35 @@ async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
   
   const supabase = getSupabaseClient(token || undefined);
   
-  const { data, error } = await supabase
-    .from('User')
-    .select('*, UserSession(lastPing, endTime, startTime)')
-    .order('createdAt', { ascending: false })
-    .order('lastPing', { foreignTable: 'UserSession', ascending: false })
-    .limit(1, { foreignTable: 'UserSession' });
+  const [usersRes, saveStatsRes] = await Promise.all([
+    supabase
+      .from('User')
+      .select('*, UserSession(lastPing, endTime, startTime)')
+      .order('createdAt', { ascending: false })
+      .order('lastPing', { foreignTable: 'UserSession', ascending: false })
+      .limit(1, { foreignTable: 'UserSession' }),
+    supabase
+      .from('user_save_sizes_summary')
+      .select('*')
+  ]);
   
-  if (error) {
-    console.error('[UsersAudit] Supabase error:', error);
-    throw error;
+  if (usersRes.error) {
+    console.error('[UsersAudit] Supabase error fetching users:', usersRes.error);
+    throw usersRes.error;
   }
-  return data || [];
+  
+  if (saveStatsRes.error) {
+    console.warn('[UsersAudit] Supabase error fetching save sizes:', saveStatsRes.error);
+  }
+
+  const users = usersRes.data || [];
+  const saveStats = saveStatsRes.data || [];
+  const saveStatsMap = new Map(saveStats.map((s: any) => [s.userId, s]));
+
+  return users.map((user) => ({
+    ...user,
+    saveStats: saveStatsMap.get(user.id) || { save_count: 0, total_bytes: 0 }
+  }));
 }
 
 export function useUsers() {

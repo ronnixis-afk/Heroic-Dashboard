@@ -48,6 +48,27 @@ SELECT date_trunc('hour'::text, "createdAt") AS hour,
  WHERE "createdAt" > (now() - '24:00:00'::interval)
  GROUP BY (date_trunc('hour'::text, "createdAt"))
  ORDER BY (date_trunc('hour'::text, "createdAt"));
+
+-- Aggregates save count and total save size in bytes per user
+CREATE OR REPLACE VIEW user_save_sizes_summary AS
+SELECT 
+  "userId",
+  count(*) AS save_count,
+  coalesce(sum(octet_length(data::text)), 0) AS total_bytes
+FROM "GameSave"
+GROUP BY "userId";
+
+-- Exposes basic metadata and text size of individual cloud saves
+CREATE OR REPLACE VIEW game_save_metadata AS
+SELECT 
+  id,
+  "userId",
+  "worldId",
+  name,
+  "updatedAt",
+  "createdAt",
+  octet_length(data::text) AS size_bytes
+FROM "GameSave";
 ```
 
 > [!IMPORTANT]
@@ -72,7 +93,9 @@ SELECT date_trunc('hour'::text, "createdAt") AS hour,
 >     'real_time_hourly_stats',
 >     'page_visit_summary',
 >     'global_usage_stats',
->     'user_daily_usage_summary'
+>     'user_daily_usage_summary',
+>     'user_save_sizes_summary',
+>     'game_save_metadata'
 >   ];
 >   tables text[] := ARRAY[
 >     'News',
@@ -81,7 +104,8 @@ SELECT date_trunc('hour'::text, "createdAt") AS hour,
 >     'UserSession',
 >     'CreditAdjustment',
 >     'EngineTelemetry',
->     'PageVisit'
+>     'PageVisit',
+>     'GameSave'
 >   ];
 > BEGIN
 >   -- 1. Grant SELECT Access to Views for the Analytical Dashboard

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Mail, ShieldCheck, Calendar, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../lib/utils';
+import { cn, formatBytes } from '../../lib/utils';
 import { Skeleton, SkeletonText } from '../Skeleton';
 
 interface UsersTableProps {
@@ -31,6 +31,7 @@ export default function UsersTable({
                 <th>User Identity</th>
                 <th>Access Level</th>
                 <th>Credit Balance</th>
+                <th>Save Size</th>
                 <th>Registration</th>
                 <th>Last Seen</th>
                 <th className="text-right">Manage</th>
@@ -111,6 +112,20 @@ export default function UsersTable({
                           </>
                         )}
                       </div>
+                    </td>
+                    <td>
+                      {isLoading ? (
+                        <SkeletonText width={60} className="h-3 opacity-50" />
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold text-white font-mono">
+                            {formatBytes(user.saveStats?.total_bytes || 0)}
+                          </span>
+                          <span className="text-[10px] text-brand-text-muted">
+                            {user.saveStats?.save_count || 0} {user.saveStats?.save_count === 1 ? 'save' : 'saves'}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td>
                       {isLoading ? (
