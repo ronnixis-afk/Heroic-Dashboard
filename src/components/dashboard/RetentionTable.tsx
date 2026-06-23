@@ -92,28 +92,28 @@ export function RetentionTable() {
         <thead>
           <tr>
             <th>Cohort</th>
-            <th>New Users</th>
-            <th>Day 1</th>
-            <th>Day 7</th>
-            <th>Day 30</th>
+            <th className="text-center">New Users</th>
+            <th className="text-center">Day 1</th>
+            <th className="text-center">Day 7</th>
+            <th className="text-center">Day 30</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, idx) => (
             <tr key={idx}>
               <td className="font-medium">{row.cohort}</td>
-              <td className="text-brand-text-muted">{row.newUsers}</td>
-              <td>
+              <td className="text-center text-brand-text-muted">{row.newUsers}</td>
+              <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day1Retention)}`}>
                   {row.day1Retention}%
                 </div>
               </td>
-              <td>
+              <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day7Retention)}`}>
                   {row.day7Retention}%
                 </div>
               </td>
-              <td>
+              <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day30Retention)}`}>
                   {row.day30Retention}%
                 </div>

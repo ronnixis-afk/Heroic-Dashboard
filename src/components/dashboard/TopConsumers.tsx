@@ -26,7 +26,10 @@ export default function TopConsumers({ topConsumers, isLoading = false }: TopCon
 
       <div className="flex-1 overflow-y-auto space-y-0.5">
         {(isLoading ? Array.from({ length: 5 }) : topConsumers).map((tx, idx) => (
-          <div key={isLoading ? idx : tx.id} className="grid grid-cols-[1fr_64px] items-center list-item px-1">
+          <div
+            key={isLoading ? idx : tx.id}
+            className="grid grid-cols-[1fr_64px] items-center py-1.5 px-1 rounded-md hover:bg-brand-hover transition-colors duration-150"
+          >
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-6 h-6 rounded-full overflow-hidden border border-brand-primary shrink-0">
                 {isLoading ? (

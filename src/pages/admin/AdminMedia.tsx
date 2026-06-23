@@ -205,12 +205,35 @@ const initialForm = {
   metadata: {} as Record<string, string>,
 };
 
+interface OptimizedImageDraft extends OptimizedImageResult {
+  sourceFileName: string;
+  title: string;
+}
+
 const toTitleCase = (value: string) =>
   value
     .trim()
     .split(/\s+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+
+const getTitleFromFileName = (fileName: string) => {
+  const nameWithoutExtension = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
+  return toTitleCase(nameWithoutExtension) || 'Image Asset';
+};
+
+const getUniqueTitle = (baseTitle: string, usedTitles: Set<string>) => {
+  let title = baseTitle;
+  let suffix = 2;
+
+  while (usedTitles.has(title.toLowerCase())) {
+    title = `${baseTitle} ${suffix}`;
+    suffix += 1;
+  }
+
+  usedTitles.add(title.toLowerCase());
+  return title;
+};
 
 const getStringMetadata = (metadata: Record<string, unknown> | null | undefined): Record<string, string> =>
   Object.fromEntries(
@@ -223,8 +246,7 @@ export default function AdminMedia() {
   const [editingAsset, setEditingAsset] = useState<ImageAsset | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<ImageAsset | null>(null);
   const [tagDraft, setTagDraft] = useState('');
-  const [optimizedImage, setOptimizedImage] = useState<OptimizedImageResult | null>(null);
-  const [sourceFileName, setSourceFileName] = useState('');
+  const [optimizedImages, setOptimizedImages] = useState<OptimizedImageDraft[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -238,11 +260,9 @@ export default function AdminMedia() {
 
   useEffect(() => {
     return () => {
-      if (optimizedImage?.previewUrl) {
-        URL.revokeObjectURL(optimizedImage.previewUrl);
-      }
+      optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     };
-  }, [optimizedImage?.previewUrl]);
+  }, [optimizedImages]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -275,13 +295,10 @@ export default function AdminMedia() {
   );
 
   const resetForm = () => {
-    if (optimizedImage?.previewUrl) {
-      URL.revokeObjectURL(optimizedImage.previewUrl);
-    }
+    optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setFormData(initialForm);
     setEditingAsset(null);
-    setOptimizedImage(null);
-    setSourceFileName('');
+    setOptimizedImages([]);
     setTagDraft('');
     setErrorMessage(null);
     setStatusMessage(null);
@@ -306,24 +323,33 @@ export default function AdminMedia() {
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!file) return;
+    if (files.length === 0) return;
 
     setErrorMessage(null);
     setStatusMessage(null);
     setIsOptimizing(true);
-    setSourceFileName(file.name);
+    optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    setOptimizedImages([]);
 
     try {
-      const optimized = await optimizeImageToSquare(file);
-      if (optimizedImage?.previewUrl) {
-        URL.revokeObjectURL(optimizedImage.previewUrl);
-      }
-      setOptimizedImage(optimized);
-      setStatusMessage('Image Optimized To 500px By 500px.');
+      const nextImages = await Promise.all(
+        files.map(async (file) => {
+          const optimized = await optimizeImageToSquare(file);
+          return {
+            ...optimized,
+            sourceFileName: file.name,
+            title: getTitleFromFileName(file.name),
+          };
+        })
+      );
+      setOptimizedImages(nextImages);
+      setStatusMessage(
+        `${nextImages.length} ${nextImages.length === 1 ? 'Image' : 'Images'} Optimized To 500px By 500px.`
+      );
     } catch (error) {
-      setOptimizedImage(null);
+      setOptimizedImages([]);
       setErrorMessage(error instanceof Error ? error.message : 'Image Optimization Failed.');
     } finally {
       setIsOptimizing(false);
@@ -331,9 +357,7 @@ export default function AdminMedia() {
   };
 
   const handleEdit = (asset: ImageAsset) => {
-    if (optimizedImage?.previewUrl) {
-      URL.revokeObjectURL(optimizedImage.previewUrl);
-    }
+    optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setEditingAsset(asset);
     setFormData({
       title: asset.title,
@@ -343,8 +367,7 @@ export default function AdminMedia() {
       tags: asset.tags || [],
       metadata: getStringMetadata(asset.metadata),
     });
-    setOptimizedImage(null);
-    setSourceFileName('');
+    setOptimizedImages([]);
     setTagDraft('');
     setErrorMessage(null);
     setStatusMessage('Editing Metadata Only.');
@@ -364,17 +387,33 @@ export default function AdminMedia() {
         return;
       }
 
-      if (!optimizedImage) {
-        throw new Error('Please Select And Optimize An Image First.');
+      if (optimizedImages.length === 0) {
+        throw new Error('Please Select And Optimize At Least One Image First.');
       }
 
-      await createImageAsset({
-        ...formData,
-        blob: optimizedImage.blob,
-        sizeBytes: optimizedImage.outputSize,
-      });
+      const baseTitle = formData.title.trim();
+      const usedTitles = new Set<string>();
+
+      for (const [index, image] of optimizedImages.entries()) {
+        const titleBase = baseTitle
+          ? optimizedImages.length > 1
+            ? `${baseTitle} ${index + 1}`
+            : baseTitle
+          : image.title;
+
+        await createImageAsset({
+          ...formData,
+          title: getUniqueTitle(titleBase, usedTitles),
+          blob: image.blob,
+          sizeBytes: image.outputSize,
+        });
+      }
+
+      const uploadedCount = optimizedImages.length;
       resetForm();
-      setStatusMessage('Image Uploaded To Media Library.');
+      setStatusMessage(
+        `${uploadedCount} ${uploadedCount === 1 ? 'Image' : 'Images'} Uploaded To Media Library.`
+      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable To Save Image Asset.');
     } finally {
@@ -441,35 +480,57 @@ export default function AdminMedia() {
                 <div>
                   <label className="input-label">Image File</label>
                   <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-brand-primary bg-brand-bg p-3 text-center transition-colors hover:border-brand-accent">
-                    {optimizedImage ? (
-                      <img
-                        src={optimizedImage.previewUrl}
-                        alt="Optimized Preview"
-                        className="h-36 w-36 rounded-lg object-cover"
-                      />
+                    {optimizedImages.length > 0 ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex max-w-full flex-wrap justify-center gap-2">
+                          {optimizedImages.slice(0, 6).map((image) => (
+                            <img
+                              key={image.previewUrl}
+                              src={image.previewUrl}
+                              alt={`${image.title} Preview`}
+                              className="h-16 w-16 rounded-lg object-cover"
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-brand-text">
+                          {optimizedImages.length} {optimizedImages.length === 1 ? 'Image' : 'Images'} Ready To Upload
+                        </span>
+                        {optimizedImages.length > 6 && (
+                          <span className="badge-muted">+{optimizedImages.length - 6} More</span>
+                        )}
+                      </div>
                     ) : (
                       <>
                         <ImageIcon className="mb-2 text-brand-accent" size={28} />
-                        <span className="text-xs font-medium text-brand-text">Select Image To Optimize</span>
+                        <span className="text-xs font-medium text-brand-text">Select Images To Optimize</span>
                         <span className="mt-1 text-xs text-brand-text-muted">
-                          Output Will Be 500px By 500px WebP
+                          Batch Uploads Become 500px By 500px WebP
                         </span>
                       </>
                     )}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
+                      multiple
                       onChange={handleFileChange}
                       className="sr-only"
                     />
                   </label>
-                  {isOptimizing && <p className="mt-2 text-xs text-brand-text-muted">Optimizing Image...</p>}
-                  {optimizedImage && (
+                  {isOptimizing && <p className="mt-2 text-xs text-brand-text-muted">Optimizing Images...</p>}
+                  {optimizedImages.length > 0 && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-brand-text-muted">
-                      <span className="badge-muted truncate">{sourceFileName}</span>
-                      <span className="badge-accent">{optimizedImage.width}px Square</span>
-                      <span>Original: {formatBytes(optimizedImage.sourceSize)}</span>
-                      <span>Optimized: {formatBytes(optimizedImage.outputSize)}</span>
+                      <span className="badge-muted truncate">
+                        {optimizedImages.length === 1 ? optimizedImages[0].sourceFileName : `${optimizedImages.length} Files`}
+                      </span>
+                      <span className="badge-accent">{optimizedImages[0].width}px Square</span>
+                      <span>
+                        Original:{' '}
+                        {formatBytes(optimizedImages.reduce((total, image) => total + image.sourceSize, 0))}
+                      </span>
+                      <span>
+                        Optimized:{' '}
+                        {formatBytes(optimizedImages.reduce((total, image) => total + image.outputSize, 0))}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -479,12 +540,17 @@ export default function AdminMedia() {
                 <label className="input-label">Title</label>
                 <input
                   type="text"
-                  required
+                  required={Boolean(editingAsset)}
                   value={formData.title}
                   onChange={(event) => setFormData({ ...formData, title: event.target.value })}
-                  placeholder="Elven Ranger Portrait"
+                  placeholder={editingAsset ? 'Elven Ranger Portrait' : 'Optional Base Title'}
                   className="input-field"
                 />
+                {!editingAsset && (
+                  <p className="mt-1 text-xs text-brand-text-muted">
+                    Leave Blank To Use Each Filename. For Batch Uploads, A Base Title Becomes Numbered Titles.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -740,11 +806,11 @@ export default function AdminMedia() {
                 )}
                 <button
                   type="submit"
-                  disabled={isSaving || isOptimizing || (!editingAsset && !optimizedImage)}
+                  disabled={isSaving || isOptimizing || (!editingAsset && optimizedImages.length === 0)}
                   className="btn-primary"
                 >
                   <Save size={14} />
-                  {isSaving ? 'Saving...' : editingAsset ? 'Save Metadata' : 'Upload Image'}
+                  {isSaving ? 'Saving...' : editingAsset ? 'Save Metadata' : 'Upload Images'}
                 </button>
               </div>
             </form>
