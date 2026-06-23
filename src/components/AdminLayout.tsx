@@ -13,6 +13,7 @@ import {
   Search,
   Activity,
   DollarSign,
+  Images,
   MessageSquare,
   Settings,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ const NAV_GROUPS = [
     group: 'Operations',
     items: [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
+      { icon: Images, label: 'Media Library', path: '/admin/media' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
     ],
   },

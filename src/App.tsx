@@ -13,6 +13,7 @@ import AdminCredits from './pages/admin/AdminCredits';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminMedia from './pages/admin/AdminMedia';
 
 
 import AudienceReports from './pages/admin/AudienceReports';
@@ -85,6 +86,7 @@ export default function App() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="news" element={<AdminNews />} />
+                <Route path="media" element={<AdminMedia />} />
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="feedback" element={<AdminFeedback />} />
