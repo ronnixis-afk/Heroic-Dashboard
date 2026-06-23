@@ -53,6 +53,38 @@ const normalizeFolderName = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+const compactSegments = (segments: Array<string | undefined>) =>
+  segments.map((segment) => (segment ? normalizeFolderName(segment) : '')).filter(Boolean);
+
+const getMetadataPathSegments = (input: ImageAssetInput) => {
+  const metadata = input.metadata || {};
+
+  switch (input.assetType) {
+    case 'Character Portrait':
+      return compactSegments([metadata.race, metadata.gender]);
+    case 'Point Of Interest Image':
+      return compactSegments([metadata.poiBaseType, metadata.poiModifier]);
+    case 'Zone Image':
+      return compactSegments([metadata.zoneProperty, metadata.zoneQuality]);
+    case 'Item Image':
+      return compactSegments([metadata.itemCategory, metadata.itemSubtype]);
+    default:
+      return [];
+  }
+};
+
+const getImageObjectPath = (input: ImageAssetInput, id: string) => {
+  const titleSlug = normalizeFolderName(input.title) || 'image';
+  const fileName = `${titleSlug}-${id}.webp`;
+
+  return [
+    normalizeFolderName(input.genre),
+    normalizeFolderName(input.assetType),
+    ...getMetadataPathSegments(input),
+    fileName,
+  ].join('/');
+};
+
 const getAssetId = () => {
   if ('crypto' in window && 'randomUUID' in window.crypto) {
     return window.crypto.randomUUID();
@@ -123,11 +155,7 @@ export function useImageAssets() {
   const createImageAsset = async (input: CreateImageAssetInput) => {
     const supabase = await getSupabaseForAdmin(getToken);
     const id = getAssetId();
-    const objectPath = [
-      normalizeFolderName(input.assetType),
-      normalizeFolderName(input.genre),
-      `${id}.webp`,
-    ].join('/');
+    const objectPath = getImageObjectPath(input, id);
 
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_ASSET_BUCKET)
