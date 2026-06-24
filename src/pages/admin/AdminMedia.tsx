@@ -335,7 +335,7 @@ export default function AdminMedia() {
 
     try {
       const nextImages = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file: File) => {
           const optimized = await optimizeImageToSquare(file);
           return {
             ...optimized,

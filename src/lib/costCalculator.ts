@@ -16,23 +16,47 @@ export function calculateFallbackCost(log: any): number {
     return 0.04;
   }
 
-  // Gemini 3 / 3.1 Pro
-  if ((modelLower.includes('3.1') || modelLower.includes('gemini-3')) && modelLower.includes('pro')) {
+  // 1. Embeddings
+  if (modelLower.includes('embedding')) {
+    return (inT * 0.10 / 1000000);
+  }
+
+  // 2. Gemini 3.5 Pro / Gemini 3.1 Pro / Gemini 3 Pro
+  if ((modelLower.includes('3.5') || modelLower.includes('3.1') || modelLower.includes('gemini-3')) && modelLower.includes('pro')) {
     return (inT * 2.00 / 1000000) + (outT * 12.00 / 1000000);
   }
-  
-  // Gemini 3 / 3.1 Flash Lite (Primary Model)
+
+  // 3. Gemini 3.5 Flash
+  if (modelLower.includes('3.5-flash') || (modelLower.includes('3.5') && modelLower.includes('flash'))) {
+    return (inT * 1.50 / 1000000) + (outT * 9.00 / 1000000);
+  }
+
+  // 4. Gemini 3 Flash
+  if (modelLower.includes('3-flash') || modelLower.includes('gemini-3-flash')) {
+    return (inT * 0.50 / 1000000) + (outT * 3.00 / 1000000);
+  }
+
+  // 5. Gemini 3.1 Flash Lite / Gemini 3 Flash Lite (Primary Model)
   if (modelLower.includes('lite') || modelLower.includes('flash-lite')) {
     return (inT * 0.25 / 1000000) + (outT * 1.50 / 1000000);
   }
-  
-  // Legacy Pro fallback
+
+  // 6. Gemini 1.5 Flash 8b
+  if (modelLower.includes('8b')) {
+    return (inT * 0.0375 / 1000000) + (outT * 0.15 / 1000000);
+  }
+
+  // 7. Gemini 2.5 Flash / Gemini 2.0 Flash / Gemini 1.5 Flash
+  if (modelLower.includes('flash') && (modelLower.includes('2.5') || modelLower.includes('2.0') || modelLower.includes('1.5'))) {
+    return (inT * 0.075 / 1000000) + (outT * 0.30 / 1000000);
+  }
+
+  // 8. Gemini 2.5 Pro / Gemini 1.5 Pro (Legacy Pro fallback)
   if (modelLower.includes('pro')) {
     return (inT * 1.25 / 1000000) + (outT * 5.00 / 1000000);
   }
 
-  // Flash 1.5 default / Generic fallback
-  // Since the user says Gemini 3 Flash Lite is the ONLY model, we use its rates as the ultimate fallback
+  // Default: Use Gemini 3.1 Flash Lite rates as fallback
   const estimatedCost = (inT * 0.25 / 1000000) + (outT * 1.50 / 1000000);
   
   if (estimatedCost === 0 && totalT > 0) {
@@ -42,4 +66,5 @@ export function calculateFallbackCost(log: any): number {
   
   return estimatedCost;
 }
+
 

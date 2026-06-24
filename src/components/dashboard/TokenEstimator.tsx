@@ -3,28 +3,43 @@ import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnalytics } from '../../hooks/useAnalytics';
 
+interface ModelOption {
+  name: string;
+  blendedRate: number; // per 1M tokens
+}
+
+const MODELS: ModelOption[] = [
+  { name: 'Gemini 3.1 Flash Lite', blendedRate: 0.60 },
+  { name: 'Gemini 3.5 Flash', blendedRate: 3.00 },
+  { name: 'Gemini 3 Flash', blendedRate: 1.00 },
+  { name: 'Gemini 3.1 / 3.5 Pro', blendedRate: 4.00 },
+  { name: 'Gemini 1.5 / 2.5 Pro', blendedRate: 2.00 },
+  { name: 'Gemini 1.5 / 2.0 / 2.5 Flash', blendedRate: 0.12 },
+  { name: 'Gemini 1.5 Flash 8b', blendedRate: 0.06 }
+];
+
 export default function TokenEstimator() {
   const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(MODELS[0]);
   const [estimatedCost, setEstimatedCost] = useState('0.19');
   const [showInputDropdown, setShowInputDropdown] = useState(false);
   const [showUsdDropdown, setShowUsdDropdown] = useState(false);
   const [inputType, setInputType] = useState('Tokens');
   const [currencyType, setCurrencyType] = useState('USD');
   const { trackEvent } = useAnalytics();
-  const currentModelName = 'Gemini 3.1 Flash Lite';
 
-  const calculateCost = (value: string, type: string = currencyType) => {
+  const calculateCost = (value: string, modelObj = selectedModel, type: string = currencyType) => {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
     
     if (type === 'Credits') {
       const credits = Math.max(1, Math.ceil(tokens / 1000));
       setEstimatedCost(credits.toString());
     } else if (type === 'EUR') {
-      const costUsd = (tokens / 1000000) * 0.60;
+      const costUsd = (tokens / 1000000) * modelObj.blendedRate;
       const costEur = costUsd * 0.92;
       setEstimatedCost(costEur.toFixed(2));
     } else {
-      const cost = (tokens / 1000000) * 0.60;
+      const cost = (tokens / 1000000) * modelObj.blendedRate;
       setEstimatedCost(cost.toFixed(2));
     }
   };
@@ -38,8 +53,15 @@ export default function TokenEstimator() {
   const handleCurrencyTypeChange = (type: string) => {
     setCurrencyType(type);
     setShowUsdDropdown(false);
-    calculateCost(tokensProcessed, type);
+    calculateCost(tokensProcessed, selectedModel, type);
     trackEvent('estimator_currency_type_changed', { type });
+  };
+
+  const handleModelChange = (modelName: string) => {
+    const newModel = MODELS.find(m => m.name === modelName) || MODELS[0];
+    setSelectedModel(newModel);
+    calculateCost(tokensProcessed, newModel, currencyType);
+    trackEvent('estimator_model_changed', { model: modelName });
   };
 
   return (
@@ -62,6 +84,7 @@ export default function TokenEstimator() {
             />
             <div className="relative">
               <button 
+                type="button"
                 onClick={() => setShowInputDropdown(!showInputDropdown)}
                 className="btn-secondary btn-sm shrink-0"
               >
@@ -79,6 +102,7 @@ export default function TokenEstimator() {
                     {['Tokens', 'Words', 'Chars'].map(type => (
                       <button 
                         key={type}
+                        type="button"
                         onClick={() => handleInputTypeChange(type)}
                         className="w-full text-left px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-hover hover:text-white transition-colors"
                       >
@@ -90,7 +114,19 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-brand-text-muted mt-1">{currentModelName}</p>
+          <div className="mt-1">
+            <select
+              value={selectedModel.name}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="bg-transparent text-xs text-brand-text-muted outline-none cursor-pointer hover:text-white transition-colors border-none p-0"
+            >
+              {MODELS.map(m => (
+                <option key={m.name} value={m.name} className="bg-brand-bg text-brand-text">
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="bg-brand-bg rounded-lg border border-brand-primary p-3">
@@ -104,6 +140,7 @@ export default function TokenEstimator() {
             />
             <div className="relative">
               <button 
+                type="button"
                 onClick={() => setShowUsdDropdown(!showUsdDropdown)}
                 className="btn-secondary btn-sm shrink-0"
               >
@@ -121,6 +158,7 @@ export default function TokenEstimator() {
                     {['USD', 'EUR', 'Credits'].map(type => (
                       <button 
                         key={type}
+                        type="button"
                         onClick={() => handleCurrencyTypeChange(type)}
                         className="w-full text-left px-3 py-1.5 text-xs text-brand-text-muted hover:bg-brand-hover hover:text-white transition-colors"
                       >
@@ -132,9 +170,12 @@ export default function TokenEstimator() {
               </AnimatePresence>
             </div>
           </div>
-          <p className="text-xs text-brand-text-muted mt-1">~$0.60 / 1M Tokens (Blended)</p>
+          <p className="text-xs text-brand-text-muted mt-1">
+            ~${selectedModel.blendedRate.toFixed(2)} / 1M Tokens (Blended)
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
