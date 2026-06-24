@@ -41,6 +41,11 @@ export function calculateFallbackCost(log: any): number {
     return (inT * 0.25 / 1000000) + (outT * 1.50 / 1000000);
   }
 
+  // 5b. DeepSeek V4 Flash
+  if (modelLower.includes('deepseek-v4-flash') || modelLower.includes('deepseek')) {
+    return (inT * 0.14 / 1000000) + (outT * 0.28 / 1000000);
+  }
+
   // 6. Gemini 1.5 Flash 8b
   if (modelLower.includes('8b')) {
     return (inT * 0.0375 / 1000000) + (outT * 0.15 / 1000000);

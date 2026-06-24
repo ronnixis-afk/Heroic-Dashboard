@@ -11,6 +11,7 @@ interface SettingsData {
   currentFreeUsers: number;
   referralSignupReward: number;
   referralPremiumReward: number;
+  defaultModel: string;
 }
 
 export default function AdminSettings() {
@@ -23,13 +24,15 @@ export default function AdminSettings() {
     maxFreeUsers: null,
     currentFreeUsers: 0,
     referralSignupReward: 200,
-    referralPremiumReward: 1000
+    referralPremiumReward: 1000,
+    defaultModel: 'gemini-3.1-flash-lite'
   });
 
   const [enableLimit, setEnableLimit] = useState(false);
   const [limitValue, setLimitValue] = useState<number>(100);
   const [signupReward, setSignupReward] = useState<number>(200);
   const [premiumReward, setPremiumReward] = useState<number>(1000);
+  const [defaultModel, setDefaultModel] = useState<string>('gemini-3.1-flash-lite');
 
   useEffect(() => {
     async function loadSettings() {
@@ -44,6 +47,7 @@ export default function AdminSettings() {
         }
         setSignupReward(data.referralSignupReward);
         setPremiumReward(data.referralPremiumReward);
+        setDefaultModel(data.defaultModel || 'gemini-3.1-flash-lite');
       } catch (err: any) {
         console.error('Failed to load settings:', err);
         setStatus({ type: 'error', msg: err.message || 'Failed to Load Settings.' });
@@ -76,7 +80,8 @@ export default function AdminSettings() {
         body: JSON.stringify({
           maxFreeUsers: targetLimit,
           referralSignupReward: signupReward,
-          referralPremiumReward: premiumReward
+          referralPremiumReward: premiumReward,
+          defaultModel: defaultModel
         })
       });
 
@@ -90,8 +95,10 @@ export default function AdminSettings() {
         maxFreeUsers: result.maxFreeUsers,
         currentFreeUsers: result.currentFreeUsers,
         referralSignupReward: result.referralSignupReward,
-        referralPremiumReward: result.referralPremiumReward
+        referralPremiumReward: result.referralPremiumReward,
+        defaultModel: result.defaultModel
       });
+      setDefaultModel(result.defaultModel || 'gemini-3.1-flash-lite');
       
       setStatus({ type: 'success', msg: 'System Settings Saved Successfully.' });
     } catch (err: any) {
@@ -228,6 +235,36 @@ export default function AdminSettings() {
               />
               <span className="text-[10px] text-brand-text-muted leading-tight mt-1 block">
                 Credits awarded to the referrer once the referred friend upgrades to any paid tier plan.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: AI Model Routing */}
+        <div className="card p-4 space-y-4">
+          <div>
+            <h2 className="section-title mb-1.5 flex items-center gap-2">
+              <Settings className="text-brand-accent" size={16} />
+              AI Model Routing
+            </h2>
+            <p className="text-xs text-brand-text-muted leading-relaxed">
+              Choose the primary text generation and reasoning model used for narration, GM logic, combat, and NPC interactions. Switching takes effect immediately across all active user sessions.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="input-label">Default Text Model</label>
+              <select
+                value={defaultModel}
+                onChange={(e) => setDefaultModel(e.target.value)}
+                className="input-field cursor-pointer"
+              >
+                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                <option value="deepseek-v4-flash">DeepSeek V4 Flash (Reasoning)</option>
+              </select>
+              <span className="text-[10px] text-brand-text-muted leading-tight mt-1 block">
+                Selected model will process all standard game turns, intents, and narrative generations.
               </span>
             </div>
           </div>
