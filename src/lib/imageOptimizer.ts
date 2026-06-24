@@ -14,6 +14,12 @@ const MIN_QUALITY = 0.68;
 const QUALITY_STEP = 0.06;
 const TARGET_BYTES = 300 * 1024;
 
+interface SourceRegion {
+  x: number;
+  y: number;
+  size: number;
+}
+
 const blobFromCanvas = (canvas: HTMLCanvasElement, quality: number): Promise<Blob> =>
   new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -51,19 +57,17 @@ const decodeImage = async (file: File): Promise<ImageBitmap | HTMLImageElement> 
   return loadImageElement(file);
 };
 
-export async function optimizeImageToSquare(file: File): Promise<OptimizedImageResult> {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Please Select An Image File.');
+const closeDecodedImage = (image: ImageBitmap | HTMLImageElement) => {
+  if ('close' in image && typeof image.close === 'function') {
+    image.close();
   }
+};
 
-  const image = await decodeImage(file);
-  const sourceWidth = 'width' in image ? image.width : 0;
-  const sourceHeight = 'height' in image ? image.height : 0;
-
-  if (!sourceWidth || !sourceHeight) {
-    throw new Error('Unable To Determine Image Dimensions.');
-  }
-
+const optimizeImageRegionToSquare = async (
+  image: ImageBitmap | HTMLImageElement,
+  region: SourceRegion,
+  sourceSize: number
+): Promise<OptimizedImageResult> => {
   const canvas = document.createElement('canvas');
   canvas.width = OUTPUT_SIZE;
   canvas.height = OUTPUT_SIZE;
@@ -78,25 +82,17 @@ export async function optimizeImageToSquare(file: File): Promise<OptimizedImageR
   context.fillStyle = '#111114';
   context.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
-  const sourceSize = Math.min(sourceWidth, sourceHeight);
-  const sourceX = Math.max(0, (sourceWidth - sourceSize) / 2);
-  const sourceY = Math.max(0, (sourceHeight - sourceSize) / 2);
-
   context.drawImage(
     image,
-    sourceX,
-    sourceY,
-    sourceSize,
-    sourceSize,
+    region.x,
+    region.y,
+    region.size,
+    region.size,
     0,
     0,
     OUTPUT_SIZE,
     OUTPUT_SIZE
   );
-
-  if ('close' in image && typeof image.close === 'function') {
-    image.close();
-  }
 
   let quality = INITIAL_QUALITY;
   let blob = await blobFromCanvas(canvas, quality);
@@ -112,7 +108,74 @@ export async function optimizeImageToSquare(file: File): Promise<OptimizedImageR
     width: OUTPUT_SIZE,
     height: OUTPUT_SIZE,
     quality,
-    sourceSize: file.size,
+    sourceSize,
     outputSize: blob.size,
   };
+};
+
+const getDecodedImageSize = (image: ImageBitmap | HTMLImageElement) => ({
+  width: 'width' in image ? image.width : 0,
+  height: 'height' in image ? image.height : 0,
+});
+
+export async function optimizeImageToSquare(file: File): Promise<OptimizedImageResult> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please Select An Image File.');
+  }
+
+  const image = await decodeImage(file);
+  const { width: sourceWidth, height: sourceHeight } = getDecodedImageSize(image);
+
+  if (!sourceWidth || !sourceHeight) {
+    closeDecodedImage(image);
+    throw new Error('Unable To Determine Image Dimensions.');
+  }
+
+  const sourceSize = Math.min(sourceWidth, sourceHeight);
+  const region = {
+    x: Math.max(0, (sourceWidth - sourceSize) / 2),
+    y: Math.max(0, (sourceHeight - sourceSize) / 2),
+    size: sourceSize,
+  };
+
+  try {
+    return await optimizeImageRegionToSquare(image, region, file.size);
+  } finally {
+    closeDecodedImage(image);
+  }
+}
+
+export async function optimizeImageToSquareGrid(file: File): Promise<OptimizedImageResult[]> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please Select An Image File.');
+  }
+
+  const image = await decodeImage(file);
+  const { width: sourceWidth, height: sourceHeight } = getDecodedImageSize(image);
+
+  if (!sourceWidth || !sourceHeight) {
+    closeDecodedImage(image);
+    throw new Error('Unable To Determine Image Dimensions.');
+  }
+
+  const sourceSize = Math.min(sourceWidth, sourceHeight);
+  const cellSize = sourceSize / 2;
+  const startX = Math.max(0, (sourceWidth - sourceSize) / 2);
+  const startY = Math.max(0, (sourceHeight - sourceSize) / 2);
+  const quadrantSourceSize = Math.round(file.size / 4);
+
+  const regions: SourceRegion[] = [
+    { x: startX, y: startY, size: cellSize },
+    { x: startX + cellSize, y: startY, size: cellSize },
+    { x: startX, y: startY + cellSize, size: cellSize },
+    { x: startX + cellSize, y: startY + cellSize, size: cellSize },
+  ];
+
+  try {
+    return await Promise.all(
+      regions.map((region) => optimizeImageRegionToSquare(image, region, quadrantSourceSize))
+    );
+  } finally {
+    closeDecodedImage(image);
+  }
 }

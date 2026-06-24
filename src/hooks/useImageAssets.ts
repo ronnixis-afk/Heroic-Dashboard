@@ -230,6 +230,33 @@ export function useImageAssets() {
     return data as ImageAsset;
   };
 
+  const addTagsToImageAssets = async (selectedAssets: ImageAsset[], tags: string[]) => {
+    const normalizedTags = Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
+    if (selectedAssets.length === 0 || normalizedTags.length === 0) return;
+
+    const supabase = await getSupabaseForAdmin(getToken);
+
+    await Promise.all(
+      selectedAssets.map(async (asset) => {
+        const nextTags = Array.from(new Set([...(asset.tags || []), ...normalizedTags]));
+        const { error } = await supabase
+          .from('ImageAsset')
+          .update({
+            tags: nextTags,
+            updatedAt: new Date().toISOString(),
+          })
+          .eq('id', asset.id);
+
+        if (error) {
+          console.error('[MediaLibrary] Batch tag image asset failed:', error);
+          throw error;
+        }
+      })
+    );
+
+    queryClient.invalidateQueries({ queryKey: ['image-assets'] });
+  };
+
   const deleteImageAsset = async (asset: ImageAsset) => {
     const supabase = await getSupabaseForAdmin(getToken);
     const { error: removeError } = await supabase.storage
@@ -251,11 +278,49 @@ export function useImageAssets() {
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };
 
+  const deleteImageAssets = async (selectedAssets: ImageAsset[]) => {
+    if (selectedAssets.length === 0) return;
+
+    const supabase = await getSupabaseForAdmin(getToken);
+    const assetsByBucket = selectedAssets.reduce<Record<string, string[]>>((groups, asset) => {
+      const bucketId = asset.bucketId || IMAGE_ASSET_BUCKET;
+      groups[bucketId] = [...(groups[bucketId] || []), asset.objectPath];
+      return groups;
+    }, {});
+
+    await Promise.all(
+      Object.entries(assetsByBucket).map(async ([bucketId, objectPaths]) => {
+        const { error } = await supabase.storage.from(bucketId).remove(objectPaths);
+        if (error) {
+          console.error('[MediaLibrary] Batch delete image objects failed:', error);
+          throw error;
+        }
+      })
+    );
+
+    const { error } = await supabase
+      .from('ImageAsset')
+      .delete()
+      .in(
+        'id',
+        selectedAssets.map((asset) => asset.id)
+      );
+
+    if (error) {
+      console.error('[MediaLibrary] Batch delete image metadata failed:', error);
+      throw error;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['image-assets'] });
+  };
+
   return {
     assets,
     loading,
     createImageAsset,
     updateImageAsset,
+    addTagsToImageAssets,
     deleteImageAsset,
+    deleteImageAssets,
   };
 }
