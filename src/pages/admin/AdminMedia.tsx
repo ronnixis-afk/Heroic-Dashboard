@@ -21,14 +21,24 @@ import {
 import { formatBytes } from '../../lib/utils';
 import { optimizeImageToSquare, optimizeImageToSquareGrid, OptimizedImageResult } from '../../lib/imageOptimizer';
 
-const QUICK_TAGS: Record<ImageAssetType, string[]> = {
-  'Character Portrait': ['Male', 'Female', 'Human', 'Elf', 'Dwarf', 'Orc', 'Draconic', 'Undead', 'Beastfolk'],
-  'Point Of Interest Image': ['Settlement', 'Dungeon', 'Tavern', 'Temple', 'Ruins', 'Castle', 'Cave', 'Wilderness'],
-  'Zone Image': ['Forest', 'Desert', 'Mountain', 'Coast', 'Swamp', 'Urban', 'Arctic', 'Volcanic'],
-  'Item Image': ['Weapon', 'Armor', 'Potion', 'Scroll', 'Relic', 'Gem', 'Tool', 'Food'],
-};
+type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
-const POI_TAG_SUGGESTIONS: Record<ImageGenre, { baseTypes: string[]; modifiers: string[] }> = {
+const TAG_GROUPS = [
+  {
+    label: 'Warrior',
+    tags: ['Fighter', 'Warrior', 'Martial'],
+  },
+  {
+    label: 'Rogue',
+    tags: ['Ranger', 'Rogue', 'Sniper', 'Hunter', 'Scout'],
+  },
+  {
+    label: 'Caster',
+    tags: ['Mage', 'Magician', 'Wizard', 'Sorcerer', 'Spellcaster'],
+  },
+] as const;
+
+const POI_TAG_SUGGESTIONS: Record<SpecificImageGenre, { baseTypes: string[]; modifiers: string[] }> = {
   Fantasy: {
     baseTypes: [
       'Cave / Cavern',
@@ -135,7 +145,7 @@ const POI_TAG_SUGGESTIONS: Record<ImageGenre, { baseTypes: string[]; modifiers: 
   },
 };
 
-const ZONE_TAG_SUGGESTIONS: Record<ImageGenre, Record<string, string[]>> = {
+const ZONE_TAG_SUGGESTIONS: Record<SpecificImageGenre, Record<string, string[]>> = {
   Fantasy: {
     'Mana Density': ['Dead Zone', 'Normal', 'Highly Saturated', 'Wild / Unstable'],
     'Mythic Threat Level': ['Mundane Beasts', 'Goblinoid Hordes', 'Undead Infestation', 'Apex / Dragon Territory'],
@@ -187,9 +197,15 @@ const ZONE_TAG_SUGGESTIONS: Record<ImageGenre, Record<string, string[]>> = {
 };
 
 const PORTRAIT_METADATA_OPTIONS = {
-  gender: ['Male', 'Female', 'Nonbinary', 'Androgynous', 'Unknown'],
-  race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome', 'Draconic', 'Undead', 'Beastfolk', 'Construct', 'Alien', 'Synthetic'],
+  gender: ['Male', 'Female'],
+  race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
+
+const isPortraitAssetType = (assetType: ImageAssetType) =>
+  assetType === 'Character Portrait' || assetType === 'Monster Portrait';
+
+const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
+  genre === 'Any Genre' ? 'Fantasy' : genre;
 
 const ITEM_METADATA_OPTIONS = {
   itemCategory: ['Weapon', 'Armor', 'Consumable', 'Relic', 'Material', 'Tool', 'Currency', 'Quest Item'],
@@ -245,6 +261,7 @@ interface NamingInput {
 
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
+  'Monster Portrait': ['race', 'gender'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
@@ -296,12 +313,12 @@ const getNextUploadOrder = (assets: ImageAsset[], input: NamingInput) => {
 
 const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
   const metadataTags =
-    input.assetType === 'Character Portrait'
+    isPortraitAssetType(input.assetType)
       ? [input.metadata.race, input.metadata.gender].filter(Boolean)
       : [];
   const portraitMetadataOptions = [...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender];
   const baseTags =
-    input.assetType === 'Character Portrait'
+    isPortraitAssetType(input.assetType)
       ? input.tags.filter((tag) => !portraitMetadataOptions.includes(tag))
       : input.tags;
 
@@ -404,10 +421,11 @@ export default function AdminMedia() {
         ? 'bg-amber-500'
         : 'bg-brand-accent';
 
-  const zonePropertyOptions = useMemo(() => Object.keys(ZONE_TAG_SUGGESTIONS[formData.genre]), [formData.genre]);
+  const structuredGenre = getStructuredGenre(formData.genre);
+  const zonePropertyOptions = useMemo(() => Object.keys(ZONE_TAG_SUGGESTIONS[structuredGenre]), [structuredGenre]);
   const zoneQualityOptions = useMemo(
-    () => ZONE_TAG_SUGGESTIONS[formData.genre][formData.metadata.zoneProperty] || [],
-    [formData.genre, formData.metadata.zoneProperty]
+    () => ZONE_TAG_SUGGESTIONS[structuredGenre][formData.metadata.zoneProperty] || [],
+    [structuredGenre, formData.metadata.zoneProperty]
   );
   const previewUploadOrder = useMemo(
     () => (editingAsset ? getTrailingUploadOrder(editingAsset.title) || 1 : getNextUploadOrder(assets, formData)),
@@ -434,6 +452,20 @@ export default function AdminMedia() {
     const tag = toTitleCase(value);
     if (!tag || formData.tags.includes(tag)) return;
     setFormData((current) => ({ ...current, tags: [...current.tags, tag] }));
+    setTagDraft('');
+  };
+
+  const addTagGroup = (tags: readonly string[]) => {
+    setFormData((current) => {
+      const nextTags = [...current.tags];
+      tags.forEach((value) => {
+        const tag = toTitleCase(value);
+        if (tag && !nextTags.includes(tag)) {
+          nextTags.push(tag);
+        }
+      });
+      return { ...current, tags: nextTags };
+    });
     setTagDraft('');
   };
 
@@ -843,6 +875,41 @@ export default function AdminMedia() {
                 </div>
               </div>
 
+              {isPortraitAssetType(formData.assetType) && (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="input-label">Portrait Gender</label>
+                    <select
+                      value={formData.metadata.gender || ''}
+                      onChange={(event) => setMetadataField('gender', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Any Gender</option>
+                      {PORTRAIT_METADATA_OPTIONS.gender.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="input-label">Portrait Race</label>
+                    <select
+                      value={formData.metadata.race || ''}
+                      onChange={(event) => setMetadataField('race', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Any Race</option>
+                      {PORTRAIT_METADATA_OPTIONS.race.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="input-label">Tags</label>
                 <div className="flex gap-2">
@@ -876,63 +943,41 @@ export default function AdminMedia() {
               </div>
 
               <div>
-                <label className="input-label">General Tags</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_TAGS[formData.assetType].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => addTag(tag)}
-                      className="badge-muted hover:border-brand-accent hover:text-brand-text"
-                    >
-                      {tag}
-                    </button>
+                <label className="input-label">Tag Groups</label>
+                <div className="space-y-2">
+                  {TAG_GROUPS.map((group) => (
+                    <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => addTagGroup(group.tags)}
+                        className="badge-accent hover:border-brand-accent hover:text-brand-text"
+                        title={`Add All ${group.label} Tags`}
+                      >
+                        {group.label}
+                      </button>
+                      {group.tags.map((tag) => (
+                        <button
+                          key={`${group.label}-${tag}`}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="badge-muted hover:border-brand-accent hover:text-brand-text"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-3 rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
-                <div>
-                  <label className="input-label mb-0">Structured Details</label>
-                  <p className="text-xs text-brand-text-muted">
-                    Dropdowns Save Cleaner Metadata For Future Game Matching.
-                  </p>
-                </div>
-
-                {formData.assetType === 'Character Portrait' && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="input-label">Portrait Gender</label>
-                      <select
-                        value={formData.metadata.gender || ''}
-                        onChange={(event) => setMetadataField('gender', event.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">Any Gender</option>
-                        {PORTRAIT_METADATA_OPTIONS.gender.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="input-label">Portrait Race</label>
-                      <select
-                        value={formData.metadata.race || ''}
-                        onChange={(event) => setMetadataField('race', event.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">Any Race</option>
-                        {PORTRAIT_METADATA_OPTIONS.race.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              {!isPortraitAssetType(formData.assetType) && (
+                <div className="space-y-3 rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
+                  <div>
+                    <label className="input-label mb-0">Structured Details</label>
+                    <p className="text-xs text-brand-text-muted">
+                      Dropdowns Save Cleaner Metadata For Future Game Matching.
+                    </p>
                   </div>
-                )}
 
                 {formData.assetType === 'Point Of Interest Image' && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -944,7 +989,7 @@ export default function AdminMedia() {
                         className="input-field"
                       >
                         <option value="">Any Type</option>
-                        {POI_TAG_SUGGESTIONS[formData.genre].baseTypes.map((option) => (
+                        {POI_TAG_SUGGESTIONS[structuredGenre].baseTypes.map((option) => (
                           <option key={option} value={option}>
                             {option}
                           </option>
@@ -959,7 +1004,7 @@ export default function AdminMedia() {
                         className="input-field"
                       >
                         <option value="">Any Subtype</option>
-                        {POI_TAG_SUGGESTIONS[formData.genre].modifiers.map((option) => (
+                        {POI_TAG_SUGGESTIONS[structuredGenre].modifiers.map((option) => (
                           <option key={option} value={option}>
                             {option}
                           </option>
@@ -1039,7 +1084,8 @@ export default function AdminMedia() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
 
               <div className="rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
                 <label className="input-label mb-0">Naming Convention</label>
