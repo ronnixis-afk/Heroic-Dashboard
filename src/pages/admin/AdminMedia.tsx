@@ -1278,7 +1278,7 @@ export default function AdminMedia() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,180px))] justify-start gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                   {visibleAssets.map((asset) => (
                     <div
                       key={asset.id}
