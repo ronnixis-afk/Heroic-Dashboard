@@ -188,7 +188,7 @@ const ZONE_TAG_SUGGESTIONS: Record<ImageGenre, Record<string, string[]>> = {
 
 const PORTRAIT_METADATA_OPTIONS = {
   gender: ['Male', 'Female', 'Nonbinary', 'Androgynous', 'Unknown'],
-  race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Draconic', 'Undead', 'Beastfolk', 'Construct', 'Alien', 'Synthetic'],
+  race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome', 'Draconic', 'Undead', 'Beastfolk', 'Construct', 'Alien', 'Synthetic'],
 };
 
 const ITEM_METADATA_OPTIONS = {
