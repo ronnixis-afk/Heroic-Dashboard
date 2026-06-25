@@ -202,7 +202,7 @@ const PORTRAIT_METADATA_OPTIONS = {
 };
 
 const isPortraitAssetType = (assetType: ImageAssetType) =>
-  assetType === 'Character Portrait' || assetType === 'Monster Portrait';
+  assetType === 'Character Portrait' || assetType === 'Monster Portrait' || assetType === 'Service NPC Portrait';
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
@@ -262,6 +262,7 @@ interface NamingInput {
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
   'Monster Portrait': ['race', 'gender'],
+  'Service NPC Portrait': ['race', 'gender'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
@@ -1287,8 +1288,9 @@ export default function AdminMedia() {
                       }`}
                     >
                       <label
-                        className="absolute left-2 top-2 z-10 flex cursor-pointer items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-xs text-white backdrop-blur"
+                        className="absolute left-2 top-2 z-10 flex cursor-pointer items-center rounded-md bg-black/70 p-1 text-xs text-white backdrop-blur"
                         onClick={(event) => event.stopPropagation()}
+                        title={`Select ${asset.title}`}
                       >
                         <input
                           type="checkbox"
@@ -1297,7 +1299,6 @@ export default function AdminMedia() {
                           className="h-3.5 w-3.5 accent-brand-accent"
                           aria-label={`Select ${asset.title}`}
                         />
-                        Select
                       </label>
                       <button
                         type="button"

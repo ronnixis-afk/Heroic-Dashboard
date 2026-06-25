@@ -6,7 +6,7 @@ import { useAuth } from '../lib/AuthContext';
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Magitech', 'Modern'] as const;
-export const IMAGE_ASSET_TYPES = ['Character Portrait', 'Monster Portrait', 'Point Of Interest Image', 'Zone Image', 'Item Image'] as const;
+export const IMAGE_ASSET_TYPES = ['Character Portrait', 'Monster Portrait', 'Service NPC Portrait', 'Point Of Interest Image', 'Zone Image', 'Item Image'] as const;
 
 export type ImageGenre = (typeof IMAGE_GENRES)[number];
 export type ImageAssetType = (typeof IMAGE_ASSET_TYPES)[number];
@@ -62,6 +62,7 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
   switch (input.assetType) {
     case 'Character Portrait':
     case 'Monster Portrait':
+    case 'Service NPC Portrait':
       return compactSegments([metadata.race, metadata.gender]);
     case 'Point Of Interest Image':
       return compactSegments([metadata.poiBaseType, metadata.poiModifier]);
