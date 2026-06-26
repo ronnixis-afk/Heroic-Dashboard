@@ -31,6 +31,11 @@ export interface ImageAsset {
   updatedAt: string;
 }
 
+interface ImageAssetsResult {
+  assets: ImageAsset[];
+  totalCount: number;
+}
+
 export interface ImageAssetInput {
   title: string;
   description?: string;
@@ -102,11 +107,11 @@ const getSupabaseForAdmin = async (getToken: (options?: any) => Promise<string |
   return getSupabaseClient(token);
 };
 
-async function fetchImageAssets(getToken: (options?: any) => Promise<string | null>): Promise<ImageAsset[]> {
+async function fetchImageAssets(getToken: (options?: any) => Promise<string | null>): Promise<ImageAssetsResult> {
   const supabase = await getSupabaseForAdmin(getToken);
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('ImageAsset')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('createdAt', { ascending: false });
 
   if (error) {
@@ -114,17 +119,23 @@ async function fetchImageAssets(getToken: (options?: any) => Promise<string | nu
     throw error;
   }
 
-  return (data || []) as ImageAsset[];
+  const assets = (data || []) as ImageAsset[];
+  return {
+    assets,
+    totalCount: count ?? assets.length,
+  };
 }
 
 export function useImageAssets() {
   const queryClient = useQueryClient();
   const { getToken, user } = useAuth();
 
-  const { data: assets = [], isLoading: loading } = useQuery({
+  const { data: imageAssetResult, isLoading: loading } = useQuery({
     queryKey: ['image-assets'],
     queryFn: () => fetchImageAssets(getToken),
   });
+  const assets = imageAssetResult?.assets ?? [];
+  const totalAssetCount = imageAssetResult?.totalCount ?? assets.length;
 
   useEffect(() => {
     let subscription: any;
@@ -318,6 +329,7 @@ export function useImageAssets() {
 
   return {
     assets,
+    totalAssetCount,
     loading,
     createImageAsset,
     updateImageAsset,

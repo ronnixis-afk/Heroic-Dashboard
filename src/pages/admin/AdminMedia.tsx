@@ -329,6 +329,7 @@ const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
 export default function AdminMedia() {
   const {
     assets,
+    totalAssetCount,
     loading,
     createImageAsset,
     updateImageAsset,
@@ -1125,10 +1126,11 @@ export default function AdminMedia() {
               <div>
                 <h3 className="section-title flex items-center gap-2">
                   <Tags className="text-brand-accent" size={16} />
-                  Image Assets ({filteredAssets.length})
+                  Image Assets ({totalAssetCount.toLocaleString()})
                 </h3>
                 <p className="card-subtitle">
-                  Showing {visibleAssets.length} Of {filteredAssets.length} Filtered Image Assets.
+                  Showing {visibleAssets.length} Of {filteredAssets.length} Filtered Image Assets
+                  {totalAssetCount > assets.length ? ` (${assets.length.toLocaleString()} Loaded).` : '.'}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
