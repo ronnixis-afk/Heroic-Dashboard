@@ -165,8 +165,14 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
-const isPortraitAssetType = (assetType: ImageAssetType) =>
-  assetType === 'Character Portrait' || assetType === 'Monster Portrait' || assetType === 'Service NPC Portrait';
+const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
+const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Monster Portrait', 'Service NPC Portrait']);
+
+const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
+  LEGACY_NPC_PORTRAIT_TYPES.has(assetType) ? 'NPC Portrait' : (assetType as ImageAssetType);
+
+const isPortraitAssetType = (assetType: string | undefined) =>
+  assetType === 'Character Portrait' || assetType === 'NPC Portrait' || Boolean(assetType && LEGACY_NPC_PORTRAIT_TYPES.has(assetType));
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
@@ -225,8 +231,7 @@ interface NamingInput {
 
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
-  'Monster Portrait': ['race', 'gender'],
-  'Service NPC Portrait': ['race', 'gender'],
+  'NPC Portrait': ['race', 'gender'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
@@ -277,17 +282,18 @@ const getNextUploadOrder = (assets: ImageAsset[], input: NamingInput) => {
 };
 
 const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
-  const metadataTags =
-    isPortraitAssetType(input.assetType)
-      ? [input.metadata.race, input.metadata.gender].filter(Boolean)
-      : [];
+  const selectionTags = [
+    input.genre,
+    input.assetType,
+    ...NAMING_METADATA_KEYS[input.assetType].map((key) => input.metadata[key]),
+  ].filter(Boolean);
   const portraitMetadataOptions = [...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender];
   const baseTags =
     isPortraitAssetType(input.assetType)
       ? input.tags.filter((tag) => !portraitMetadataOptions.includes(tag))
       : input.tags;
 
-  return Array.from(new Set([...baseTags, ...metadataTags]));
+  return Array.from(new Set([...baseTags, ...selectionTags]));
 };
 
 export default function AdminMedia() {
@@ -315,6 +321,8 @@ export default function AdminMedia() {
   const [isSaving, setIsSaving] = useState(false);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [visibleAssetCount, setVisibleAssetCount] = useState(MEDIA_GRID_PAGE_SIZE);
+  const [customRacesByGenre, setCustomRacesByGenre] = useState<Record<string, string[]>>({});
+  const [isRaceMenuOpen, setIsRaceMenuOpen] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     genre: 'All',
@@ -327,6 +335,17 @@ export default function AdminMedia() {
       optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     };
   }, [optimizedImages]);
+
+  useEffect(() => {
+    try {
+      const storedRaces = window.localStorage.getItem(CUSTOM_RACES_STORAGE_KEY);
+      if (storedRaces) {
+        setCustomRacesByGenre(JSON.parse(storedRaces) as Record<string, string[]>);
+      }
+    } catch (error) {
+      console.warn('[MediaLibrary] Unable To Load Custom Race Options:', error);
+    }
+  }, []);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -351,7 +370,7 @@ export default function AdminMedia() {
         searchTerms.length === 0 ||
         searchTerms.every((term) => searchableValues.some((value) => value.includes(term)));
       const matchesGenre = filters.genre === 'All' || asset.genre === filters.genre;
-      const matchesType = filters.assetType === 'All' || asset.assetType === filters.assetType;
+      const matchesType = filters.assetType === 'All' || normalizeAssetTypeForForm(asset.assetType) === filters.assetType;
       const matchesTag = filters.tag === 'All' || asset.tags.includes(filters.tag);
 
       return matchesSearch && matchesGenre && matchesType && matchesTag;
@@ -386,6 +405,21 @@ export default function AdminMedia() {
       : storageUsagePercent >= 75
         ? 'bg-amber-500'
         : 'bg-brand-accent';
+  const portraitRaceOptions = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...PORTRAIT_METADATA_OPTIONS.race,
+          ...(customRacesByGenre[formData.genre] || []),
+        ])
+      ).sort((a, b) => a.localeCompare(b)),
+    [customRacesByGenre, formData.genre]
+  );
+  const filteredPortraitRaceOptions = useMemo(() => {
+    const raceQuery = (formData.metadata.race || '').trim().toLowerCase();
+    if (!raceQuery) return portraitRaceOptions;
+    return portraitRaceOptions.filter((option) => option.toLowerCase().includes(raceQuery));
+  }, [formData.metadata.race, portraitRaceOptions]);
 
   const structuredGenre = getStructuredGenre(formData.genre);
   const zonePropertyOptions = useMemo(() => Object.keys(ZONE_TAG_SUGGESTIONS[structuredGenre]), [structuredGenre]);
@@ -537,7 +571,7 @@ export default function AdminMedia() {
     setEditingAsset(asset);
     setFormData({
       genre: asset.genre,
-      assetType: asset.assetType,
+      assetType: normalizeAssetTypeForForm(asset.assetType),
       tags: asset.tags || [],
       metadata: getStringMetadata(asset.metadata),
     });
@@ -657,6 +691,30 @@ export default function AdminMedia() {
 
       return { ...current, metadata };
     });
+  };
+
+  const addCustomRaceOption = (value: string) => {
+    const race = toTitleCase(value);
+    if (!race || PORTRAIT_METADATA_OPTIONS.race.includes(race)) return;
+
+    setCustomRacesByGenre((current) => {
+      const currentOptions = current[formData.genre] || [];
+      if (currentOptions.includes(race)) return current;
+
+      const next = {
+        ...current,
+        [formData.genre]: [...currentOptions, race].sort((a, b) => a.localeCompare(b)),
+      };
+      window.localStorage.setItem(CUSTOM_RACES_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleRaceBlur = () => {
+    const race = toTitleCase(formData.metadata.race || '');
+    setMetadataField('race', race);
+    addCustomRaceOption(race);
+    window.setTimeout(() => setIsRaceMenuOpen(false), 120);
   };
 
   const handleDelete = async (asset: ImageAsset) => {
@@ -860,18 +918,66 @@ export default function AdminMedia() {
                   </div>
                   <div>
                     <label className="input-label">Portrait Race</label>
-                    <select
-                      value={formData.metadata.race || ''}
-                      onChange={(event) => setMetadataField('race', event.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Any Race</option>
-                      {PORTRAIT_METADATA_OPTIONS.race.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input
+                        value={formData.metadata.race || ''}
+                        onChange={(event) => {
+                          setMetadataField('race', event.target.value);
+                          setIsRaceMenuOpen(true);
+                        }}
+                        onFocus={() => setIsRaceMenuOpen(true)}
+                        onBlur={handleRaceBlur}
+                        className="input-field pr-9"
+                        placeholder="Any Race"
+                      />
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => setIsRaceMenuOpen((current) => !current)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text"
+                        aria-label="Toggle Race Options"
+                      >
+                        v
+                      </button>
+                      {isRaceMenuOpen && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
+                          <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              setMetadataField('race', '');
+                              setIsRaceMenuOpen(false);
+                            }}
+                            className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text-muted hover:bg-brand-primary/30 hover:text-brand-text"
+                          >
+                            Any Race
+                          </button>
+                          {filteredPortraitRaceOptions.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setMetadataField('race', option);
+                                addCustomRaceOption(option);
+                                setIsRaceMenuOpen(false);
+                              }}
+                              className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
+                            >
+                              {option}
+                            </button>
+                          ))}
+                          {filteredPortraitRaceOptions.length === 0 && (
+                            <div className="px-2 py-1.5 text-body-sm text-brand-text-muted">
+                              Type A New Race Name
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      Select A Race Or Type A Custom Race For This Genre.
+                    </p>
                   </div>
                 </div>
               )}
