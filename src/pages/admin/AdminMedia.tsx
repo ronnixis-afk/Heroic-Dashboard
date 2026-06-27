@@ -117,32 +117,7 @@ const POI_TAG_SUGGESTIONS: Record<SpecificImageGenre, { baseTypes: string[]; mod
       'Caught In A Temporal Distortion',
     ],
   },
-  Magitech: {
-    baseTypes: [
-      'Etheric Spire',
-      'Synchronized Citadel',
-      'Prime-Logic Depot',
-      'Essence-Forge Precinct',
-      'Crystal-Link Relay',
-      'Arcane Factory',
-      'Golemetric Lab',
-      'Pneumatic Transit Hub',
-      'Alchemical Refinery',
-      'Levitation Platform',
-    ],
-    modifiers: [
-      'Leaking Raw Resonance',
-      'Overclocked / Unstable',
-      'Abandoned / Corroded',
-      'Highly Pressurized',
-      'Automated / Guarded',
-      'Flux-Corrupted',
-      'Techno-Arcane Shielded',
-      'Drained Of Power',
-      'Vibrating With Resonance',
-      'Experimental / Top-Secret',
-    ],
-  },
+
 };
 
 const ZONE_TAG_SUGGESTIONS: Record<SpecificImageGenre, Record<string, string[]>> = {
@@ -182,18 +157,7 @@ const ZONE_TAG_SUGGESTIONS: Record<SpecificImageGenre, Record<string, string[]>>
     'Primary Output': ['Rare Isotope Mining', 'Agrarian / Food Production', 'Antimatter Refineries', 'Starship Drydocks'],
     'Anomalous Phenomenon': ['Time Dilation Field', 'Psionic Echo Chamber', 'Derelict Dyson Sphere', 'Synthetic Virus Outbreak'],
   },
-  Magitech: {
-    'Etheric Vibrancy': ['Harmonic / Empowering', 'Dissonant / Damaging', 'Null-Magic Void', 'Pulsing Resonance'],
-    'Technomantic Infrastructure': ['Automated Celestial Network', 'Rune-Gate Hub', 'Resonance-Forges', 'Aetheric Railroads'],
-    'Power Source': ['Captured Dying Star', 'Mass Essence-Extractors', 'Crystal-Flux Cores', 'Volatile Void-Siphons'],
-    'Ruling Caste': ['Arch-Mage Syndicate', 'Cyber-Lich Dynasty', 'Artificer Guilds', 'Order Of The Prime-Logic'],
-    'Construct Population': ['Sentient Reinforced Colossi', 'Bound Stellar Elementals', 'Homunculi Workforce', 'Rogue Golem Swarms'],
-    'Astral Alignment': ['Planar Convergence', 'Void-Touched / Eldritch', 'Celestially Shielded', 'Echoes Of Other-Self'],
-    'Space-Time Stability': ['Temporal Echoes', 'Warped Gravity Wells', 'Stasis Fields', 'Chrono-Flicker'],
-    'Travel Medium': ['Flux-Currents', 'Ancient Warp-Gates', 'Void-Skimmer Docks', 'Astral Rifts'],
-    'Arcane Hazard': ['Wild Magic Storms', 'Resonance Fallout Zones', 'Ethereal Parasite Swarms', 'Arcane Leakage'],
-    'Planetary Biome': ['Biomechanical Flora', 'Liquid Mercury Oceans', 'Crystalline Forests', 'Molten Glass Plains'],
-  },
+
 };
 
 const PORTRAIT_METADATA_OPTIONS = {
