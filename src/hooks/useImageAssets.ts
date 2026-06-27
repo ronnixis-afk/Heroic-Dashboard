@@ -6,7 +6,14 @@ import { useAuth } from '../lib/AuthContext';
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
-export const IMAGE_ASSET_TYPES = ['Character Portrait', 'NPC Portrait', 'Point Of Interest Image', 'Zone Image', 'Item Image'] as const;
+export const IMAGE_ASSET_TYPES = [
+  'Character Portrait',
+  'NPC Portrait',
+  'Point Of Interest Image',
+  'Zone Image',
+  'Item Image',
+  'App Assets',
+] as const;
 
 export type ImageGenre = (typeof IMAGE_GENRES)[number];
 export type ImageAssetType = (typeof IMAGE_ASSET_TYPES)[number];
@@ -48,6 +55,8 @@ export interface ImageAssetInput {
 export interface CreateImageAssetInput extends ImageAssetInput {
   blob: Blob;
   sizeBytes: number;
+  width: number;
+  height: number;
 }
 
 export type UpdateImageAssetInput = ImageAssetInput;
@@ -199,8 +208,8 @@ export function useImageAssets() {
       publicUrl: publicUrlData.publicUrl,
       mimeType: 'image/webp',
       sizeBytes: input.sizeBytes,
-      width: 500,
-      height: 500,
+      width: input.width,
+      height: input.height,
       uploadedByUserId: user?.id || null,
     };
 

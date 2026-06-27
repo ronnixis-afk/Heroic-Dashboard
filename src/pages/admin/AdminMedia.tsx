@@ -19,7 +19,12 @@ import {
   useImageAssets,
 } from '../../hooks/useImageAssets';
 import { formatBytes } from '../../lib/utils';
-import { optimizeImageToSquare, optimizeImageToSquareGrid, OptimizedImageResult } from '../../lib/imageOptimizer';
+import {
+  optimizeImageToOriginalWebp,
+  optimizeImageToSquare,
+  optimizeImageToSquareGrid,
+  OptimizedImageResult,
+} from '../../lib/imageOptimizer';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
@@ -197,7 +202,7 @@ interface OptimizedImageDraft extends OptimizedImageResult {
   title: string;
 }
 
-type UploadMode = 'single' | 'grid';
+type UploadMode = 'single' | 'original' | 'grid';
 
 const toTitleCase = (value: string) =>
   value
@@ -235,7 +240,11 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
+  'App Assets': [],
 };
+
+const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
+  assetType === 'Point Of Interest Image' || assetType === 'Zone Image' || assetType === 'Item Image';
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -315,6 +324,7 @@ export default function AdminMedia() {
   const [batchTagDraft, setBatchTagDraft] = useState('');
   const [optimizedImages, setOptimizedImages] = useState<OptimizedImageDraft[]>([]);
   const [uploadMode, setUploadMode] = useState<UploadMode | null>(null);
+  const [pendingSingleFile, setPendingSingleFile] = useState<File | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -443,6 +453,7 @@ export default function AdminMedia() {
     setEditingAsset(null);
     setOptimizedImages([]);
     setUploadMode(null);
+    setPendingSingleFile(null);
     setTagDraft('');
     setErrorMessage(null);
     setStatusMessage(null);
@@ -502,12 +513,25 @@ export default function AdminMedia() {
 
     setErrorMessage(null);
     setStatusMessage(null);
-    setIsOptimizing(true);
-    setUploadMode('single');
+    setPendingSingleFile(file);
+    setUploadMode(null);
     clearOptimizedImages();
+  };
+
+  const handleSingleUploadChoice = async (mode: Exclude<UploadMode, 'grid'>) => {
+    if (!pendingSingleFile) return;
+
+    const file = pendingSingleFile;
+    setErrorMessage(null);
+    setStatusMessage(null);
+    setIsOptimizing(true);
+    setUploadMode(mode);
+    clearOptimizedImages();
+    setPendingSingleFile(null);
 
     try {
-      const optimized = await optimizeImageToSquare(file);
+      const optimized =
+        mode === 'original' ? await optimizeImageToOriginalWebp(file) : await optimizeImageToSquare(file);
       const nextImages = [
         {
           ...optimized,
@@ -516,7 +540,11 @@ export default function AdminMedia() {
         },
       ];
       setOptimizedImages(nextImages);
-      setStatusMessage('1 Image Optimized To 500px By 500px.');
+      setStatusMessage(
+        mode === 'original'
+          ? `1 Image Converted To ${optimized.width}px By ${optimized.height}px WebP.`
+          : '1 Image Optimized To 500px By 500px WebP.'
+      );
     } catch (error) {
       setOptimizedImages([]);
       setErrorMessage(error instanceof Error ? error.message : 'Image Optimization Failed.');
@@ -631,6 +659,8 @@ export default function AdminMedia() {
           description: '',
           blob: image.blob,
           sizeBytes: image.outputSize,
+          width: image.width,
+          height: image.height,
         });
       }
 
@@ -766,7 +796,7 @@ export default function AdminMedia() {
     <div className="page">
       <PageHeader
         title="Media Library"
-        description="Upload Optimized 500px Image Assets For Future Game Imagery."
+        description="Upload WebP Image Assets For Future Game Imagery."
       />
 
       {(statusMessage || errorMessage) && (
@@ -792,7 +822,7 @@ export default function AdminMedia() {
                       <ImageIcon className="mb-2 text-brand-accent" size={28} />
                       <span className="text-xs font-medium text-brand-text">Single Image Frame</span>
                       <span className="mt-1 text-xs text-brand-text-muted">
-                        Upload 1 Image To Become 500px By 500px WebP
+                        Choose 500px Square Or Original Proportion WebP
                       </span>
                       <input
                         type="file"
@@ -832,14 +862,18 @@ export default function AdminMedia() {
                               key={image.previewUrl}
                               src={image.previewUrl}
                               alt={`${image.title} Preview`}
-                              className="aspect-square w-full rounded-lg object-cover"
+                              className={`w-full rounded-lg bg-black/40 ${
+                                uploadMode === 'original' ? 'h-20 object-contain' : 'aspect-square object-cover'
+                              }`}
                             />
                           ))}
                         </div>
                         <span className="text-xs font-medium text-brand-text">
                           {uploadMode === 'grid'
                             ? `${optimizedImages.length} Extracted Images Ready To Upload`
-                            : '1 Image Ready To Upload'}
+                            : uploadMode === 'original'
+                              ? '1 Original-Proportion Image Ready To Upload'
+                              : '1 Square Image Ready To Upload'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs text-brand-text-muted">
@@ -848,7 +882,11 @@ export default function AdminMedia() {
                             ? optimizedImages[0].sourceFileName
                             : `${optimizedImages.length} Files`}
                         </span>
-                        <span className="badge-accent">{optimizedImages[0].width}px Square</span>
+                        <span className="badge-accent">
+                          {optimizedImages[0].width === optimizedImages[0].height
+                            ? `${optimizedImages[0].width}px Square`
+                            : `${optimizedImages[0].width}px By ${optimizedImages[0].height}px`}
+                        </span>
                         <span>
                           Original:{' '}
                           {formatBytes(optimizedImages.reduce((total, image) => total + image.sourceSize, 0))}
@@ -1042,7 +1080,7 @@ export default function AdminMedia() {
                 </div>
               </div>
 
-              {!isPortraitAssetType(formData.assetType) && (
+              {hasStructuredMetadataFields(formData.assetType) && (
                 <div className="space-y-3 rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
                   <div>
                     <label className="input-label mb-0">Structured Details</label>
@@ -1426,6 +1464,61 @@ export default function AdminMedia() {
           </div>
         </div>
       </div>
+
+      {pendingSingleFile && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm"
+          onClick={() => setPendingSingleFile(null)}
+        >
+          <div
+            className="card w-full max-w-md p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="section-title mb-1">Choose Image Processing</h3>
+                <p className="text-xs text-brand-text-muted">
+                  {pendingSingleFile.name} Can Be Saved As A Square Game Frame Or Kept At Its Original Proportion For Reusable App Art.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingSingleFile(null)}
+                className="btn-icon"
+                title="Close"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => handleSingleUploadChoice('single')}
+                className="rounded-lg border border-brand-primary bg-brand-bg p-3 text-left transition-colors hover:border-brand-accent"
+              >
+                <ImageIcon className="mb-2 text-brand-accent" size={22} />
+                <span className="block text-xs font-medium text-brand-text">Square Game Frame</span>
+                <span className="mt-1 block text-xs text-brand-text-muted">
+                  Crop And Resize To 500px By 500px WebP.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSingleUploadChoice('original')}
+                className="rounded-lg border border-brand-accent bg-brand-accent/10 p-3 text-left transition-colors hover:bg-brand-accent/15"
+              >
+                <ImageIcon className="mb-2 text-brand-accent" size={22} />
+                <span className="block text-xs font-medium text-brand-text">Keep Original Proportion</span>
+                <span className="mt-1 block text-xs text-brand-text-muted">
+                  Convert To WebP Without Cropping Or Resizing.
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedAsset && (
         <div

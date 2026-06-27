@@ -118,6 +118,55 @@ const getDecodedImageSize = (image: ImageBitmap | HTMLImageElement) => ({
   height: 'height' in image ? image.height : 0,
 });
 
+export async function optimizeImageToOriginalWebp(file: File): Promise<OptimizedImageResult> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please Select An Image File.');
+  }
+
+  const image = await decodeImage(file);
+  const { width: sourceWidth, height: sourceHeight } = getDecodedImageSize(image);
+
+  if (!sourceWidth || !sourceHeight) {
+    closeDecodedImage(image);
+    throw new Error('Unable To Determine Image Dimensions.');
+  }
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+
+    const context = canvas.getContext('2d', { alpha: true });
+    if (!context) {
+      throw new Error('Image Optimization Is Not Supported In This Browser.');
+    }
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+
+    let quality = INITIAL_QUALITY;
+    let blob = await blobFromCanvas(canvas, quality);
+
+    while (blob.size > file.size && quality > MIN_QUALITY) {
+      quality = Math.max(MIN_QUALITY, quality - QUALITY_STEP);
+      blob = await blobFromCanvas(canvas, quality);
+    }
+
+    return {
+      blob,
+      previewUrl: URL.createObjectURL(blob),
+      width: sourceWidth,
+      height: sourceHeight,
+      quality,
+      sourceSize: file.size,
+      outputSize: blob.size,
+    };
+  } finally {
+    closeDecodedImage(image);
+  }
+}
+
 export async function optimizeImageToSquare(file: File): Promise<OptimizedImageResult> {
   if (!file.type.startsWith('image/')) {
     throw new Error('Please Select An Image File.');
