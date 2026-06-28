@@ -8,6 +8,8 @@ import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
+const ANALYTICS_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+
 function percentChange(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : current === 0 ? 0 : null;
   return ((current - previous) / previous) * 100;
@@ -288,7 +290,8 @@ export function useAnalyticsMetrics() {
   const { data, isLoading: loading } = useQuery({
     queryKey: ['analytics-metrics'],
     queryFn: () => fetchAnalyticsMetrics(getToken),
-    refetchInterval: 30000,
+    refetchInterval: ANALYTICS_REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   return {

@@ -3,6 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
+const USERS_PAGE_SIZE = 250;
+const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
+
 async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
@@ -16,13 +19,14 @@ async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
   const [usersRes, saveStatsRes] = await Promise.all([
     supabase
       .from('User')
-      .select('*, UserSession(lastPing, endTime, startTime)')
+      .select('id, email, tier, currentCredits, maxCredits, createdAt, UserSession(lastPing, endTime, startTime)')
       .order('createdAt', { ascending: false })
       .order('lastPing', { foreignTable: 'UserSession', ascending: false })
-      .limit(1, { foreignTable: 'UserSession' }),
+      .limit(1, { foreignTable: 'UserSession' })
+      .limit(USERS_PAGE_SIZE),
     supabase
       .from('user_save_sizes_summary')
-      .select('*')
+      .select('userId, save_count, total_bytes')
   ]);
   
   if (usersRes.error) {
@@ -56,6 +60,10 @@ export function useUsers() {
   });
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    let isMounted = true;
+
     const setupSubscription = async () => {
       try {
         const token = await getToken({ template: 'supabase' }).catch(() => null);
@@ -63,7 +71,10 @@ export function useUsers() {
         const subscription = supabase
           .channel('public:User')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
+            if (invalidateTimer) clearTimeout(invalidateTimer);
+            invalidateTimer = setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['users'] });
+            }, REALTIME_INVALIDATE_DEBOUNCE_MS);
           })
           .subscribe();
 
@@ -75,7 +86,19 @@ export function useUsers() {
       }
     };
     
-    setupSubscription();
+    setupSubscription().then((result) => {
+      if (isMounted) {
+        cleanup = result;
+      } else {
+        result?.();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      cleanup?.();
+    };
   }, [queryClient, getToken]);
 
   const syncUsers = async () => {

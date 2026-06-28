@@ -4,6 +4,8 @@ import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
+const IMAGE_ASSET_PAGE_SIZE = 500;
+const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
 export const IMAGE_ASSET_TYPES = [
@@ -119,8 +121,12 @@ async function fetchImageAssets(getToken: (options?: any) => Promise<string | nu
   const supabase = await getSupabaseForAdmin(getToken);
   const { data, error, count } = await supabase
     .from('ImageAsset')
-    .select('*', { count: 'exact' })
-    .order('createdAt', { ascending: false });
+    .select(
+      'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt',
+      { count: 'exact' }
+    )
+    .order('createdAt', { ascending: false })
+    .range(0, IMAGE_ASSET_PAGE_SIZE - 1);
 
   if (error) {
     console.error('[MediaLibrary] Fetch image assets failed:', error);
@@ -146,30 +152,45 @@ export function useImageAssets() {
   const totalAssetCount = imageAssetResult?.totalCount ?? assets.length;
 
   useEffect(() => {
-    let subscription: any;
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    let cleanup: (() => void) | undefined;
+    let isMounted = true;
 
     const setupSubscription = async () => {
-      try {
-        const supabase = await getSupabaseForAdmin(getToken);
-        subscription = supabase
-          .channel('public:ImageAsset')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'ImageAsset' }, () => {
+      // getSupabaseForAdmin creates a fresh client (and realtime socket) per call,
+      // so we must capture this exact client instance and tear down the channel on
+      // it during cleanup. Calling removeChannel on a different client would leave
+      // this socket open (an egress/resource leak).
+      const supabase = await getSupabaseForAdmin(getToken);
+      const subscription = supabase
+        .channel('public:ImageAsset')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ImageAsset' }, () => {
+          if (invalidateTimer) clearTimeout(invalidateTimer);
+          invalidateTimer = setTimeout(() => {
             queryClient.invalidateQueries({ queryKey: ['image-assets'] });
-          })
-          .subscribe();
-      } catch (error) {
-        console.error('[MediaLibrary] Real-time setup failed:', error);
-      }
+          }, REALTIME_INVALIDATE_DEBOUNCE_MS);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     };
 
-    setupSubscription();
+    setupSubscription()
+      .then((result) => {
+        if (isMounted) {
+          cleanup = result;
+        } else {
+          result?.();
+        }
+      })
+      .catch((error) => console.error('[MediaLibrary] Real-time setup failed:', error));
 
     return () => {
-      if (subscription) {
-        getSupabaseForAdmin(getToken)
-          .then((supabase) => supabase.removeChannel(subscription))
-          .catch((error) => console.error('[MediaLibrary] Real-time cleanup failed:', error));
-      }
+      isMounted = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      cleanup?.();
     };
   }, [queryClient, getToken]);
 

@@ -3,6 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
+const NEWS_LIMIT = 50;
+const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
+
 async function fetchNews(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
@@ -15,8 +18,9 @@ async function fetchNews(getToken: (options?: any) => Promise<string | null>) {
   
   const { data, error } = await supabase
     .from('News')
-    .select('*')
-    .order('createdAt', { ascending: false });
+    .select('id,title,content,imageUrl,published,createdAt,updatedAt')
+    .order('createdAt', { ascending: false })
+    .limit(NEWS_LIMIT);
   
   if (error) {
     console.error('[NewsAudit] Supabase news error:', error);
@@ -35,33 +39,45 @@ export function useNews() {
   });
 
   useEffect(() => {
-    let subscription: any;
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    let cleanup: (() => void) | undefined;
+    let isMounted = true;
 
     const setupSubscription = async () => {
-      try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
-        
-        subscription = supabase
-          .channel('public:News')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'News' }, () => {
+      // getSupabaseClient creates a fresh client (and realtime socket) per call,
+      // so capture this exact instance and remove the channel from it on cleanup.
+      const token = await getToken({ template: 'supabase' }).catch(() => null);
+      const supabase = getSupabaseClient(token || undefined);
+
+      const subscription = supabase
+        .channel('public:News')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'News' }, () => {
+          if (invalidateTimer) clearTimeout(invalidateTimer);
+          invalidateTimer = setTimeout(() => {
             queryClient.invalidateQueries({ queryKey: ['news'] });
-          })
-          .subscribe();
-      } catch (e) {
-        console.error('[NewsAudit] Real-time setup failed:', e);
-      }
+          }, REALTIME_INVALIDATE_DEBOUNCE_MS);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     };
-    
-    setupSubscription();
+
+    setupSubscription()
+      .then((result) => {
+        if (isMounted) {
+          cleanup = result;
+        } else {
+          result?.();
+        }
+      })
+      .catch((e) => console.error('[NewsAudit] Real-time setup failed:', e));
 
     return () => {
-      if (subscription) {
-        const token = getToken({ template: 'supabase' }).catch(() => null);
-        token.then((t) => {
-          getSupabaseClient(t || undefined).removeChannel(subscription);
-        });
-      }
+      isMounted = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      cleanup?.();
     };
   }, [queryClient, getToken]);
 

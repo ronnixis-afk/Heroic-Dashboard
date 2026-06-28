@@ -3,6 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
+const CREDIT_HISTORY_LIMIT = 100;
+const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
+
 async function fetchCreditHistory(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
@@ -15,8 +18,9 @@ async function fetchCreditHistory(getToken: (options?: any) => Promise<string | 
   
   const { data, error } = await supabase
     .from('CreditAdjustment')
-    .select('*')
-    .order('createdAt', { ascending: false });
+    .select('id,userId,amount,reason,adminId,createdAt')
+    .order('createdAt', { ascending: false })
+    .limit(CREDIT_HISTORY_LIMIT);
   
   if (error) {
     console.error('[CreditsAudit] Supabase credits history error:', error);
@@ -37,33 +41,45 @@ export function useCredits() {
   });
 
   useEffect(() => {
-    let subscription: any;
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    let cleanup: (() => void) | undefined;
+    let isMounted = true;
 
     const setupSubscription = async () => {
-      try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
-        
-        subscription = supabase
-          .channel('public:CreditAdjustment')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'CreditAdjustment' }, () => {
+      // getSupabaseClient creates a fresh client (and realtime socket) per call,
+      // so capture this exact instance and remove the channel from it on cleanup.
+      const token = await getToken({ template: 'supabase' }).catch(() => null);
+      const supabase = getSupabaseClient(token || undefined);
+
+      const subscription = supabase
+        .channel('public:CreditAdjustment')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'CreditAdjustment' }, () => {
+          if (invalidateTimer) clearTimeout(invalidateTimer);
+          invalidateTimer = setTimeout(() => {
             queryClient.invalidateQueries({ queryKey: ['credit-history'] });
-          })
-          .subscribe();
-      } catch (e) {
-        console.error('[CreditsAudit] Real-time setup failed:', e);
-      }
+          }, REALTIME_INVALIDATE_DEBOUNCE_MS);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     };
-    
-    setupSubscription();
+
+    setupSubscription()
+      .then((result) => {
+        if (isMounted) {
+          cleanup = result;
+        } else {
+          result?.();
+        }
+      })
+      .catch((e) => console.error('[CreditsAudit] Real-time setup failed:', e));
 
     return () => {
-      if (subscription) {
-        const token = getToken({ template: 'supabase' }).catch(() => null);
-        token.then((t) => {
-          getSupabaseClient(t || undefined).removeChannel(subscription);
-        });
-      }
+      isMounted = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      cleanup?.();
     };
   }, [queryClient, getToken]);
 

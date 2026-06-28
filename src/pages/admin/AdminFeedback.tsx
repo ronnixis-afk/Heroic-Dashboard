@@ -18,6 +18,9 @@ interface FeedbackItem {
   };
 }
 
+const FEEDBACK_LIMIT = 200;
+const REALTIME_REFRESH_DEBOUNCE_MS = 5000;
+
 export default function AdminFeedback() {
   const { getToken } = useAuth();
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
@@ -38,8 +41,9 @@ export default function AdminFeedback() {
 
       const { data: rows, error: dbError } = await supabase
         .from('Feedback')
-        .select('*')
-        .order('createdAt', { ascending: false });
+        .select('id,userId,type,category,message,metadata,createdAt')
+        .order('createdAt', { ascending: false })
+        .limit(FEEDBACK_LIMIT);
 
       if (dbError) throw dbError;
 
@@ -81,14 +85,19 @@ export default function AdminFeedback() {
       try {
         const token = await getToken({ template: 'supabase' }).catch(() => null);
         const supabase = getSupabaseClient(token || undefined);
+        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
         const subscription = supabase
           .channel('public:Feedback')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'Feedback' }, () => {
-            fetchFeedback();
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+              fetchFeedback();
+            }, REALTIME_REFRESH_DEBOUNCE_MS);
           })
           .subscribe();
 
         return () => {
+          if (refreshTimer) clearTimeout(refreshTimer);
           supabase.removeChannel(subscription);
         };
       } catch (e) {
@@ -96,9 +105,19 @@ export default function AdminFeedback() {
       }
     };
 
-    let unsub: any;
-    setupSubscription().then(fn => { unsub = fn; });
-    return () => { if (unsub) unsub(); };
+    let unsub: (() => void) | undefined;
+    let isMounted = true;
+    setupSubscription().then((fn) => {
+      if (isMounted) {
+        unsub = fn;
+      } else {
+        fn?.();
+      }
+    });
+    return () => {
+      isMounted = false;
+      unsub?.();
+    };
   }, [getToken]);
 
   const handleDelete = async (id: string) => {

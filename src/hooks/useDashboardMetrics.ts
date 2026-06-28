@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
+const DASHBOARD_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+
 async function fetchDashboardMetrics(getToken: (options?: any) => Promise<string | null>, timeframe: string = 'Month') {
   let token: string | null = null;
   try {
@@ -138,7 +140,8 @@ export function useDashboardMetrics(timeframe: string = 'Month') {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-metrics', timeframe],
     queryFn: () => fetchDashboardMetrics(() => getToken({ template: 'supabase' }), timeframe),
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
 
   return {
