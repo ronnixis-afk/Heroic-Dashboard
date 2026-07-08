@@ -55,7 +55,7 @@ export default function RevenueOverview({
         <div className="min-w-0">
           <h3 className="card-title text-brand-accent">Revenue & API Costs</h3>
           <p className="text-xs text-brand-text-muted mt-0.5">
-            Revenue (Not Connected) — payment data not integrated
+            Real-Time Revenue from Stripe Integration
           </p>
           <div className="mt-2">
             {isLoading ? (

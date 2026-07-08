@@ -1,6 +1,6 @@
 // src/services/EngineTelemetryService.ts
 
-const RPG_API_URL = import.meta.env.VITE_RPG_API_URL || 'http://localhost:3000';
+const RPG_API_URL = import.meta.env.VITE_RPG_API_URL || 'http://localhost:3001';
 
 export interface TelemetryData {
     avgTokensByPhase: { phase: string; avgTokens: number }[];

@@ -85,9 +85,7 @@ export default function FinancialReports() {
           <div>
             <h3 className="text-title font-semibold text-white mb-1">Profitability Insight</h3>
             <p className="text-xs text-brand-text-muted leading-relaxed max-w-3xl">
-              Revenue is not connected to a payment provider, so net profit reflects API cost only. 
-              Based on current token consumption, the largest cost driver is output token generation in high-narrative sessions. 
-              Consider token caching or tiered credit limits for free users to optimize margins once billing is integrated.
+              Stripe Revenue Is Connected. Net Profit Calculations Account for Subscriptions and Credit Purchases in Real-Time. Based on Current Token Consumption, the Largest Cost Driver is Output Token Generation in High-Narrative Sessions. Monitor Token Usage Patterns to Maximize Profitability.
             </p>
           </div>
         </div>

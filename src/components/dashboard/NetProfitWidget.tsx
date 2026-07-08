@@ -19,8 +19,7 @@ export default function NetProfitWidget({
         <h3 className="card-title">Profitability</h3>
         <p className="text-xs text-brand-text-muted mt-0.5">Current Billing Period</p>
         <p className="text-xs text-brand-text-muted/80 mt-1 max-w-md leading-relaxed">
-          Revenue is not connected to a payment provider. Figures reflect API cost only until billing
-          is integrated.
+          Real-Time Profitability Performance Aggregated Across Stripe Sales and API Costs.
         </p>
       </div>
 
@@ -55,7 +54,7 @@ export default function NetProfitWidget({
                 <TrendingUp size={11} /> Healthy Profitability
               </>
             ) : (
-              'Pre-revenue Operating Phase'
+              'Negative Operating Margin'
             )}
           </p>
         </div>

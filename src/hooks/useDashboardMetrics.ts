@@ -63,7 +63,7 @@ async function fetchDashboardMetrics(getToken: (options?: any) => Promise<string
       return {
         name: isNaN(dateObj.getTime()) ? m.date : dateObj.toISOString().split('T')[0],
         apiCost: Number(m.total_cost) || 0,
-        revenue: 0 
+        revenue: Number(m.total_revenue) || 0 
       };
     })
     .sort((a, b) => a.name < b.name ? -1 : 1);
@@ -75,7 +75,7 @@ async function fetchDashboardMetrics(getToken: (options?: any) => Promise<string
       return {
         name: dateObj.toLocaleDateString('en-US', { month: 'short' }),
         apiCost: Number(m.total_cost) || 0,
-        revenue: 0
+        revenue: Number(m.total_revenue) || 0
       };
     })
     .reverse();
