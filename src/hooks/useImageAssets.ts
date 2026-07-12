@@ -119,24 +119,51 @@ const getSupabaseForAdmin = async (getToken: (options?: any) => Promise<string |
 
 async function fetchImageAssets(getToken: (options?: any) => Promise<string | null>): Promise<ImageAssetsResult> {
   const supabase = await getSupabaseForAdmin(getToken);
-  const { data, error, count } = await supabase
-    .from('ImageAsset')
-    .select(
-      'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt',
-      { count: 'exact' }
-    )
-    .order('createdAt', { ascending: false })
-    .range(0, IMAGE_ASSET_PAGE_SIZE - 1);
+  const selectColumns =
+    'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt';
 
-  if (error) {
-    console.error('[MediaLibrary] Fetch image assets failed:', error);
-    throw error;
+  const assets: ImageAsset[] = [];
+  let totalCount = 0;
+  let from = 0;
+
+  // Page through every row so client-side search/filters cover the full library
+  // (PostgREST max-rows caps a single range; 500 stays safely under that).
+  // Fantasy/Modern Human portraits currently sit past the newest 500 rows.
+  while (true) {
+    const to = from + IMAGE_ASSET_PAGE_SIZE - 1;
+    const { data, error, count } = await supabase
+      .from('ImageAsset')
+      .select(selectColumns, from === 0 ? { count: 'exact' } : undefined)
+      .order('createdAt', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error('[MediaLibrary] Fetch image assets failed:', error);
+      throw error;
+    }
+
+    const page = (data || []) as ImageAsset[];
+    if (from === 0) {
+      totalCount = count ?? page.length;
+    }
+    assets.push(...page);
+
+    if (page.length < IMAGE_ASSET_PAGE_SIZE) {
+      break;
+    }
+    from += IMAGE_ASSET_PAGE_SIZE;
   }
 
-  const assets = (data || []) as ImageAsset[];
+  if (totalCount > 0 && assets.length < totalCount) {
+    console.warn(
+      `[MediaLibrary] Loaded ${assets.length} of ${totalCount} image assets; search may miss older files.`
+    );
+  }
+
   return {
     assets,
-    totalCount: count ?? assets.length,
+    totalCount: Math.max(totalCount, assets.length),
   };
 }
 
@@ -145,7 +172,8 @@ export function useImageAssets() {
   const { getToken, user } = useAuth();
 
   const { data: imageAssetResult, isLoading: loading } = useQuery({
-    queryKey: ['image-assets'],
+    // Versioned key busts the pre-pagination 500-row React Query cache.
+    queryKey: ['image-assets', 'all-pages'],
     queryFn: () => fetchImageAssets(getToken),
   });
   const assets = imageAssetResult?.assets ?? [];
@@ -167,7 +195,7 @@ export function useImageAssets() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ImageAsset' }, () => {
           if (invalidateTimer) clearTimeout(invalidateTimer);
           invalidateTimer = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['image-assets'] });
+            queryClient.invalidateQueries({ queryKey: ['image-assets', 'all-pages'] });
           }, REALTIME_INVALIDATE_DEBOUNCE_MS);
         })
         .subscribe();

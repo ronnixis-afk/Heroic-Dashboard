@@ -373,13 +373,19 @@ export default function AdminMedia() {
       const searchableValues = [
         asset.title,
         asset.description || '',
+        asset.genre,
+        normalizeAssetTypeForForm(asset.assetType),
         ...asset.tags,
         ...Object.values(asset.metadata || {}).map((value) => String(value)),
       ].map((value) => value.toLowerCase());
       const matchesSearch =
         searchTerms.length === 0 ||
         searchTerms.every((term) => searchableValues.some((value) => value.includes(term)));
-      const matchesGenre = filters.genre === 'All' || asset.genre === filters.genre;
+      // "Any Genre" in the filter means no genre restriction (upload form still uses the literal value).
+      const matchesGenre =
+        filters.genre === 'All' ||
+        filters.genre === 'Any Genre' ||
+        asset.genre === filters.genre;
       const matchesType = filters.assetType === 'All' || normalizeAssetTypeForForm(asset.assetType) === filters.assetType;
       const matchesTag = filters.tag === 'All' || asset.tags.includes(filters.tag);
 
@@ -1263,7 +1269,7 @@ export default function AdminMedia() {
                   className="input-field"
                 >
                   <option value="All">All Genres</option>
-                  {IMAGE_GENRES.map((genre) => (
+                  {IMAGE_GENRES.filter((genre) => genre !== 'Any Genre').map((genre) => (
                     <option key={genre} value={genre}>
                       {genre}
                     </option>
