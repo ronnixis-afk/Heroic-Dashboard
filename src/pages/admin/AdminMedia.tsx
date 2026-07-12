@@ -268,6 +268,16 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
   assetType === 'Item Image' ||
   assetType === 'Monster Portrait';
 
+/** Primary "Type" field kept after a successful upload for faster repeat uploads. */
+const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
+  'Character Portrait': 'race',
+  'NPC Portrait': 'race',
+  'Monster Portrait': 'monsterType',
+  'Point Of Interest Image': 'poiBaseType',
+  'Zone Image': 'zoneProperty',
+  'Item Image': 'itemCategory',
+};
+
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getNamingMetadataValues = (input: NamingInput) =>
@@ -491,6 +501,36 @@ export default function AdminMedia() {
     setStatusMessage(null);
   };
 
+  const resetFormAfterUpload = () => {
+    optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    setEditingAsset(null);
+    setOptimizedImages([]);
+    setUploadMode(null);
+    setPendingSingleFile(null);
+    setTagDraft('');
+    setErrorMessage(null);
+
+    setFormData((current) => {
+      const typeKey = PRIMARY_TYPE_METADATA_KEY[current.assetType];
+      const preservedType = typeKey ? current.metadata[typeKey] : undefined;
+      const metadata =
+        typeKey && preservedType
+          ? { [typeKey]: preservedType }
+          : ({} as Record<string, string>);
+      const nextForm = {
+        genre: current.genre,
+        assetType: current.assetType,
+        description: '',
+        tags: [] as string[],
+        metadata,
+      };
+      return {
+        ...nextForm,
+        tags: getTagsWithStructuredMetadata(nextForm),
+      };
+    });
+  };
+
   const addTag = (value: string) => {
     const tag = toTitleCase(value);
     if (!tag || formData.tags.includes(tag)) return;
@@ -699,7 +739,7 @@ export default function AdminMedia() {
       }
 
       const uploadedCount = optimizedImages.length;
-      resetForm();
+      resetFormAfterUpload();
       setStatusMessage(
         `${uploadedCount} ${uploadedCount === 1 ? 'Image' : 'Images'} Uploaded To Media Library.`
       );
@@ -1120,66 +1160,6 @@ export default function AdminMedia() {
                 </div>
               )}
 
-              <div>
-                <label className="input-label">Tags</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={tagDraft}
-                    onChange={(event) => setTagDraft(event.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    placeholder="Add Tag And Press Enter"
-                    className="input-field"
-                  />
-                  <button type="button" onClick={() => addTag(tagDraft)} className="btn-secondary">
-                    Add
-                  </button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {formData.tags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="badge-accent"
-                      title="Remove Tag"
-                    >
-                      {tag}
-                      <X size={10} />
-                    </button>
-                  ))}
-                  {formData.tags.length === 0 && <span className="badge-muted">No Tags</span>}
-                </div>
-              </div>
-
-              <div>
-                <label className="input-label">Tag Groups</label>
-                <div className="space-y-2">
-                  {TAG_GROUPS.map((group) => (
-                    <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => addTagGroup(group.tags)}
-                        className="badge-accent hover:border-brand-accent hover:text-brand-text"
-                        title={`Add All ${group.label} Tags`}
-                      >
-                        {group.label}
-                      </button>
-                      {group.tags.map((tag) => (
-                        <button
-                          key={`${group.label}-${tag}`}
-                          type="button"
-                          onClick={() => addTag(tag)}
-                          className="badge-muted hover:border-brand-accent hover:text-brand-text"
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {hasStructuredMetadataFields(formData.assetType) && (
                 <div className="space-y-3 rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
                   <div>
@@ -1354,6 +1334,66 @@ export default function AdminMedia() {
                 )}
                 </div>
               )}
+
+              <div>
+                <label className="input-label">Tags</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={tagDraft}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder="Add Tag And Press Enter"
+                    className="input-field"
+                  />
+                  <button type="button" onClick={() => addTag(tagDraft)} className="btn-secondary">
+                    Add
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {formData.tags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="badge-accent"
+                      title="Remove Tag"
+                    >
+                      {tag}
+                      <X size={10} />
+                    </button>
+                  ))}
+                  {formData.tags.length === 0 && <span className="badge-muted">No Tags</span>}
+                </div>
+              </div>
+
+              <div>
+                <label className="input-label">Tag Groups</label>
+                <div className="space-y-2">
+                  {TAG_GROUPS.map((group) => (
+                    <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => addTagGroup(group.tags)}
+                        className="badge-accent hover:border-brand-accent hover:text-brand-text"
+                        title={`Add All ${group.label} Tags`}
+                      >
+                        {group.label}
+                      </button>
+                      {group.tags.map((tag) => (
+                        <button
+                          key={`${group.label}-${tag}`}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="badge-muted hover:border-brand-accent hover:text-brand-text"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
                 <label className="input-label mb-0">Naming Convention</label>

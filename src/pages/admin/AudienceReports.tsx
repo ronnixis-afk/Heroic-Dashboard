@@ -17,8 +17,8 @@ export default function AudienceReports() {
     return (
       <div className="page">
         <div className="flex flex-col gap-2">
-          <Skeleton width={200} height={24} mdWidth={240} mdHeight={28} />
-          <Skeleton width="100%" height={14} mdWidth={450} className="opacity-50" />
+          <Skeleton width={200} height={24} />
+          <Skeleton width="100%" height={14} className="opacity-50" />
         </div>
         <CardSkeleton height={160} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

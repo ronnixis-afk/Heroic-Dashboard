@@ -1,6 +1,13 @@
 /**
+ * AUTO-GENERATED — do not edit by hand.
+ *
  * Slim monster type/subtype catalog for Media Library Monster Portraits.
- * Source of truth: heroic-ai-rpg/src/constants/monsterTypes.ts — keep in sync when subtypes change.
+ * Source of truth: heroic-ai-rpg/src/constants/monsterTypes.ts
+ *
+ * Regenerate:
+ *   npm run sync:monster-catalog
+ *
+ * Last synced: 2026-07-12
  */
 
 export interface MonsterPortraitSubtype {
@@ -21,27 +28,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Phasing Crawler",
-        "visualDescription": "A writhing anomaly with multi-jointed limbs that shifts out of phase, appearing and vanishing as it crawls."
+        "visualDescription": "Looks like a many-legged insect that flickers in and out of sight, its joints bending the wrong way as it crawls."
       },
       {
         "name": "Gnarled Tendril",
-        "visualDescription": "An alien mass of branch-like muscle that mimics deadwood, covered in writhing feelers."
+        "visualDescription": "Looks like a fallen deadwood trunk wrapped in living muscle, sprouting writhing feelers where branches and bark should grow instead."
       },
       {
         "name": "Mirage Terror",
-        "visualDescription": "A shimmering, heat-distorting entity whose crystalline eyes project disorienting light patterns."
+        "visualDescription": "Looks like a desert heat shimmer given a solid body of crystal and glass, eyes flashing disorienting mirage light patterns."
       },
       {
         "name": "Deep-Sea Beholder",
-        "visualDescription": "A bloated, multi-eyed levitating orb trailing glowing, translucent tentacles."
+        "visualDescription": "Looks like a bloated floating eyeball the size of a wooden barrel, trailing glowing translucent tentacles like long jellyfish arms."
       },
       {
         "name": "Storm-Cloud Polyp",
-        "visualDescription": "A gas-filled floating bladder crackling with captured static electricity."
+        "visualDescription": "Looks like a living thundercloud balloon crackling with static electricity, dangling tendrils of lightning beneath its swollen gas filled body."
       },
       {
         "name": "Cosmic Scavenger",
-        "visualDescription": "A calcified, multi-legged horror that feeds on background stellar radiation and space debris."
+        "visualDescription": "Looks like a calcified crab grown from asteroid rock, multi-legged and scavenging hungrily among stellar debris and broken hull scrap."
       }
     ]
   },
@@ -51,27 +58,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Grassland Prowler",
-        "visualDescription": "A sleek, quadrupedal hunter with camouflaged fur and high-density muscle built for sprinting."
+        "visualDescription": "Looks like a wolf built for open plains sprinting, with camouflaged tawny fur and dense muscle running along its flanks."
       },
       {
         "name": "Thicket Stalker",
-        "visualDescription": "A low-slung, green-scaled reptile with multi-jointed legs that blends seamlessly with shadows."
+        "visualDescription": "Looks like a low crocodile crossed with a forest lizard, green scaled and multi jointed for slipping through shadowed underbrush silently."
       },
       {
         "name": "Dune Rover",
-        "visualDescription": "A hard-shelled reptile with shovel-like limbs for burrowing through shifting sand."
+        "visualDescription": "Looks like an armored desert tortoise with shovel like forelimbs, built for burrowing deep through hot shifting sand dune flats."
       },
       {
         "name": "Tideclaw Predator",
-        "visualDescription": "An armored crustacean-beast with heavy pincers and webbed hind limbs."
+        "visualDescription": "Looks like a lobster crossed with a hunting wolf, heavy pincers up front and webbed hind limbs for coastal hunting."
       },
       {
         "name": "Skywing Hunter",
-        "visualDescription": "A massive avian predator with segmented leathery wings and razor-sharp talons."
+        "visualDescription": "Looks like a giant eagle with segmented leathery wings instead of feathers, and razor talons shaped like hooked hunting blades."
       },
       {
         "name": "Void Skimmer",
-        "visualDescription": "A sleek, vacuum-breathing creature that uses electromagnetic fields to glide between space debris."
+        "visualDescription": "Looks like a sleek manta ray gliding through empty vacuum, riding shimmering electromagnetic fields instead of warm ocean water currents."
       }
     ]
   },
@@ -81,27 +88,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Solar Vanguard",
-        "visualDescription": "An ethereal warrior clad in gleaming, golden armor plates that hum with holy light."
+        "visualDescription": "Looks like an ethereal knight forged from golden light, with armor plates humming with holy radiance instead of cold steel."
       },
       {
         "name": "Grove Guardian",
-        "visualDescription": "A majestic cervid-like construct made of petrified wood and glowing silver vines."
+        "visualDescription": "Looks like a majestic stag shaped from petrified wood and silver vines, its branching antlers glowing with soft divine light."
       },
       {
         "name": "Searing Emissary",
-        "visualDescription": "A hovering figure composed of pure white flame and rotating golden rings."
+        "visualDescription": "Looks like a hovering angel made entirely of white flame, ringed by rotating golden halos of burning holy light energy."
       },
       {
         "name": "Oceanic Seraph",
-        "visualDescription": "A glowing, bioluminescent humanoid entity whose skin radiates a calming warm light."
+        "visualDescription": "Looks like a bioluminescent humanoid draped in warm sea light, skin glowing softly as if lit gently from deep within."
       },
       {
         "name": "Aureole Glider",
-        "visualDescription": "A winged angelic presence composed of light, trailing ribbons of celestial energy."
+        "visualDescription": "Looks like a winged angel woven from pure white light, trailing ribbons of celestial energy behind each graceful slow wingbeat."
       },
       {
         "name": "Nebula Archon",
-        "visualDescription": "A translucent cosmic entity woven from starlight, shifting with solar colors."
+        "visualDescription": "Looks like a translucent figure woven from starlight and swirling nebula colors, shifting through bright solar hues as it drifts."
       }
     ]
   },
@@ -111,27 +118,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Rustwork Sentinel",
-        "visualDescription": "A bulky, clanking automaton made of corroded iron and ticking gears."
+        "visualDescription": "Looks like a bulky iron golem of corroded plates and ticking gears, clanking loudly with every heavy grinding metal step."
       },
       {
         "name": "Rune-Oak Automaton",
-        "visualDescription": "An animated wooden golem bound by glowing emerald arcane glyphs."
+        "visualDescription": "Looks like a wooden golem carved from living oak timber, bound tightly by glowing emerald arcane glyphs across its limbs."
       },
       {
         "name": "Scrapwork Scavenger",
-        "visualDescription": "A spindly construct cobbled together from metal debris, wires, and makeshift armor plates."
+        "visualDescription": "Looks like a spindly scavenger bot cobbled from junk metal, dangling wires, and mismatched armor plates scavenged from old wrecks."
       },
       {
         "name": "Brass Mariner",
-        "visualDescription": "A pressurized bronze diving suit driven by steam valves and internal water pumps."
+        "visualDescription": "Looks like an antique bronze diving suit walking on its own power, driven by steam valves and churning water pumps."
       },
       {
         "name": "Aether Skiff",
-        "visualDescription": "A floating mechanical drone with brass propellers and rotating crystal lenses."
+        "visualDescription": "Looks like a floating brass propeller drone with rotating crystal camera lenses, hovering steadily on spinning aether powered lift rotors."
       },
       {
         "name": "Solar Sentry",
-        "visualDescription": "A polished chrome probe with solar panels and high-intensity energy arrays."
+        "visualDescription": "Looks like a polished chrome satellite probe studded with unfolded solar panels, bristling with high intensity energy weapon lens arrays."
       }
     ]
   },
@@ -141,27 +148,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Plains Drake",
-        "visualDescription": "A hornless, low-slung dragon with emerald scales and powerful, stocky limbs."
+        "visualDescription": "Looks like a hornless dragon built low like a crocodile, emerald scaled with powerful stocky limbs made for plains sprinting."
       },
       {
         "name": "Forest Wyrm",
-        "visualDescription": "A long, serpentine dragon covered in moss-colored scales and branch-like horns."
+        "visualDescription": "Looks like a long serpentine dragon draped in moss colored scales, crowned with twisting branch like horns of living wood."
       },
       {
         "name": "Cinder Drake",
-        "visualDescription": "A massive, soot-stained dragon with magma flowing between its obsidian scales."
+        "visualDescription": "Looks like a soot stained mountain dragon with glowing magma seeping between black obsidian scales like cracks in cooling lava."
       },
       {
         "name": "Reef Dragon",
-        "visualDescription": "A sleek, finned dragon with shimmering blue scales and coral-like crests."
+        "visualDescription": "Looks like a sleek sea dragon with shimmering blue scales and living coral reefs growing thick along its ridged crest."
       },
       {
         "name": "Sky Sovereign",
-        "visualDescription": "A colossal dragon with broad, cloud-colored wings and a crown of lightning horns."
+        "visualDescription": "Looks like a colossal cloud winged dragon crowned with crackling lightning horns, wings stretched out as broad as storm fronts."
       },
       {
         "name": "Void Wyrm",
-        "visualDescription": "An ancient, wingless serpent of dark matter that swims through the gravity lines of space."
+        "visualDescription": "Looks like an ancient wingless serpent woven from dark matter, swimming silently along gravity lines between cold and distant stars."
       }
     ]
   },
@@ -171,27 +178,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Dust Devil",
-        "visualDescription": "A swirling vortex of sand, dirt, and crackling dry static energy."
+        "visualDescription": "Looks like a tornado of sand and dirt given a whirling living body, crackling loudly with dry desert static energy."
       },
       {
         "name": "Living Grove",
-        "visualDescription": "A shifting mound of animated loam, roots, and wet moss."
+        "visualDescription": "Looks like a walking mound of animated loam, tangled roots, and wet moss shaping roughly into a beast like silhouette."
       },
       {
         "name": "Magma Crag",
-        "visualDescription": "A heavy, semi-liquid pile of molten rock and basalt plates."
+        "visualDescription": "Looks like a walking pile of molten rock armored in basalt plates, dripping bright lava between the cooling stone cracks."
       },
       {
         "name": "Tidal Wave",
-        "visualDescription": "A surging, self-propelled body of water taking on a semi-humanoid shape."
+        "visualDescription": "Looks like a surging wall of ocean water shaped into a semi humanoid form that never fully settles or stills."
       },
       {
         "name": "Zephyr Spirit",
-        "visualDescription": "A formless breeze made visible by carrying glowing, vaporous clouds."
+        "visualDescription": "Looks like a formless breeze made visible only by glowing vapor clouds swirling restlessly through its restless winding airy path."
       },
       {
         "name": "Stellar Flare",
-        "visualDescription": "A highly unstable cluster of solar plasma and magnetic loops."
+        "visualDescription": "Looks like an unstable cluster of solar plasma and looping magnetic arcs, burning fiercely like a miniature living sun flare."
       }
     ]
   },
@@ -201,27 +208,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Meadow Sprite",
-        "visualDescription": "A tiny, glittering humanoid with gossamer wings and skin like fresh grass."
+        "visualDescription": "Looks like a tiny glittering humanoid with gossamer insect wings and soft skin the bright color of fresh spring grass."
       },
       {
         "name": "Bramble Stalker",
-        "visualDescription": "A thorny humanoid construct made of twisting vines and autumn leaves."
+        "visualDescription": "Looks like a humanoid wrapped entirely in twisting vines and autumn leaves, with sharp thorns bristling out from every joint."
       },
       {
         "name": "Mirage Pixie",
-        "visualDescription": "A shifting, iridescent fairy that leaves trails of sparkling, mind-altering dust."
+        "visualDescription": "Looks like a shifting iridescent fairy leaving trails of sparkling mind altering dust that shimmers like desert heat haze mirages."
       },
       {
         "name": "Shore Siren",
-        "visualDescription": "A beautiful, scale-dusted humanoid with webbed fingers and seaweed hair."
+        "visualDescription": "Looks like a beautiful humanoid lightly dusted in fish scales, with webbed fingers and long flowing hair of living seaweed."
       },
       {
         "name": "Cloud Nymph",
-        "visualDescription": "A pale, floating entity whose garments are made of woven condensation and breeze."
+        "visualDescription": "Looks like a pale floating woman whose flowing garments are woven from soft condensation, white mist, and a gentle breeze."
       },
       {
         "name": "Aurora Dancer",
-        "visualDescription": "A spectral, ribbon-like sprite that leaves a glowing trail resembling the northern lights."
+        "visualDescription": "Looks like a spectral ribbon like sprite trailing glowing aurora colors as it dances and twists through cold empty space."
       }
     ]
   },
@@ -231,27 +238,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Hellspawn Hound",
-        "visualDescription": "A skeletal canine surrounded by sulfurous smoke and burning coal eyes."
+        "visualDescription": "Looks like a skeletal wolf wreathed in sulfurous smoke, with eyes burning like hot coals inside a black hell furnace."
       },
       {
         "name": "Rot Demon",
-        "visualDescription": "A bloated, green-skinned humanoid dripping with noxious slime and rotting vegetation."
+        "visualDescription": "Looks like a bloated green skinned humanoid dripping noxious slime, half wrapped in rotting swamp vegetation and thick black mold."
       },
       {
         "name": "Abyssal Ravager",
-        "visualDescription": "A multi-limbed, muscular demon with obsidian skin, curving horns, and iron talons."
+        "visualDescription": "Looks like a multi limbed muscular demon with obsidian skin, curving horns, and clawed hands tipped in sharp iron talons."
       },
       {
         "name": "Trench Leviathan",
-        "visualDescription": "A grotesque, scale-covered monstrosity with long, spiked claws and a gaping maw."
+        "visualDescription": "Looks like a grotesque scale covered sea serpent with spiked claws and a gaping maw wide enough to swallow boats."
       },
       {
         "name": "Imp Harrier",
-        "visualDescription": "A leathery-winged, red-skinned imp carrying a jagged, red-hot pitchfork."
+        "visualDescription": "Looks like a small red skinned leathery winged imp clutching a jagged pitchfork that glows red hot from hellfire heat."
       },
       {
         "name": "Void Terror",
-        "visualDescription": "A formless entity with glowing violet runes etched across its dark-matter skin."
+        "visualDescription": "Looks like a formless shadow body etched with glowing violet runes across dark matter skin that never fully settles still."
       }
     ]
   },
@@ -261,27 +268,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Hill Goliath",
-        "visualDescription": "A stocky, thick-skinned giant wearing patched hides and carrying a stone club."
+        "visualDescription": "Looks like a stocky thick skinned hill giant wearing patched animal hides and swinging a crude massive stone war club."
       },
       {
         "name": "Forest Colossus",
-        "visualDescription": "A towering giant with skin like bark, covered in clinging moss and ivy."
+        "visualDescription": "Looks like a towering humanoid with rough bark for skin, cloaked heavily in clinging moss and trailing green forest ivy."
       },
       {
         "name": "Stone Titan",
-        "visualDescription": "A massive humanoid carved from solid granite, with quartz crystals for eyes."
+        "visualDescription": "Looks like a massive humanoid carved from solid mountain granite, with glittering quartz crystals set deep as bright glowing eyes."
       },
       {
         "name": "Ocean Giant",
-        "visualDescription": "A blue-skinned giant wearing clothing woven from massive kelp leaves."
+        "visualDescription": "Looks like a blue skinned ocean giant dressed in heavy robes woven from massive kelp leaves and tangled sea wrack."
       },
       {
         "name": "Storm Giant",
-        "visualDescription": "A majestic giant with crackling blue skin, white hair, and eyes that flash with thunder."
+        "visualDescription": "Looks like a majestic giant with crackling blue skin, wild white hair, and piercing eyes that flash bright with thunder."
       },
       {
         "name": "Cosmic Colossus",
-        "visualDescription": "A giant composed of compacted stardust and meteorites, shifting with cosmic scale."
+        "visualDescription": "Looks like a giant compacted from stardust and meteorite rock, its vast body shifting with the grand scale of constellations."
       }
     ]
   },
@@ -291,27 +298,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Plains Raider",
-        "visualDescription": "A rugged, wind-burnt scout clad in light leather and protective headwraps."
+        "visualDescription": "Looks like a rugged wind burnt plains scout clad in light leather armor, dust scarves, and protective desert style headwraps."
       },
       {
         "name": "Woodland Ranger",
-        "visualDescription": "A stealthy hunter dressed in mottled green and brown cloaks."
+        "visualDescription": "Looks like a stealthy forest hunter draped in mottled green and brown cloaks that blend deep into dark canopy shade."
       },
       {
         "name": "Nomadic Scavenger",
-        "visualDescription": "A traveler wearing protective layers of cloth, goggles, and filter masks."
+        "visualDescription": "Looks like a desert mountain traveler layered in cloth wraps, sand goggles, and filter masks against harsh blowing grit storms."
       },
       {
         "name": "Coral Diver",
-        "visualDescription": "A lean, gill-necked humanoid wearing bone-reinforced swimming suits."
+        "visualDescription": "Looks like a lean gill necked humanoid sealed in a bone reinforced swimming suit built for long deep reef diving."
       },
       {
         "name": "Sky Corsair",
-        "visualDescription": "An aviator equipped with leather harness straps, flight goggles, and cloaks."
+        "visualDescription": "Looks like a daring airship corsair strapped into leather harnesses, wearing flight goggles and a wind torn sky blue cloak."
       },
       {
         "name": "Station Engineer",
-        "visualDescription": "A worker sealed inside a modular, pressurized environmental hazard suit."
+        "visualDescription": "Looks like a crew worker sealed inside a bulky modular pressurized hazard suit built for hard orbital station repair work."
       }
     ]
   },
@@ -321,27 +328,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Windrunner Wolf",
-        "visualDescription": "A large wolf with silver fur that leaves glowing trails of wind in its wake."
+        "visualDescription": "Looks like a large silver wolf that leaves glowing trails of wind wherever its paws strike the open grassy ground."
       },
       {
         "name": "Grove Owlbear",
-        "visualDescription": "A massive, feather-furred hybrid with glowing green eyes and wooden horns."
+        "visualDescription": "Looks like a bear fused with a giant owl, feather furred with glowing green eyes and wooden antler like horns."
       },
       {
         "name": "Cinder Panther",
-        "visualDescription": "A sleek cat with smoking, charcoal-colored fur and claws made of hot crystal."
+        "visualDescription": "Looks like a sleek panther with smoking charcoal fur and sharp claws of hot crystal that glow bright like embers."
       },
       {
         "name": "Sea Chimera",
-        "visualDescription": "A multi-headed aquatic hybrid with scale plating and thick fin-webs."
+        "visualDescription": "Looks like a multi headed aquatic hybrid armored in hard scale plating, with thick fin webs stretched between its limbs."
       },
       {
         "name": "Storm Griffin",
-        "visualDescription": "A half-eagle, half-lion beast whose wings crackle with blue electrical charge."
+        "visualDescription": "Looks like a half eagle half lion beast whose broad wings crackle constantly with bright blue electrical storm charge energy."
       },
       {
         "name": "Void Stalker",
-        "visualDescription": "A star-speckled, predatory cat that blends into the background of space."
+        "visualDescription": "Looks like a predatory big cat speckled with living stars, blending into the black empty backdrop of cold deep space."
       }
     ]
   },
@@ -351,27 +358,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Plainswarp Hydra",
-        "visualDescription": "A multi-headed reptilian horror whose heads snap out from spatial folds."
+        "visualDescription": "Looks like a multi headed reptilian hydra whose snapping necks burst out from spatial folds like torn open reality seams."
       },
       {
         "name": "Blighted Chimera",
-        "visualDescription": "A stitched, rotting beast with multiple animal heads and exposed ribs."
+        "visualDescription": "Looks like a stitched rotting beast with mismatched animal heads and exposed ribs where rotting flesh has already failed away."
       },
       {
         "name": "Gorgon Centaur",
-        "visualDescription": "A half-serpent, half-horse creature with petrifying crystal protrusions."
+        "visualDescription": "Looks like a half serpent half horse horror bristling with petrifying crystal spikes along its scaled flanks and long mane."
       },
       {
         "name": "Siren Lurker",
-        "visualDescription": "A pale, scale-coated crawler with human-like features and long clawed appendages."
+        "visualDescription": "Looks like a pale scale coated crawler with eerily human features and long clawed appendages for grasping struggling living prey."
       },
       {
         "name": "Manticore Skimmer",
-        "visualDescription": "A bat-winged lion-beast with a tail composed of organic needle-launchers."
+        "visualDescription": "Looks like a bat winged lion beast with a whip tail made of organic needle launchers instead of a lash."
       },
       {
         "name": "Nebula Horror",
-        "visualDescription": "A shifting, multi-limbed nightmare with no defined front or back, covered in alien carapace."
+        "visualDescription": "Looks like a shifting multi limbed nightmare with no clear front or back, sheathed entirely in hard alien carapace plating."
       }
     ]
   },
@@ -381,27 +388,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Glow-Hide Hound",
-        "visualDescription": "A hairless dog with pulsing, bioluminescent veins and extra vestigial limbs."
+        "visualDescription": "Looks like a hairless dog with pulsing bioluminescent veins and extra vestigial limbs dangling loosely from both of its sides."
       },
       {
         "name": "Blight-Root Beast",
-        "visualDescription": "A deformed animal whose flesh has fused with toxic roots and thorny vines."
+        "visualDescription": "Looks like a deformed forest animal whose flesh has fused with toxic roots and thorny strangling vines nearly everywhere around."
       },
       {
         "name": "Ash-Walker Juggernaut",
-        "visualDescription": "A heavily mutated, stone-scaled humanoid with asymmetrical muscles."
+        "visualDescription": "Looks like a heavily mutated stone scaled humanoid with asymmetrical muscles bulging unevenly under cracked ash scarred desert hide plating."
       },
       {
         "name": "Gill-Spawn Crawler",
-        "visualDescription": "An amphibious creature with exposed, pulsing gills and webbed claws."
+        "visualDescription": "Looks like an amphibious horror with exposed pulsing gills and oversized webbed claws built specially for wet shoreline mud crawling."
       },
       {
         "name": "Rad-Winged Flyer",
-        "visualDescription": "A bat-like beast with glowing, irradiated membranes and multiple eyes."
+        "visualDescription": "Looks like a bat like beast with glowing irradiated wing membranes and a clustered set of many staring extra eyes."
       },
       {
         "name": "Cosmic Abomination",
-        "visualDescription": "A creature warped by solar radiation, covered in crystalline tumors and eyes."
+        "visualDescription": "Looks like a radiation warped creature studded with crystalline tumors and staring eyes grown all across its twisted alien hide."
       }
     ]
   },
@@ -411,57 +418,57 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Slime Mold",
-        "visualDescription": "A yellowish, pulsing carpet of protoplasm that digests organic matter."
+        "visualDescription": "Looks like a yellowish pulsing carpet of living protoplasm that slowly digests anything organic it crawls across and covers fully."
       },
       {
         "name": "Acidic Polyp",
-        "visualDescription": "A bubbling, emerald-green blob that leaves scorched trails on wood and moss."
+        "visualDescription": "Looks like a bubbling emerald green blob that leaves scorched acid trails across wood, leaves, and wet forest floor moss."
       },
       {
         "name": "Tar Bleeder",
-        "visualDescription": "A thick, black ooze resembling animated crude oil, smelling of sulfur."
+        "visualDescription": "Looks like a thick black ooze resembling animated crude oil, reeking strongly of sulfur as it creeps slowly ever forward."
       },
       {
         "name": "Coral Dissolver",
-        "visualDescription": "A translucent, stinging jelly that dissolves shells and bones on contact."
+        "visualDescription": "Looks like a translucent stinging sea jelly that dissolves hard shells and bones wherever its soft jelly body first touches."
       },
       {
         "name": "Aerosol Cloud",
-        "visualDescription": "A floating, vaporous mist that burns the lungs and eyes of those who touch it."
+        "visualDescription": "Looks like a floating vaporous mist that burns the lungs and eyes of anyone who walks blindly through its path."
       },
       {
         "name": "Void Jelly",
-        "visualDescription": "A dark purple, zero-gravity jelly filled with sparkling cosmic dust particles."
+        "visualDescription": "Looks like a dark purple zero gravity jelly filled with sparkling cosmic dust like tiny bright stars trapped in gel."
       }
     ]
   },
   {
     "name": "Outsider",
-    "description": "Beings originating from alternate dimensions or planes of existence that do not strictly fall into \\",
+    "description": "Beings originating from alternate dimensions or planes of existence that do not strictly fall into \"holy\" or \"demonic\" alignments.",
     "subtypes": [
       {
         "name": "Dimension Wanderer",
-        "visualDescription": "A tall, slender figure whose outlines flicker and warp like a bad signal."
+        "visualDescription": "Looks like a tall slender humanoid whose outlines constantly flicker and warp like broken static on a bad television signal."
       },
       {
         "name": "Ether-Web Weaver",
-        "visualDescription": "A multi-limbed spider-like entity made of purple energy threads."
+        "visualDescription": "Looks like a multi limbed forest spider woven entirely from purple energy threads instead of solid flesh and hard chitin."
       },
       {
         "name": "Rift Nomad",
-        "visualDescription": "A cloaked, featureless humanoid wearing masks made of pure force fields."
+        "visualDescription": "Looks like a cloaked featureless desert nomad wearing a blank mask forged from shimmering pure force fields and void light."
       },
       {
         "name": "Astral Angler",
-        "visualDescription": "A shimmering jellyfish-like flyer trailing energy filaments that phase through matter."
+        "visualDescription": "Looks like a shimmering jellyfish like flyer trailing luminous energy fishing filaments that phase harmlessly through any nearby solid matter."
       },
       {
         "name": "Void Glider",
-        "visualDescription": "A manta-ray-shaped entity of pure starlight that swims through air currents."
+        "visualDescription": "Looks like a manta ray shaped entity of pure starlight that swims through air currents like warm deep ocean water."
       },
       {
         "name": "Stellar Sentinel",
-        "visualDescription": "A geometric crystalline structure that rotates silently in the void of space."
+        "visualDescription": "Looks like a silent geometric crystalline structure rotating in deep void, facets catching and refracting cold distant starlight beam flashes."
       }
     ]
   },
@@ -471,27 +478,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Tumble-Weed Creeper",
-        "visualDescription": "A dry, ball-like mass of thorny branches that rolls quickly across open ground."
+        "visualDescription": "Looks like a dry ball of thorny tumbleweed branches that rolls quickly across open ground entirely on its own will."
       },
       {
         "name": "Bramble Horror",
-        "visualDescription": "A dense, animated cluster of thorned vines and snapping leaf traps."
+        "visualDescription": "Looks like a dense animated thicket of thorned vines and snapping leaf traps shaped into a stalking predatory forest beast."
       },
       {
         "name": "Alpine Lichen",
-        "visualDescription": "A stone-like plant growth that unfolds rock-hard tendrils when approached."
+        "visualDescription": "Looks like a stone colored mountain lichen growth that unfolds rock hard tendrils when anything living approaches much too close."
       },
       {
         "name": "Kelp Strangler",
-        "visualDescription": "A thick, waving sea-plant with suction cups and strong binding leaves."
+        "visualDescription": "Looks like a thick waving kelp plant with sticky suction cups and binding leaves that coil tightly like thick ropes."
       },
       {
         "name": "Spore Floater",
-        "visualDescription": "A large, drifting seed pod that releases clouds of sleeping spores."
+        "visualDescription": "Looks like a large drifting seed pod that releases thick clouds of sleeping spores from under its swollen soft underside."
       },
       {
         "name": "Solar Skimmer",
-        "visualDescription": "A hardy, vacuum-sealed space flower with leaves modified into solar sails."
+        "visualDescription": "Looks like a vacuum sealed space flower whose broad leaves have become solar sails for drifting slowly between distant stars."
       }
     ]
   },
@@ -501,27 +508,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Wisp Guide",
-        "visualDescription": "A flickering, blue flame that bobs gently above the grass."
+        "visualDescription": "Looks like a flickering blue will o wisp flame that bobs gently just above the waving tall prairie grass blades."
       },
       {
         "name": "Weeping Shade",
-        "visualDescription": "A weeping, translucent specter that blends into forest mists."
+        "visualDescription": "Looks like a weeping translucent specter half lost in forest mist, its pale face streaked with endless cold ghostly tears."
       },
       {
         "name": "Mirage Wraith",
-        "visualDescription": "A shimmering heat-wraith whose touch causes dry dehydration."
+        "visualDescription": "Looks like a shimmering heat wraith rising from desert air, whose burning touch leaves skin bone dry and badly cracked."
       },
       {
         "name": "Drowned Soul",
-        "visualDescription": "A waterlogged, glowing phantom trailing seaweed and cold bubbles."
+        "visualDescription": "Looks like a waterlogged glowing phantom trailing seaweed and cold bubbles as it drifts slowly through the dark ocean depths."
       },
       {
         "name": "Phantasm Gale",
-        "visualDescription": "A screaming face formed from wind currents and sparkling vapor."
+        "visualDescription": "Looks like a screaming face sculpted from wind currents and sparkling vapor, howling loudly as it races swiftly past travelers."
       },
       {
         "name": "Cosmic Echo",
-        "visualDescription": "A fading light reflection of a lost astronaut, floating silently in vacuum."
+        "visualDescription": "Looks like a fading light reflection of a lost astronaut, floating silently forever in the cold and empty vacuum beyond."
       }
     ]
   },
@@ -531,27 +538,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Locust Cloud",
-        "visualDescription": "A dense, buzzing mass of chewing insects that strip everything bare."
+        "visualDescription": "Looks like a dense buzzing cloud of chewing locusts that strip all vegetation bare wherever the hungry swarm mass lands."
       },
       {
         "name": "Spore Beetle Swarm",
-        "visualDescription": "Thousands of glowing, crawling insects covered in toxic fungal growths."
+        "visualDescription": "Looks like thousands of glowing crawling beetles each covered in toxic fungal growths and drifting clouds of poisonous spore dust."
       },
       {
         "name": "Blight Rat Pack",
-        "visualDescription": "A scurrying, red-eyed colony of diseased rodents that move in unison."
+        "visualDescription": "Looks like a scurrying red eyed colony of diseased rats moving as one coordinated living carpet of filthy matted fur."
       },
       {
         "name": "Stinger Jellyfish Swarm",
-        "visualDescription": "A glowing cloud of tiny, translucent jellyfish with stinging tentacles."
+        "visualDescription": "Looks like a glowing underwater cloud of tiny translucent jellyfish, each trailing clusters of needle thin stinging tentacle thread fronds."
       },
       {
         "name": "Sky-Wasp Swarm",
-        "visualDescription": "A buzzing swarm of hover-capable insects with bright orange stingers."
+        "visualDescription": "Looks like a buzzing swarm of hover wasps with bright orange stingers glinting like hot coals while out in flight."
       },
       {
         "name": "Nanite Swarm",
-        "visualDescription": "A cloud of microscopic silver drones acting with a single, buzzing intelligence."
+        "visualDescription": "Looks like a cloud of microscopic silver drones acting with one shared buzzing hive intelligence across the empty silent void."
       }
     ]
   },
@@ -561,27 +568,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Graveyard Ghoul",
-        "visualDescription": "A pale, gaunt corpse with elongated claws and dirt-stained skin."
+        "visualDescription": "Looks like a pale gaunt corpse with elongated claws and dirt stained skin stretched tightly over brittle yellowed dry bone."
       },
       {
         "name": "Blighted Husk",
-        "visualDescription": "A moss-covered skeleton bound together by dark energy and parasitic vines."
+        "visualDescription": "Looks like a moss covered skeleton bound together by dark energy and parasitic vines wrapping tightly around the old bones."
       },
       {
         "name": "Dust Mummy",
-        "visualDescription": "A desiccated corpse wrapped in decaying linen, emitting sand and dust."
+        "visualDescription": "Looks like a desiccated desert corpse wrapped in decaying linen bandages, constantly shedding fine sand and dry desert dust clouds."
       },
       {
         "name": "Drowned Sailor",
-        "visualDescription": "A bloated, waterlogged zombie dripping water and clad in rotted rags."
+        "visualDescription": "Looks like a bloated waterlogged zombie dripping seawater, still clad loosely in the rotted torn rags of a dead sailor."
       },
       {
         "name": "Phantom Wraith",
-        "visualDescription": "A dark, hovering specter draped in tattered black cloaks with burning red eyes."
+        "visualDescription": "Looks like a dark hovering specter draped in tattered black cloaks, with hollow eyes burning a deep angry blood red."
       },
       {
         "name": "Star-Husk",
-        "visualDescription": "A reanimated body preserved in a cracked space suit, driven by cosmic energies."
+        "visualDescription": "Looks like a reanimated corpse sealed inside a cracked space suit, driven onward only by cold distant cosmic void energies."
       }
     ]
   },
@@ -591,27 +598,27 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "subtypes": [
       {
         "name": "Prairie Beetle",
-        "visualDescription": "A horse-sized, hard-shelled beetle with heavy chewing mandibles."
+        "visualDescription": "Looks like a horse sized hard shelled prairie beetle with heavy chewing mandibles strong enough to crush solid dry bone."
       },
       {
         "name": "Bramble Spider",
-        "visualDescription": "A long-legged spider with a green, leaf-patterned abdomen."
+        "visualDescription": "Looks like a giant long legged forest spider with a green leaf patterned abdomen, perfectly camouflaged for silent underbrush ambush."
       },
       {
         "name": "Dune Scorpion",
-        "visualDescription": "A sand-colored arachnid with a thick stinger and heavy front claws."
+        "visualDescription": "Looks like a sand colored giant desert scorpion with a thick venomous stinger and crushing pair of heavy front claws."
       },
       {
         "name": "Barnacle Crawler",
-        "visualDescription": "A multi-legged crustacean parasite that clings to coastal rocks."
+        "visualDescription": "Looks like a multi legged crustacean parasite clinging to coastal rocks like an oversized living barnacle feeding rock side cluster."
       },
       {
         "name": "Sky Cicada",
-        "visualDescription": "A giant, winged insect that produces a deafening, high-pitched hum."
+        "visualDescription": "Looks like a giant winged sky cicada that produces a deafening high pitched hum audible far across the open sky."
       },
       {
         "name": "Asteroid Tick",
-        "visualDescription": "A silicon-shelled parasite that drills into metal hulls to feed on radiation."
+        "visualDescription": "Looks like a silicon shelled parasite that drills into metal hulls like a hungry tick greedily feeding on hull radiation."
       }
     ]
   }

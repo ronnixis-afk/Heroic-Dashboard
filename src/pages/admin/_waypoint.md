@@ -31,7 +31,15 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/reports/financial` | Financial Reports | Revenue + cost distribution |
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News | Announcements CMS |
-| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). |
+| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). | 
+
+## Monster Portrait Catalog Sync
+
+- **Source of truth:** `heroic-ai-rpg/src/constants/monsterTypes.ts` (names, descriptions, subtypes).
+- **Dashboard copy:** `src/constants/monsterPortraitCatalog.ts` — auto-generated; do not edit by hand.
+- **Sync command:** `npm run sync:monster-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
+- **Override path:** set `HEROIC_RPG_ROOT` if the RPG repo is not at `../Heroic AI RPG/heroic-ai-rpg`.
+- After changing monster types/subtypes/descriptions in the RPG (or adding new ones), run the sync and commit the regenerated catalog so deploys stay current.
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
 | `/admin/settings` | System Settings | Caps, referrals, model routing |
