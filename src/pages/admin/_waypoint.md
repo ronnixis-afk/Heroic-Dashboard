@@ -31,7 +31,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/reports/financial` | Financial Reports | Revenue + cost distribution |
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News | Announcements CMS |
-| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). |
+| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). |
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
 | `/admin/settings` | System Settings | Caps, referrals, model routing |

@@ -11,6 +11,7 @@ export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as cons
 export const IMAGE_ASSET_TYPES = [
   'Character Portrait',
   'NPC Portrait',
+  'Monster Portrait',
   'Point Of Interest Image',
   'Zone Image',
   'Item Image',
@@ -85,6 +86,8 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
       return compactSegments([metadata.zoneProperty, metadata.zoneQuality]);
     case 'Item Image':
       return compactSegments([metadata.itemCategory, metadata.itemSubtype]);
+    case 'Monster Portrait':
+      return compactSegments([metadata.monsterType, metadata.monsterSubtype]);
     default:
       return [];
   }

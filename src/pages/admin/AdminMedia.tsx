@@ -25,9 +25,18 @@ import {
   optimizeImageToSquareGrid,
   OptimizedImageResult,
 } from '../../lib/imageOptimizer';
+import {
+  getMonsterSubtypeDescription,
+  getMonsterSubtypes,
+  getMonsterTypeNames,
+} from '../../constants/monsterPortraitCatalog';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
+const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
+const BASE_IMAGE_ASSET_TYPES = IMAGE_ASSET_TYPES.filter((assetType) => assetType !== 'Monster Portrait');
+const getAssetTypeOptionsForGenre = (genre: ImageGenre): ImageAssetType[] =>
+  genre === 'Any Genre' ? [...IMAGE_ASSET_TYPES] : BASE_IMAGE_ASSET_TYPES;
 const TAG_GROUPS = [
   {
     label: 'Warrior',
@@ -171,13 +180,13 @@ const PORTRAIT_METADATA_OPTIONS = {
 };
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
-const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Monster Portrait', 'Service NPC Portrait']);
+const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
 
 const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
   LEGACY_NPC_PORTRAIT_TYPES.has(assetType) ? 'NPC Portrait' : (assetType as ImageAssetType);
 
 const isPortraitAssetType = (assetType: string | undefined) =>
-  assetType === 'Character Portrait' || assetType === 'NPC Portrait' || Boolean(assetType && LEGACY_NPC_PORTRAIT_TYPES.has(assetType));
+  assetType === 'Character Portrait' || assetType === 'NPC Portrait';
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
@@ -190,6 +199,7 @@ const ITEM_METADATA_OPTIONS = {
 const initialForm = {
   genre: 'Fantasy' as ImageGenre,
   assetType: 'Character Portrait' as ImageAssetType,
+  description: '',
   tags: [] as string[],
   metadata: {} as Record<string, string>,
 };
@@ -211,6 +221,14 @@ const toTitleCase = (value: string) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+};
 const getTitleFromFileName = (fileName: string) => {
   const nameWithoutExtension = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
   return toTitleCase(nameWithoutExtension) || 'Image Asset';
@@ -237,6 +255,7 @@ interface NamingInput {
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
   'NPC Portrait': ['race', 'gender'],
+  'Monster Portrait': ['monsterType', 'monsterSubtype'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
@@ -244,7 +263,10 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
 };
 
 const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
-  assetType === 'Point Of Interest Image' || assetType === 'Zone Image' || assetType === 'Item Image';
+  assetType === 'Point Of Interest Image' ||
+  assetType === 'Zone Image' ||
+  assetType === 'Item Image' ||
+  assetType === 'Monster Portrait';
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -443,6 +465,10 @@ export default function AdminMedia() {
     () => ZONE_TAG_SUGGESTIONS[structuredGenre][formData.metadata.zoneProperty] || [],
     [structuredGenre, formData.metadata.zoneProperty]
   );
+  const monsterSubtypeOptions = useMemo(
+    () => getMonsterSubtypes(formData.metadata.monsterType || ''),
+    [formData.metadata.monsterType]
+  );
   const previewUploadOrder = useMemo(
     () => (editingAsset ? getTrailingUploadOrder(editingAsset.title) || 1 : getNextUploadOrder(assets, formData)),
     [assets, editingAsset, formData]
@@ -603,9 +629,11 @@ export default function AdminMedia() {
   const handleEdit = (asset: ImageAsset) => {
     optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setEditingAsset(asset);
+    const assetType = normalizeAssetTypeForForm(asset.assetType);
     setFormData({
-      genre: asset.genre,
-      assetType: normalizeAssetTypeForForm(asset.assetType),
+      genre: assetType === 'Monster Portrait' ? 'Any Genre' : asset.genre,
+      assetType,
+      description: asset.description || '',
       tags: asset.tags || [],
       metadata: getStringMetadata(asset.metadata),
     });
@@ -644,7 +672,7 @@ export default function AdminMedia() {
           ...formData,
           tags: getTagsWithStructuredMetadata(formData),
           title: getGeneratedImageTitle(formData, uploadOrder),
-          description: '',
+          description: formData.description.trim(),
         });
         resetForm();
         setStatusMessage('Image Metadata Updated.');
@@ -662,7 +690,7 @@ export default function AdminMedia() {
           ...formData,
           tags: getTagsWithStructuredMetadata(formData),
           title: getGeneratedImageTitle(formData, firstUploadOrder + index),
-          description: '',
+          description: formData.description.trim(),
           blob: image.blob,
           sizeBytes: image.outputSize,
           width: image.width,
@@ -676,7 +704,7 @@ export default function AdminMedia() {
         `${uploadedCount} ${uploadedCount === 1 ? 'Image' : 'Images'} Uploaded To Media Library.`
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable To Save Image Asset.');
+      setErrorMessage(getErrorMessage(error, 'Unable To Save Image Asset.'));
     } finally {
       setIsSaving(false);
     }
@@ -706,7 +734,7 @@ export default function AdminMedia() {
         }.`
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable To Batch Tag Image Assets.');
+      setErrorMessage(getErrorMessage(error, 'Unable To Batch Tag Image Assets.'));
     } finally {
       setIsBatchSaving(false);
     }
@@ -725,7 +753,50 @@ export default function AdminMedia() {
         delete metadata.zoneQuality;
       }
 
+      if (key === 'monsterType') {
+        const previousDescription = getMonsterSubtypeDescription(
+          current.metadata.monsterType || '',
+          current.metadata.monsterSubtype || ''
+        );
+        delete metadata.monsterSubtype;
+        const shouldClearDescription =
+          !current.description.trim() || current.description.trim() === previousDescription.trim();
+        return {
+          ...current,
+          metadata,
+          description: shouldClearDescription ? '' : current.description,
+        };
+      }
+
       return { ...current, metadata };
+    });
+  };
+
+  const setMonsterSubtype = (subtypeName: string) => {
+    setFormData((current) => {
+      const metadata = { ...current.metadata };
+      const previousDescription = getMonsterSubtypeDescription(
+        current.metadata.monsterType || '',
+        current.metadata.monsterSubtype || ''
+      );
+
+      if (subtypeName) {
+        metadata.monsterSubtype = subtypeName;
+      } else {
+        delete metadata.monsterSubtype;
+      }
+
+      const nextDescription = subtypeName
+        ? getMonsterSubtypeDescription(current.metadata.monsterType || '', subtypeName)
+        : '';
+      const shouldSeedDescription =
+        !current.description.trim() || current.description.trim() === previousDescription.trim();
+
+      return {
+        ...current,
+        metadata,
+        description: shouldSeedDescription ? nextDescription : current.description,
+      };
     });
   };
 
@@ -766,7 +837,7 @@ export default function AdminMedia() {
       setSelectedAssetIds((current) => current.filter((id) => id !== asset.id));
       setStatusMessage('Image Asset Deleted.');
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable To Delete Image Asset.');
+      setErrorMessage(getErrorMessage(error, 'Unable To Delete Image Asset.'));
     }
   };
 
@@ -792,7 +863,7 @@ export default function AdminMedia() {
         `${selectedAssets.length} ${selectedAssets.length === 1 ? 'Image Asset' : 'Image Assets'} Deleted.`
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable To Batch Delete Image Assets.');
+      setErrorMessage(getErrorMessage(error, 'Unable To Batch Delete Image Assets.'));
     } finally {
       setIsBatchSaving(false);
     }
@@ -917,9 +988,20 @@ export default function AdminMedia() {
                   <label className="input-label">Genre</label>
                   <select
                     value={formData.genre}
-                    onChange={(event) =>
-                      setFormData({ ...formData, genre: event.target.value as ImageGenre, metadata: {} })
-                    }
+                    onChange={(event) => {
+                      const nextGenre = event.target.value as ImageGenre;
+                      const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
+                      const nextAssetType = allowedTypes.includes(formData.assetType)
+                        ? formData.assetType
+                        : 'Character Portrait';
+                      setFormData({
+                        ...formData,
+                        genre: nextGenre,
+                        assetType: nextAssetType,
+                        metadata: {},
+                        description: nextAssetType === 'Monster Portrait' ? formData.description : '',
+                      });
+                    }}
                     className="input-field"
                   >
                     {IMAGE_GENRES.map((genre) => (
@@ -934,12 +1016,19 @@ export default function AdminMedia() {
                   <label className="input-label">Asset Type</label>
                   <select
                     value={formData.assetType}
-                    onChange={(event) =>
-                      setFormData({ ...formData, assetType: event.target.value as ImageAssetType, metadata: {} })
-                    }
+                    onChange={(event) => {
+                      const nextAssetType = event.target.value as ImageAssetType;
+                      setFormData({
+                        ...formData,
+                        genre: nextAssetType === 'Monster Portrait' ? 'Any Genre' : formData.genre,
+                        assetType: nextAssetType,
+                        metadata: {},
+                        description: '',
+                      });
+                    }}
                     className="input-field"
                   >
-                    {IMAGE_ASSET_TYPES.map((assetType) => (
+                    {getAssetTypeOptionsForGenre(formData.genre).map((assetType) => (
                       <option key={assetType} value={assetType}>
                         {assetType}
                       </option>
@@ -1202,6 +1291,64 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+                )}
+
+                {formData.assetType === 'Monster Portrait' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="input-label">Monster Type</label>
+                        <select
+                          value={formData.metadata.monsterType || ''}
+                          onChange={(event) => setMetadataField('monsterType', event.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Any Type</option>
+                          {MONSTER_TYPE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Monster Subtype</label>
+                        <select
+                          value={formData.metadata.monsterSubtype || ''}
+                          onChange={(event) => setMonsterSubtype(event.target.value)}
+                          className="input-field"
+                          disabled={!formData.metadata.monsterType}
+                        >
+                          <option value="">Any Subtype</option>
+                          {monsterSubtypeOptions.map((option) => (
+                            <option key={option.name} value={option.name}>
+                              {option.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    {formData.metadata.monsterSubtype && (
+                      <p className="help-text">
+                        {getMonsterSubtypeDescription(
+                          formData.metadata.monsterType || '',
+                          formData.metadata.monsterSubtype
+                        )}
+                      </p>
+                    )}
+                    <div>
+                      <label className="input-label">Portrait Description</label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(event) =>
+                          setFormData((current) => ({ ...current, description: event.target.value }))
+                        }
+                        className="input-field min-h-[72px]"
+                        placeholder="Visual Description Used For Matching And Artist Reference"
+                        rows={3}
+                      />
                     </div>
                   </div>
                 )}
