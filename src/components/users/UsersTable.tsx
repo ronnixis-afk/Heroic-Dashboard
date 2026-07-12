@@ -54,7 +54,7 @@ export default function UsersTable({
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="relative group/avatar">
-                          <div className="relative w-6 h-6 rounded-md bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent group-hover:border-brand-accent/50 transition-colors">
+                          <div className="relative w-6 h-6 rounded-md bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center text-brand-accent group-hover:border-brand-accent/50 transition-colors">
                             {isLoading ? (
                               <Skeleton width="100%" height="100%" className="rounded-md" />
                             ) : (
@@ -82,13 +82,12 @@ export default function UsersTable({
                         <SkeletonText width={80} className="h-5 rounded-full" />
                       ) : (
                         <span className={cn(
-                          "badge",
-                          user.tier === 'super_admin' ? "bg-indigo-500 text-white" :
-                          user.tier === 'hero' ? "badge-accent bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                          user.tier === 'adventurer' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
-                          "badge-muted"
+                          user.tier === 'super_admin' ? 'badge-accent' :
+                          user.tier === 'hero' ? 'badge-warning' :
+                          user.tier === 'adventurer' ? 'badge-success' :
+                          'badge-muted'
                         )}>
-                          {user.tier === 'super_admin' && <ShieldCheck size={10} className="text-white" />}
+                          {user.tier === 'super_admin' && <ShieldCheck size={10} />}
                           {user.tier === 'super_admin' ? 'Super Admin' : user.tier.charAt(0).toUpperCase() + user.tier.slice(1)}
                         </span>
                       )}
@@ -121,7 +120,7 @@ export default function UsersTable({
                           <span className="text-xs font-semibold text-white font-mono">
                             {formatBytes(user.saveStats?.total_bytes || 0)}
                           </span>
-                          <span className="text-[10px] text-brand-text-muted">
+                          <span className="text-xs text-brand-text-muted">
                             {user.saveStats?.save_count || 0} {user.saveStats?.save_count === 1 ? 'save' : 'saves'}
                           </span>
                         </div>

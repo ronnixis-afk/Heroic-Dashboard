@@ -116,7 +116,7 @@ export default function UserDetailModal({
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-accent/20 to-purple-500/20 border border-brand-primary flex items-center justify-center text-brand-accent">
+            <div className="w-10 h-10 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center text-brand-accent">
               <Mail size={18} />
             </div>
             <div className="space-y-0.5 flex-1 min-w-0">
@@ -222,11 +222,11 @@ export default function UserDetailModal({
                         <span className="text-xs font-semibold text-white truncate" title={save.name}>
                           {save.name}
                         </span>
-                        <span className="badge-muted text-[9px] px-1 font-mono uppercase truncate max-w-[120px]" title={save.worldId}>
+                        <span className="badge-muted font-mono truncate max-w-[120px]" title={save.worldId}>
                           {save.worldId}
                         </span>
                       </div>
-                      <p className="text-[10px] text-brand-text-muted flex items-center gap-1">
+                      <p className="text-xs text-brand-text-muted flex items-center gap-1">
                         <span>Last Saved:</span>
                         <span>
                           {new Date(save.updatedAt).toLocaleString(undefined, {

@@ -50,9 +50,11 @@ function RealTimeTrendCard({ title, value, trend, dataKey, color, loading, icon,
           ) : (
             <div className="flex items-baseline gap-2 mt-1">
               <span className="card-metric">{value}</span>
-              <div className={`badge ${
-                isNeutral ? 'badge-muted' : isPositive ? 'badge-success' : 'badge-danger'
-              }`}>
+              <div
+                className={
+                  isNeutral ? 'badge-muted' : isPositive ? 'badge-success' : 'badge-danger'
+                }
+              >
                 {!isNeutral && (isPositive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />)}
                 {comparison}
               </div>
@@ -118,7 +120,10 @@ export default function AdminAnalytics() {
 
   return (
     <div className="page">
-      <PageHeader title="Real-Time Analytics" />
+      <PageHeader
+        title="Real-Time Analytics"
+        description="Live sessions, API cost, latency, and model usage trends."
+      />
       
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 

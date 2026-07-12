@@ -27,7 +27,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="page">
-      <PageHeader title="Admin Dashboard" />
+      <PageHeader
+        title="Admin Dashboard"
+        description="Revenue, profitability, acquisition, and top consumer overview."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-2">

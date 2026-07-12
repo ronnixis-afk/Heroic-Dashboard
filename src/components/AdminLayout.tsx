@@ -172,13 +172,16 @@ export default function AdminLayout() {
                     to={item.path}
                     title={!isSidebarOpen ? item.label : undefined}
                     className={cn(
-                      'flex items-center gap-2.5 rounded-md px-2 h-8 text-xs font-medium transition-colors duration-150',
+                      'relative flex items-center gap-2.5 rounded-md px-2 h-8 text-xs font-medium transition-colors duration-150',
                       isActive
-                        ? 'bg-brand-primary text-brand-text'
-                        : 'text-brand-text-muted hover:bg-brand-hover hover:text-brand-text',
+                        ? 'bg-brand-hover text-brand-text'
+                        : 'text-brand-text-muted hover:bg-brand-hover/70 hover:text-brand-text',
                       !isSidebarOpen && 'justify-center px-0'
                     )}
                   >
+                    {isActive && isSidebarOpen && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-brand-accent" />
+                    )}
                     <item.icon
                       size={14}
                       className={cn('shrink-0', isActive && 'text-brand-accent')}
@@ -222,9 +225,14 @@ export default function AdminLayout() {
                 <Menu size={14} />
               </button>
             )}
-            <h2 className="text-title font-semibold text-brand-text truncate">
-              {currentPage?.label ?? 'Dashboard'}
-            </h2>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-brand-text-muted truncate">
+                {NAV_GROUPS.find((g) => g.items.some((i) => i.path === currentPage?.path))?.group ?? 'Main'}
+              </p>
+              <h2 className="text-title font-semibold text-brand-text truncate leading-tight">
+                {currentPage?.label ?? 'Dashboard'}
+              </h2>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 relative shrink-0">
@@ -232,9 +240,10 @@ export default function AdminLayout() {
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="btn-icon relative"
+                aria-label="Notifications"
+                aria-expanded={showNotifications}
               >
                 <Bell size={14} />
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
               </button>
 
               <AnimatePresence>
@@ -243,19 +252,20 @@ export default function AdminLayout() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
-                    className="absolute right-0 top-full mt-1.5 w-56 tooltip-panel z-50"
+                    className="absolute right-0 top-full mt-1.5 w-64 tooltip-panel z-50"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-title font-semibold">Notifications</h4>
+                      <h4 className="text-xs font-semibold text-brand-text">Notifications</h4>
                       <button
                         onClick={() => setShowNotifications(false)}
                         className="btn-icon w-6 h-6"
+                        aria-label="Close Notifications"
                       >
                         <X size={12} />
                       </button>
                     </div>
-                    <p className="text-center py-4 text-xs text-brand-text-muted">
-                      No New Notifications.
+                    <p className="text-center py-6 text-xs text-brand-text-muted">
+                      No New Notifications
                     </p>
                   </motion.div>
                 )}

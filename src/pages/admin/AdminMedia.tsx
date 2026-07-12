@@ -9,7 +9,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatusBanner } from '../../components/ui';
 import {
   IMAGE_ASSET_TYPES,
   IMAGE_GENRES,
@@ -796,13 +796,18 @@ export default function AdminMedia() {
     <div className="page">
       <PageHeader
         title="Media Library"
-        description="Upload WebP Image Assets For Future Game Imagery."
+        description="Upload and tag WebP image assets for game imagery."
       />
 
       {(statusMessage || errorMessage) && (
-        <div className={errorMessage ? 'badge-danger' : 'badge-success'}>
-          {errorMessage || statusMessage}
-        </div>
+        <StatusBanner
+          type={errorMessage ? 'error' : 'success'}
+          message={errorMessage || statusMessage || ''}
+          onDismiss={() => {
+            setErrorMessage(null);
+            setStatusMessage(null);
+          }}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[380px_1fr]">

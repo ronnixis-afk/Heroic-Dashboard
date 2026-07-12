@@ -5,7 +5,7 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 import UsersFilterBar from '../../components/users/UsersFilterBar';
 import UsersTable from '../../components/users/UsersTable';
 import UserDetailModal from '../../components/users/UserDetailModal';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatCard, StatusBanner } from '../../components/ui';
 import { Database, Save } from 'lucide-react';
 import { formatBytes } from '../../lib/utils';
 
@@ -42,39 +42,32 @@ export default function AdminUsers() {
 
   return (
     <div className="page">
-      <PageHeader title="User Management" />
+      <PageHeader
+        title="User Management"
+        description="Search, sync, and inspect player accounts and cloud save usage."
+      />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-        <div className="card p-3.5 flex items-center justify-between">
-          <div>
-            <h3 className="card-title">Total Cloud Storage</h3>
-            <p className="text-xs text-brand-text-muted mt-0.5 font-medium">Aggregated across all world saves</p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="card-metric text-brand-accent">
-                {loading ? 'Loading...' : formatBytes(totalSavesSize)}
-              </span>
-            </div>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center text-brand-accent">
-            <Database size={20} />
-          </div>
-        </div>
+      {syncMessage && (
+        <StatusBanner
+          type={syncMessage.toLowerCase().includes('fail') || syncMessage.toLowerCase().includes('error') ? 'error' : 'success'}
+          message={syncMessage}
+        />
+      )}
 
-        <div className="card p-3.5 flex items-center justify-between">
-          <div>
-            <h3 className="card-title">Active Cloud Saves</h3>
-            <p className="text-xs text-brand-text-muted mt-0.5 font-medium">Total registered adventure files</p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="card-metric text-white">
-                {loading ? 'Loading...' : totalSavesCount.toLocaleString()}
-              </span>
-            </div>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
-            <Save size={20} />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <StatCard
+          label="Total Cloud Storage"
+          description="Aggregated across all world saves"
+          value={loading ? '—' : formatBytes(totalSavesSize)}
+          icon={Database}
+          accent
+        />
+        <StatCard
+          label="Active Cloud Saves"
+          description="Total registered adventure files"
+          value={loading ? '—' : totalSavesCount.toLocaleString()}
+          icon={Save}
+        />
       </div>
 
       <UsersFilterBar
@@ -97,8 +90,8 @@ export default function AdminUsers() {
             exit={{ opacity: 0, y: -6 }}
             className="card p-3"
           >
-            <p className="text-xs text-brand-text-muted">
-              Placeholder for advanced filters (Tier, Credits, Date Range).
+            <p className="help-text">
+              Advanced filters for tier, credits, and date range will appear here.
             </p>
           </motion.div>
         )}

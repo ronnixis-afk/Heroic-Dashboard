@@ -3,7 +3,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { getSupabaseClient } from '../../lib/supabase';
 import { ShieldAlert, Sparkles, HelpCircle, Search, Calendar, Monitor, Globe, Compass, Cpu, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatusBanner, EmptyState } from '../../components/ui';
 
 interface FeedbackItem {
   id: string;
@@ -177,7 +177,7 @@ export default function AdminFeedback() {
       case 'Suggestion':
         return <Sparkles className="text-emerald-400" size={12} />;
       default:
-        return <HelpCircle className="text-zinc-400" size={12} />;
+        return <HelpCircle className="text-brand-text-muted" size={12} />;
     }
   };
 
@@ -196,8 +196,9 @@ export default function AdminFeedback() {
     <div className="page">
       <PageHeader
         title="User Feedback"
+        description="Review bug reports, suggestions, and other player submissions."
         actions={
-          <button onClick={fetchFeedback} className="btn-primary">
+          <button onClick={fetchFeedback} className="btn-secondary">
             Refresh Feed
           </button>
         }
@@ -238,146 +239,156 @@ export default function AdminFeedback() {
             className="input-field cursor-pointer"
           >
             <option value="All">All Categories</option>
-            {getCategoriesList().map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
+            {getCategoriesList().map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
-      {error && (
-        <div className="card p-3 badge-danger text-center text-xs">
-          {error}
-        </div>
-      )}
+      {error && <StatusBanner type="error" message={error} onDismiss={() => setError(null)} />}
 
       <div className="space-y-3">
-        <div className="flex justify-between items-center px-1 text-xs text-brand-text-muted font-medium">
-          <span>Results: {filteredItems.length}</span>
+        <div className="flex justify-between items-center px-1">
+          <span className="stat-label">Results: {filteredItems.length}</span>
         </div>
 
         <div className="space-y-2">
           <AnimatePresence>
-            {!loading && filteredItems.map((item) => {
-              const isExpanded = expandedId === item.id;
-              const hasMetadata = item.metadata && Object.keys(item.metadata).length > 0;
-              
-              return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="card p-3.5 transition-all hover:bg-brand-primary/5 space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`badge ${getTypeBadgeClass(item.type)}`}>
-                          {getTypeIcon(item.type)}
-                          {item.type}
-                        </span>
-                        <span className="badge-muted">
-                          {item.category}
-                        </span>
-                        <span className="text-xs text-brand-text-muted flex items-center gap-1 ml-auto">
-                          <Calendar size={10} />
-                          {new Date(item.createdAt).toLocaleString()}
-                        </span>
+            {!loading &&
+              filteredItems.map((item) => {
+                const isExpanded = expandedId === item.id;
+                const hasMetadata = item.metadata && Object.keys(item.metadata).length > 0;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    className="card p-3.5 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={getTypeBadgeClass(item.type)}>
+                            {getTypeIcon(item.type)}
+                            {item.type}
+                          </span>
+                          <span className="badge-muted">{item.category}</span>
+                          <span className="text-xs text-brand-text-muted flex items-center gap-1 ml-auto">
+                            <Calendar size={10} />
+                            {new Date(item.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-medium text-brand-text">
+                          {item.User?.email || (
+                            <span className="text-brand-text-muted italic">
+                              Anonymous ({item.userId})
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-brand-text-muted whitespace-pre-wrap">
+                          {item.message}
+                        </p>
                       </div>
 
-                      <div className="text-xs font-semibold text-white">
-                        {item.User?.email || <span className="text-brand-text-muted italic">Anonymous ({item.userId})</span>}
-                      </div>
-
-                      <p className="text-xs leading-relaxed text-zinc-300 whitespace-pre-wrap pt-0.5">
-                        {item.message}
-                      </p>
-                    </div>
-
-                    <div className="flex-shrink-0">
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="btn-icon hover:text-red-400 hover:bg-red-500/10"
+                        className="btn-icon hover:text-red-400 hover:bg-red-500/10 shrink-0"
                         title="Delete Feedback"
+                        aria-label="Delete Feedback"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
-                  </div>
 
-                  {hasMetadata && (
-                    <div className="border-t border-brand-border pt-2">
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                        className="flex items-center gap-1 text-xs font-medium text-brand-text-muted hover:text-white transition-colors cursor-pointer"
-                      >
-                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        <span>Game Context & Environment</span>
-                      </button>
+                    {hasMetadata && (
+                      <div className="border-t border-brand-border pt-2">
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                          className="flex items-center gap-1 text-xs font-medium text-brand-text-muted hover:text-brand-text transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          <span>Game Context & Environment</span>
+                        </button>
 
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden mt-2"
-                          >
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-brand-bg rounded-lg border border-brand-border text-xs">
-                              {item.metadata.worldName && (
-                                <div className="flex items-center gap-2">
-                                  <Compass size={10} className="text-zinc-500" />
-                                  <span className="text-zinc-500">World:</span>
-                                  <span className="text-zinc-300 font-medium">{item.metadata.worldName}</span>
-                                </div>
-                              )}
-                              {item.metadata.location && (
-                                <div className="flex items-center gap-2">
-                                  <Globe size={10} className="text-zinc-500" />
-                                  <span className="text-zinc-500">Location:</span>
-                                  <span className="text-zinc-300 font-medium">
-                                    {[item.metadata.locale, item.metadata.location].filter(Boolean).join(', ')}
-                                  </span>
-                                </div>
-                              )}
-                              {item.metadata.skillConfiguration && (
-                                <div className="flex items-center gap-2">
-                                  <Cpu size={10} className="text-zinc-500" />
-                                  <span className="text-zinc-500">Genre/Skills:</span>
-                                  <span className="text-zinc-300 font-medium">{item.metadata.skillConfiguration}</span>
-                                </div>
-                              )}
-                              {item.metadata.userAgent && (
-                                <div className="flex items-start gap-2 sm:col-span-2">
-                                  <Monitor size={10} className="text-zinc-500 mt-0.5" />
-                                  <span className="text-zinc-500 whitespace-nowrap">Agent:</span>
-                                  <span className="text-zinc-300 truncate font-mono" title={item.metadata.userAgent}>
-                                    {item.metadata.userAgent}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden mt-2"
+                            >
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-brand-bg rounded-md border border-brand-border text-xs">
+                                {item.metadata.worldName && (
+                                  <div className="flex items-center gap-2">
+                                    <Compass size={10} className="text-brand-text-muted" />
+                                    <span className="text-brand-text-muted">World:</span>
+                                    <span className="text-brand-text font-medium">
+                                      {item.metadata.worldName}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.metadata.location && (
+                                  <div className="flex items-center gap-2">
+                                    <Globe size={10} className="text-brand-text-muted" />
+                                    <span className="text-brand-text-muted">Location:</span>
+                                    <span className="text-brand-text font-medium">
+                                      {[item.metadata.locale, item.metadata.location]
+                                        .filter(Boolean)
+                                        .join(', ')}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.metadata.skillConfiguration && (
+                                  <div className="flex items-center gap-2">
+                                    <Cpu size={10} className="text-brand-text-muted" />
+                                    <span className="text-brand-text-muted">Genre/Skills:</span>
+                                    <span className="text-brand-text font-medium">
+                                      {item.metadata.skillConfiguration}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.metadata.userAgent && (
+                                  <div className="flex items-start gap-2 sm:col-span-2">
+                                    <Monitor size={10} className="text-brand-text-muted mt-0.5" />
+                                    <span className="text-brand-text-muted whitespace-nowrap">
+                                      Agent:
+                                    </span>
+                                    <span
+                                      className="text-brand-text truncate font-mono"
+                                      title={item.metadata.userAgent}
+                                    >
+                                      {item.metadata.userAgent}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
           </AnimatePresence>
 
-          {loading && (
-            <div className="py-12 text-center card text-xs text-brand-text-muted italic">
-              Loading Feedback Feed...
-            </div>
-          )}
+          {loading && <EmptyState compact title="Loading Feedback Feed..." />}
 
           {!loading && filteredItems.length === 0 && (
-            <div className="py-12 text-center card text-xs text-brand-text-muted italic">
-              No Feedback Entries Found.
-            </div>
+            <EmptyState
+              compact
+              icon={HelpCircle}
+              title="No Feedback Entries Found"
+              description="Try adjusting your filters or refresh the feed."
+            />
           )}
         </div>
       </div>

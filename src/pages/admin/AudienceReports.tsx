@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { TrendingUp, AlertTriangle } from 'lucide-react';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import { ActiveUsersCard } from '../../components/dashboard/ActiveUsersCard';
 import RecentSignups from '../../components/dashboard/RecentSignups';
@@ -15,7 +15,7 @@ export default function AudienceReports() {
 
   if (loading) {
     return (
-      <div className="page pb-6">
+      <div className="page">
         <div className="flex flex-col gap-2">
           <Skeleton width={200} height={24} mdWidth={240} mdHeight={28} />
           <Skeleton width="100%" height={14} mdWidth={450} className="opacity-50" />
@@ -40,20 +40,14 @@ export default function AudienceReports() {
   }
 
   return (
-    <div className="page pb-6">
+    <div className="page">
       <PageHeader
         title="Audience Reports"
-        description="Analysis of user growth, behavior, and retention across the platform."
-        actions={
-          <span className="badge-accent flex items-center gap-1.5">
-            <Users size={12} />
-            Audience Hub
-          </span>
-        }
+        description="User growth, behavior, and retention across the platform."
       />
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <ActiveUsersCard />
@@ -61,17 +55,17 @@ export default function AudienceReports() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05 }}
         >
           <UserAcquisition acquisitionData={acquisitionData} />
         </motion.div>
-        
+
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1 }}
         >
           <RecentSignups recentSignups={recentSignups} />
         </motion.div>
@@ -79,29 +73,29 @@ export default function AudienceReports() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.15 }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <TrendingUp size={14} className="text-emerald-500" />
+            <TrendingUp size={14} className="text-brand-accent" />
             <h3 className="section-title">User Retention</h3>
           </div>
-          <div className="overflow-x-auto custom-scrollbar">
+          <div className="overflow-x-auto">
             <RetentionTable />
           </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2 }}
         >
           <div className="mb-2 flex items-center gap-2">
-            <AlertTriangle size={14} className="text-orange-500" />
+            <AlertTriangle size={14} className="text-amber-400" />
             <h3 className="section-title">Churn Signals</h3>
           </div>
-          <div className="overflow-x-auto custom-scrollbar">
+          <div className="overflow-x-auto">
             <ChurnSignalsTable />
           </div>
         </motion.div>

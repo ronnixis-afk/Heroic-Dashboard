@@ -92,8 +92,8 @@ export function ChurnSignalsTable() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-[#ff5a36]';
-    if (score >= 60) return 'text-[#f59e0b]';
+    if (score >= 80) return 'text-red-400';
+    if (score >= 60) return 'text-amber-400';
     return 'text-brand-text';
   };
 
@@ -103,12 +103,12 @@ export function ChurnSignalsTable() {
       
       <div className="flex flex-wrap gap-4 mb-3 pb-3 border-b border-brand-border">
         <div>
-          <div className="input-label mb-0">At-Risk Users</div>
-          <div className="card-metric text-[#ff5a36]">{data.summary.totalAtRisk}</div>
+          <div className="stat-label">At-Risk Users</div>
+          <div className="card-metric text-red-400">{data.summary.totalAtRisk}</div>
         </div>
         <div>
-          <div className="input-label mb-0">New This Week</div>
-          <div className="card-metric text-[#f59e0b]">{data.summary.newThisWeek}</div>
+          <div className="stat-label">New This Week</div>
+          <div className="card-metric text-amber-400">{data.summary.newThisWeek}</div>
         </div>
       </div>
 

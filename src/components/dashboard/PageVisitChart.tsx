@@ -93,7 +93,7 @@ export function PageVisitChart() {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-brand-text-muted">Unique Users</span>
-                            <span className="text-xs font-semibold text-purple-400">{entry.uniqueUsers}</span>
+                            <span className="text-xs font-semibold text-brand-accent">{entry.uniqueUsers}</span>
                           </div>
                         </div>
                       </div>

@@ -4,10 +4,12 @@ This document is the single source of truth for visual style, typography, layout
 
 ## Core Directives
 
-1. **Title Casing is Mandatory:** Always use Title Casing for text, titles, and labels (e.g., "Revenue & API Costs", "Token Estimator").
-2. **No All Caps:** Never use ALL CAPS or all uppercase for titles or headings.
+1. **Title Casing is Mandatory:** Always use Title Casing for titles, labels, buttons, and empty-state titles (e.g., "Revenue & API Costs", "Token Estimator").
+2. **No All Caps:** Never use ALL CAPS or all-uppercase for titles or headings.
 3. **Desktop First, Mobile Usable:** Optimise for desktop and laptop viewports. Ensure layouts remain usable on mobile with responsive grids, collapsible sidebar, and touch-friendly targets.
 4. **Consult Styling File:** Use [index.css](src/index.css) for definitive brand tokens before adding custom inline styles.
+5. **Stay On Type Scale:** Only use the three sizes below. Do not invent `text-sm`, `text-[10px]`, or other ad-hoc sizes in admin UI.
+6. **Minimal CMS Tone:** Prefer quiet chrome, clear feedback, and consistent spacing over decorative badges or competing accents.
 
 ---
 
@@ -17,13 +19,13 @@ The dashboard uses a **three-tier type scale** with Inter as the primary font:
 
 | Role | Size | Token / Class | Usage |
 |------|------|---------------|-------|
-| Body | 11px | `text-xs` / `text-body` | Default UI text, table data, labels, metadata |
-| Title | 14px | `text-title` | Widget titles, section headers, sidebar labels |
-| Header | 18px | `text-header` / `card-metric` | Page titles, key metric values |
+| Body | 11px | `text-xs` / `text-body` / `.help-text` | Default UI text, table data, labels, metadata, helper copy |
+| Title | 14px | `text-title` / `.section-title` / `.card-title` | Widget titles, section headers, sticky page label |
+| Header | 18px | `text-header` / `.page-title` / `.card-metric` | Page titles, key metric values |
 
-**Font Weights:** `font-medium` (500) for labels, `font-semibold` (600) for titles and headers.
+**Font Weights:** `font-medium` (500) for labels and body emphasis, `font-semibold` (600) for titles and headers. Avoid `font-bold` in admin UI.
 
-**Icon Sizes:** 12px in buttons, 14px in navigation, 18px for decorative accents.
+**Icon Sizes:** 12px in buttons, 14px in navigation and section titles, 16px for decorative accents.
 
 ---
 
@@ -46,6 +48,7 @@ Defined in [index.css](src/index.css) via Tailwind CSS v4 `@theme`.
 * **Typography:**
   * `--color-brand-text` (`#ffffff`): Primary text
   * `--color-brand-text-muted` (`#8b8c94`): Secondary text
+* **Semantic:** Use `.badge-success`, `.badge-warning`, `.badge-danger`, `.badge-accent`, `.badge-muted` — prefer these over one-off purple/indigo/zinc colors.
 
 ### Spacing
 
@@ -54,6 +57,7 @@ Use the 4px / 8px / 12px / 16px scale:
 * `gap-2` / `gap-3` — Grid and list spacing
 * `p-3` / `p-3.5` — Card interior padding
 * `p-3 sm:p-4` — Page content padding
+* `.page` uses `space-y-4` between major blocks
 
 ---
 
@@ -62,9 +66,18 @@ Use the 4px / 8px / 12px / 16px scale:
 Defined in `AdminLayout.tsx`:
 
 1. **Shell:** Full-height flex layout, sidebar + main content
-2. **Sidebar:** 200px expanded / 52px collapsed; mobile overlay drawer at 220px
-3. **Header:** 44px (`h-11`), sticky, shows current page title and user menu
+2. **Sidebar:** 200px expanded / 52px collapsed; mobile overlay drawer at 220px; active item uses accent bar + muted surface
+3. **Header:** 44px (`h-11`), sticky, shows nav group + page title and user menu
 4. **Content:** Max-width 1400px, `p-3 sm:p-4`
+
+Every admin page should start with:
+
+```tsx
+<div className="page">
+  <PageHeader title="..." description="..." actions={...} />
+  ...
+</div>
+```
 
 ---
 
@@ -75,23 +88,38 @@ Import shared layout primitives from `src/components/ui/`.
 ### Panels & Cards
 
 ```tsx
-import { Card, PageHeader } from '../components/ui';
+import { Card, PageHeader, StatCard, StatusBanner, EmptyState, PageLoader } from '../components/ui';
 
 <PageHeader title="User Management" description="Optional subtitle" />
+<StatCard label="Total Cloud Storage" value="1.2 GB" icon={Database} accent />
 <div className="card p-3.5">...</div>
 ```
 
 * **`.card`** — Bordered surface with `rounded-lg`
 * **`.card-title`** — 14px widget title
-* **`.card-metric`** — 18px bold metric value
+* **`.card-metric`** — 18px semibold metric value
 * **`.card-header`** — Title + action row
+* **`.stat-label`** / **`.help-text`** — Muted 11px labels and helper copy
+* **`.metric-tile`** — Compact metric cell inside forms
+* **`.select-row`** — Selectable list rows (email templates, etc.)
+* **`.callout`** / **`.callout-accent`** — Inline informational panels
+
+### Feedback
+
+| Component | Usage |
+|-----------|-------|
+| `StatusBanner` | Success / error / info after saves, syncs, deletes |
+| `EmptyState` | Empty tables, lists, and filtered results |
+| `PageLoader` | Full-page loading before content is ready |
+
+Classes: `.status-banner-*`, `.empty-state`, `.page-loader`
 
 ### Buttons
 
 | Class | Usage |
 |-------|-------|
 | `.btn-primary` | Primary actions (Export, Save, View All) |
-| `.btn-secondary` | Secondary actions (Filters, Sync) |
+| `.btn-secondary` | Secondary actions (Filters, Sync, Refresh) |
 | `.btn-ghost` | Low-emphasis actions |
 | `.btn-danger` | Destructive actions |
 | `.btn-icon` | Icon-only controls (28×28px) |
@@ -130,6 +158,7 @@ import FilterTabs from '../components/ui/FilterTabs';
 * **Focus:** 2px accent outline via `:focus-visible`
 * **Touch Targets:** Minimum 28px height on buttons; use `btn-icon` padding for small controls
 * **Transitions:** 150ms for hover; `active:scale-[0.98]` on buttons
+* **Honesty:** Do not show unread indicators when there are no notifications
 
 ---
 

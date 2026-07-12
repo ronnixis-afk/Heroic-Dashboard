@@ -57,7 +57,7 @@ export default function UsersFilterBar({
           className="btn-secondary btn-sm"
         >
           <RefreshCw size={12} className={cn(isSyncing && 'animate-spin')} />
-          {isSyncing ? 'Syncing...' : syncMessage || 'Sync'}
+          {isSyncing ? 'Syncing...' : 'Sync Users'}
         </button>
         <button onClick={handleExport} disabled={isExporting} className="btn-primary btn-sm">
           {isExporting ? 'Exporting...' : 'Export'}

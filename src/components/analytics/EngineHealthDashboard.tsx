@@ -64,7 +64,7 @@ export default function EngineHealthDashboard() {
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="card p-3.5 border-l-4 border-purple-500">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="card p-3.5 border-l-2 border-brand-accent">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="input-label mb-0">Tail Latency (P95)</p>
@@ -74,7 +74,7 @@ export default function EngineHealthDashboard() {
                                 <p className="card-metric mt-1">{telemetry?.latency.p95}ms</p>
                             )}
                         </div>
-                        <TrendingUp className="text-purple-500" size={14} />
+                        <TrendingUp className="text-brand-accent" size={14} />
                     </div>
                 </motion.div>
 

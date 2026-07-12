@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, PieChart } from 'lucide-react';
+import { TrendingUp, PieChart } from 'lucide-react';
 import RevenueOverview from '../../components/dashboard/RevenueOverview';
 import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import { CostAnalyticsCard } from '../../components/dashboard/CostAnalyticsCard';
@@ -8,62 +8,54 @@ import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
 import { PageHeader } from '../../components/ui';
 
 export default function FinancialReports() {
-  const { 
-    loading, 
-    totalRevenue, 
+  const {
+    loading,
+    totalRevenue,
     dailyData,
     weeklyData,
     monthlyData,
     yearlyData,
     netProfit,
-    profitMargin
+    profitMargin,
   } = useDashboardMetrics();
 
-  const isLoading = loading;
-
   return (
-    <div className="page pb-6">
+    <div className="page">
       <PageHeader
         title="Financial Reports"
-        description="Comprehensive analysis of revenue, costs, and platform profitability."
-        actions={
-          <span className="badge-success flex items-center gap-1.5">
-            <DollarSign size={12} />
-            Financial Hub
-          </span>
-        }
+        description="Revenue, API costs, and platform profitability."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="lg:col-span-2"
         >
-          <RevenueOverview 
-            totalRevenue={totalRevenue} 
+          <RevenueOverview
+            totalRevenue={totalRevenue}
             dailyData={dailyData}
             weeklyData={weeklyData}
             monthlyData={monthlyData}
             yearlyData={yearlyData}
-            isLoading={isLoading}
+            isLoading={loading}
           />
         </motion.div>
-        
+
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05 }}
           className="lg:col-span-2"
         >
-          <NetProfitWidget netProfit={netProfit} profitMargin={profitMargin} isLoading={isLoading} />
+          <NetProfitWidget netProfit={netProfit} profitMargin={profitMargin} isLoading={loading} />
         </motion.div>
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.1 }}
       >
         <div className="mb-2 flex items-center gap-2">
           <PieChart size={14} className="text-brand-accent" />
@@ -73,19 +65,21 @@ export default function FinancialReports() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="card p-3.5 border-l-4 border-emerald-500"
+        transition={{ delay: 0.15 }}
+        className="callout-accent"
       >
-        <div className="flex flex-col sm:flex-row items-start gap-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500 flex-shrink-0">
-            <TrendingUp size={16} />
+        <div className="flex items-start gap-3">
+          <div className="p-1.5 rounded-md bg-brand-accent/10 text-brand-accent shrink-0">
+            <TrendingUp size={14} />
           </div>
           <div>
-            <h3 className="text-title font-semibold text-white mb-1">Profitability Insight</h3>
-            <p className="text-xs text-brand-text-muted leading-relaxed max-w-3xl">
-              Stripe Revenue Is Connected. Net Profit Calculations Account for Subscriptions and Credit Purchases in Real-Time. Based on Current Token Consumption, the Largest Cost Driver is Output Token Generation in High-Narrative Sessions. Monitor Token Usage Patterns to Maximize Profitability.
+            <h3 className="text-xs font-semibold text-brand-text mb-1">Profitability Insight</h3>
+            <p className="help-text max-w-3xl">
+              Stripe revenue is connected. Net profit accounts for subscriptions and credit purchases
+              in real time. Output token generation in high-narrative sessions is typically the
+              largest cost driver — monitor token patterns to protect margin.
             </p>
           </div>
         </div>
