@@ -4,7 +4,8 @@
  */
 export async function fetchRpgAdmin<T>(
   path: string,
-  getToken: (options?: { template?: string }) => Promise<string | null>
+  getToken: (options?: { template?: string }) => Promise<string | null>,
+  init?: RequestInit
 ): Promise<T> {
   const apiUrl = import.meta.env.VITE_RPG_API_URL;
   if (!apiUrl) {
@@ -14,9 +15,11 @@ export async function fetchRpgAdmin<T>(
   const token = await getToken();
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const response = await fetch(`${apiUrl}${normalizedPath}`, {
+    ...init,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'Content-Type': 'application/json',
+      ...(init?.headers || {}),
     },
   });
 

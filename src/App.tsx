@@ -14,6 +14,7 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminMedia from './pages/admin/AdminMedia';
+import AdminEmails from './pages/admin/AdminEmails';
 
 
 import AudienceReports from './pages/admin/AudienceReports';
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="credits" element={<AdminCredits />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="feedback" element={<AdminFeedback />} />
+                <Route path="emails" element={<AdminEmails />} />
                 <Route path="settings" element={<AdminSettings />} />
                 
                 {/* Reports Suite */}
