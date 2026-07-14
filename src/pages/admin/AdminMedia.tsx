@@ -179,6 +179,28 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
+/** Service roles align with RPG SettlementServiceType tags; generics cover ambient NPCs. */
+const NPC_TYPE_OPTIONS = {
+  service: ['Tavern', 'Stables', 'Merchant', 'Shipyard', 'Forge'] as const,
+  generic: [
+    'Child',
+    'Commoner',
+    'Aristocrat',
+    'Guard',
+    'Soldier',
+    'Cleric',
+    'Scholar',
+    'Farmer',
+    'Beggar',
+    'Traveler',
+    'Mercenary',
+    'Entertainer',
+    'Criminal',
+  ] as const,
+} as const;
+
+const ALL_NPC_TYPE_OPTIONS = [...NPC_TYPE_OPTIONS.service, ...NPC_TYPE_OPTIONS.generic];
+
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
 const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
 
@@ -254,7 +276,7 @@ interface NamingInput {
 
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
-  'NPC Portrait': ['race', 'gender'],
+  'NPC Portrait': ['npcType', 'race', 'gender'],
   'Monster Portrait': ['monsterType', 'monsterSubtype'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
@@ -322,16 +344,42 @@ const getNextUploadOrder = (assets: ImageAsset[], input: NamingInput) => {
   return existingOrders.length > 0 ? Math.max(...existingOrders) + 1 : 1;
 };
 
+const ALL_MONSTER_PORTRAIT_TAG_OPTIONS = (() => {
+  const options = new Set<string>();
+  MONSTER_TYPE_OPTIONS.forEach((typeName) => {
+    options.add(typeName);
+    getMonsterSubtypes(typeName).forEach((subtype) => options.add(subtype.name));
+  });
+  return options;
+})();
+
+const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> => {
+  if (assetType === 'Character Portrait') {
+    return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
+  }
+  if (assetType === 'NPC Portrait') {
+    return new Set([
+      ...PORTRAIT_METADATA_OPTIONS.race,
+      ...PORTRAIT_METADATA_OPTIONS.gender,
+      ...ALL_NPC_TYPE_OPTIONS,
+    ]);
+  }
+  if (assetType === 'Monster Portrait') {
+    return ALL_MONSTER_PORTRAIT_TAG_OPTIONS;
+  }
+  return new Set();
+};
+
 const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
   const selectionTags = [
     input.genre,
     input.assetType,
     ...NAMING_METADATA_KEYS[input.assetType].map((key) => input.metadata[key]),
   ].filter(Boolean);
-  const portraitMetadataOptions = [...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender];
+  const managedTags = getManagedStructuredTagOptions(input.assetType);
   const baseTags =
-    isPortraitAssetType(input.assetType)
-      ? input.tags.filter((tag) => !portraitMetadataOptions.includes(tag))
+    managedTags.size > 0
+      ? input.tags.filter((tag) => !managedTags.has(tag))
       : input.tags;
 
   return Array.from(new Set([...baseTags, ...selectionTags]));
@@ -513,10 +561,12 @@ export default function AdminMedia() {
     setFormData((current) => {
       const typeKey = PRIMARY_TYPE_METADATA_KEY[current.assetType];
       const preservedType = typeKey ? current.metadata[typeKey] : undefined;
-      const metadata =
-        typeKey && preservedType
-          ? { [typeKey]: preservedType }
-          : ({} as Record<string, string>);
+      const preservedNpcType =
+        current.assetType === 'NPC Portrait' ? current.metadata.npcType : undefined;
+      const metadata = {
+        ...(typeKey && preservedType ? { [typeKey]: preservedType } : {}),
+        ...(preservedNpcType ? { npcType: preservedNpcType } : {}),
+      } as Record<string, string>;
       const nextForm = {
         genre: current.genre,
         assetType: current.assetType,
@@ -801,14 +851,26 @@ export default function AdminMedia() {
         delete metadata.monsterSubtype;
         const shouldClearDescription =
           !current.description.trim() || current.description.trim() === previousDescription.trim();
-        return {
+        const nextForm = {
           ...current,
           metadata,
           description: shouldClearDescription ? '' : current.description,
         };
+        return {
+          ...nextForm,
+          tags: getTagsWithStructuredMetadata(nextForm),
+        };
       }
 
-      return { ...current, metadata };
+      const nextForm = { ...current, metadata };
+      if (NAMING_METADATA_KEYS[current.assetType].includes(key)) {
+        return {
+          ...nextForm,
+          tags: getTagsWithStructuredMetadata(nextForm),
+        };
+      }
+
+      return nextForm;
     });
   };
 
@@ -832,10 +894,14 @@ export default function AdminMedia() {
       const shouldSeedDescription =
         !current.description.trim() || current.description.trim() === previousDescription.trim();
 
-      return {
+      const nextForm = {
         ...current,
         metadata,
         description: shouldSeedDescription ? nextDescription : current.description,
+      };
+      return {
+        ...nextForm,
+        tags: getTagsWithStructuredMetadata(nextForm),
       };
     });
   };
@@ -1078,84 +1144,115 @@ export default function AdminMedia() {
               </div>
 
               {isPortraitAssetType(formData.assetType) && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="input-label">Portrait Gender</label>
-                    <select
-                      value={formData.metadata.gender || ''}
-                      onChange={(event) => setMetadataField('gender', event.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Any Gender</option>
-                      {PORTRAIT_METADATA_OPTIONS.gender.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="input-label">Portrait Race</label>
-                    <div className="relative">
-                      <input
-                        value={formData.metadata.race || ''}
-                        onChange={(event) => {
-                          setMetadataField('race', event.target.value);
-                          setIsRaceMenuOpen(true);
-                        }}
-                        onFocus={() => setIsRaceMenuOpen(true)}
-                        onBlur={handleRaceBlur}
-                        className="input-field pr-9"
-                        placeholder="Any Race"
-                      />
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => setIsRaceMenuOpen((current) => !current)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text"
-                        aria-label="Toggle Race Options"
+                <div className="space-y-3">
+                  {formData.assetType === 'NPC Portrait' && (
+                    <div>
+                      <label className="input-label">Npc Type</label>
+                      <select
+                        value={formData.metadata.npcType || ''}
+                        onChange={(event) => setMetadataField('npcType', event.target.value)}
+                        className="input-field"
                       >
-                        v
-                      </button>
-                      {isRaceMenuOpen && (
-                        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
-                          <button
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => {
-                              setMetadataField('race', '');
-                              setIsRaceMenuOpen(false);
-                            }}
-                            className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text-muted hover:bg-brand-primary/30 hover:text-brand-text"
-                          >
-                            Any Race
-                          </button>
-                          {filteredPortraitRaceOptions.map((option) => (
+                        <option value="">Any Type</option>
+                        <optgroup label="Service Types">
+                          {NPC_TYPE_OPTIONS.service.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Generic Roles">
+                          {NPC_TYPE_OPTIONS.generic.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                      <p className="mt-1 text-xs text-brand-text-muted">
+                        Saved As A Tag For Service Rooms And Ambient Npc Matching.
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="input-label">Portrait Gender</label>
+                      <select
+                        value={formData.metadata.gender || ''}
+                        onChange={(event) => setMetadataField('gender', event.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">Any Gender</option>
+                        {PORTRAIT_METADATA_OPTIONS.gender.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="input-label">Portrait Race</label>
+                      <div className="relative">
+                        <input
+                          value={formData.metadata.race || ''}
+                          onChange={(event) => {
+                            setMetadataField('race', event.target.value);
+                            setIsRaceMenuOpen(true);
+                          }}
+                          onFocus={() => setIsRaceMenuOpen(true)}
+                          onBlur={handleRaceBlur}
+                          className="input-field pr-9"
+                          placeholder="Any Race"
+                        />
+                        <button
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setIsRaceMenuOpen((current) => !current)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text"
+                          aria-label="Toggle Race Options"
+                        >
+                          v
+                        </button>
+                        {isRaceMenuOpen && (
+                          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
                             <button
-                              key={option}
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
-                                setMetadataField('race', option);
-                                addCustomRaceOption(option);
+                                setMetadataField('race', '');
                                 setIsRaceMenuOpen(false);
                               }}
-                              className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
+                              className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text-muted hover:bg-brand-primary/30 hover:text-brand-text"
                             >
-                              {option}
+                              Any Race
                             </button>
-                          ))}
-                          {filteredPortraitRaceOptions.length === 0 && (
-                            <div className="px-2 py-1.5 text-body-sm text-brand-text-muted">
-                              Type A New Race Name
-                            </div>
-                          )}
-                        </div>
-                      )}
+                            {filteredPortraitRaceOptions.map((option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setMetadataField('race', option);
+                                  addCustomRaceOption(option);
+                                  setIsRaceMenuOpen(false);
+                                }}
+                                className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
+                              >
+                                {option}
+                              </button>
+                            ))}
+                            {filteredPortraitRaceOptions.length === 0 && (
+                              <div className="px-2 py-1.5 text-body-sm text-brand-text-muted">
+                                Type A New Race Name
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-brand-text-muted">
+                        Select A Race Or Type A Custom Race For This Genre.
+                      </p>
                     </div>
-                    <p className="mt-1 text-xs text-brand-text-muted">
-                      Select A Race Or Type A Custom Race For This Genre.
-                    </p>
                   </div>
                 </div>
               )}

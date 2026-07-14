@@ -31,7 +31,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/reports/financial` | Financial Reports | Revenue + cost distribution |
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News | Announcements CMS |
-| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). | 
+| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). **NPC Portrait** adds an Npc Type dropdown (service: Tavern/Stables/Merchant/Shipyard/Forge + generic roles) stored as `metadata.npcType` and as a swap-clean tag — RPG match treats `npcType` like `monsterSubtype` (hard filter + weight 12, case-insensitive metadata/tag match). | 
 
 ## Monster Portrait Catalog Sync
 
