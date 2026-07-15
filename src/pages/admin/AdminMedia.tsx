@@ -34,7 +34,18 @@ import {
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
 const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
-const getAssetTypeOptionsForGenre = (_genre: ImageGenre): ImageAssetType[] => [...IMAGE_ASSET_TYPES];
+/** Uploadable types — NPC portraits are generated in-game (Nano Banana), not uploaded here. */
+const UPLOADABLE_IMAGE_ASSET_TYPES = IMAGE_ASSET_TYPES.filter(
+  (type) => type !== 'NPC Portrait'
+) as ImageAssetType[];
+const getAssetTypeOptionsForGenre = (
+  _genre: ImageGenre,
+  /** Include when editing a legacy NPC Portrait row so the select still has a valid value. */
+  includeLegacyNpcPortrait = false
+): ImageAssetType[] =>
+  includeLegacyNpcPortrait
+    ? ([...UPLOADABLE_IMAGE_ASSET_TYPES, 'NPC Portrait'] as ImageAssetType[])
+    : [...UPLOADABLE_IMAGE_ASSET_TYPES];
 const TAG_GROUPS = [
   {
     label: 'Warrior',
@@ -1111,7 +1122,10 @@ export default function AdminMedia() {
                     value={formData.genre}
                     onChange={(event) => {
                       const nextGenre = event.target.value as ImageGenre;
-                      const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
+                      const allowedTypes = getAssetTypeOptionsForGenre(
+                        nextGenre,
+                        formData.assetType === 'NPC Portrait'
+                      );
                       const nextAssetType = allowedTypes.includes(formData.assetType)
                         ? formData.assetType
                         : 'Character Portrait';
@@ -1148,7 +1162,10 @@ export default function AdminMedia() {
                     }}
                     className="input-field"
                   >
-                    {getAssetTypeOptionsForGenre(formData.genre).map((assetType) => (
+                    {getAssetTypeOptionsForGenre(
+                      formData.genre,
+                      formData.assetType === 'NPC Portrait'
+                    ).map((assetType) => (
                       <option key={assetType} value={assetType}>
                         {assetType}
                       </option>
