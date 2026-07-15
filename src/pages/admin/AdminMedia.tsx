@@ -179,28 +179,6 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
-/** Service roles align with RPG SettlementServiceType tags; generics cover ambient NPCs. */
-const NPC_TYPE_OPTIONS = {
-  service: ['Tavern', 'Stables', 'Merchant', 'Shipyard', 'Forge'] as const,
-  generic: [
-    'Child',
-    'Commoner',
-    'Aristocrat',
-    'Guard',
-    'Soldier',
-    'Cleric',
-    'Scholar',
-    'Farmer',
-    'Beggar',
-    'Traveler',
-    'Mercenary',
-    'Entertainer',
-    'Criminal',
-  ] as const,
-} as const;
-
-const ALL_NPC_TYPE_OPTIONS = [...NPC_TYPE_OPTIONS.service, ...NPC_TYPE_OPTIONS.generic];
-
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
 const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
 
@@ -276,7 +254,7 @@ interface NamingInput {
 
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
-  'NPC Portrait': ['npcType', 'race', 'gender'],
+  'NPC Portrait': ['race', 'gender'],
   'Monster Portrait': ['monsterType', 'monsterSubtype'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
@@ -358,11 +336,7 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
     return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
   }
   if (assetType === 'NPC Portrait') {
-    return new Set([
-      ...PORTRAIT_METADATA_OPTIONS.race,
-      ...PORTRAIT_METADATA_OPTIONS.gender,
-      ...ALL_NPC_TYPE_OPTIONS,
-    ]);
+    return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
   }
   if (assetType === 'Monster Portrait') {
     return ALL_MONSTER_PORTRAIT_TAG_OPTIONS;
@@ -561,11 +535,8 @@ export default function AdminMedia() {
     setFormData((current) => {
       const typeKey = PRIMARY_TYPE_METADATA_KEY[current.assetType];
       const preservedType = typeKey ? current.metadata[typeKey] : undefined;
-      const preservedNpcType =
-        current.assetType === 'NPC Portrait' ? current.metadata.npcType : undefined;
       const metadata = {
         ...(typeKey && preservedType ? { [typeKey]: preservedType } : {}),
-        ...(preservedNpcType ? { npcType: preservedNpcType } : {}),
       } as Record<string, string>;
       const nextForm = {
         genre: current.genre,
@@ -1145,35 +1116,6 @@ export default function AdminMedia() {
 
               {isPortraitAssetType(formData.assetType) && (
                 <div className="space-y-3">
-                  {formData.assetType === 'NPC Portrait' && (
-                    <div>
-                      <label className="input-label">Npc Type</label>
-                      <select
-                        value={formData.metadata.npcType || ''}
-                        onChange={(event) => setMetadataField('npcType', event.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">Any Type</option>
-                        <optgroup label="Service Types">
-                          {NPC_TYPE_OPTIONS.service.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Generic Roles">
-                          {NPC_TYPE_OPTIONS.generic.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                      <p className="mt-1 text-xs text-brand-text-muted">
-                        Saved As A Tag For Service Rooms And Ambient Npc Matching.
-                      </p>
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="input-label">Portrait Gender</label>

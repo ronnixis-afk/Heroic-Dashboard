@@ -80,7 +80,7 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
     case 'Character Portrait':
       return compactSegments([metadata.race, metadata.gender]);
     case 'NPC Portrait':
-      return compactSegments([metadata.npcType, metadata.race, metadata.gender]);
+      return compactSegments([metadata.race, metadata.gender]);
     case 'Point Of Interest Image':
       return compactSegments([metadata.poiBaseType, metadata.poiModifier]);
     case 'Zone Image':
