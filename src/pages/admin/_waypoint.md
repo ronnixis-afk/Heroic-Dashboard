@@ -25,10 +25,10 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 |-------|------|-------|
 | `/admin` | Dashboard | Revenue + acquisition overview |
 | `/admin/users` | Users | Sync, export, cloud save stats |
-| `/admin/reports/audience` | Audience Reports | Retention + churn |
-| `/admin/analytics` | Real-Time Analytics | Sessions, cost, latency |
-| `/admin/reports/usage` | Usage Reports | Feature / session charts |
-| `/admin/reports/financial` | Financial Reports | Revenue + cost distribution |
+| `/admin/reports/audience` | Audience Reports | Active users (incl. MAU), retention, churn → Users (`?userId=`) |
+| `/admin/analytics` | Live Analytics | Sessions, cost, latency; RPG + Supabase metrics |
+| `/admin/reports/usage` | Usage Reports | Product Surfaces + feature-usage API (unique users / duration) |
+| `/admin/reports/financial` | Financial Reports | Revenue + cost-analytics API (model latency) |
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News | Announcements CMS |
 | `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available only when Genre is `Any Genre`; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). **NPC Portrait** adds an Npc Type dropdown (service: Tavern/Stables/Merchant/Shipyard/Forge + generic roles) stored as `metadata.npcType` and as a swap-clean tag — RPG match treats `npcType` like `monsterSubtype` (hard filter + weight 12, case-insensitive metadata/tag match). | 
@@ -43,6 +43,17 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
 | `/admin/settings` | System Settings | Caps, referrals, model routing |
+
+## Insights Data Sources
+
+| Surface | Primary sources |
+|---------|-----------------|
+| Audience | RPG `active-users`, `retention`, `churn-signals`; Supabase dashboard RPC/views for tiers & signups |
+| Live Analytics | Supabase usage/session views + RPG `session-length`, `messages-per-user`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior` |
+| Usage Reports | RPG `feature-usage` (unique users / avg duration; Supabase cost merge); Product Surfaces strip from `UsageLog.type` |
+| Financial | Supabase revenue RPC + RPG `cost-analytics` (fallback: model/daily views) |
+
+Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminMedia is operations-only (no reporting KPIs).
 
 ## Email Templates
 

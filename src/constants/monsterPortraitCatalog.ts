@@ -7,7 +7,7 @@
  * Regenerate:
  *   npm run sync:monster-catalog
  *
- * Last synced: 2026-07-14
+ * Last synced: 2026-07-15
  */
 
 export interface MonsterPortraitSubtype {
@@ -378,7 +378,7 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       },
       {
         "name": "Nebula Horror",
-        "visualDescription": "Looks like a shifting multi limbed nightmare with no clear front or back, sheathed entirely in hard alien carapace plating."
+        "visualDescription": "Looks like a shifting multi limlimbed nightmare with no clear front or back, sheathed entirely in hard alien carapace plating."
       }
     ]
   },

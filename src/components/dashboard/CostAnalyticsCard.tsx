@@ -13,6 +13,7 @@ export function CostAnalyticsCard() {
 
   return (
     <div className="card p-3.5">
+      <h3 className="card-title mb-3">API Cost Distribution</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <h4 className="text-xs text-brand-text-muted mb-0.5">Today's Cost</h4>
@@ -65,15 +66,41 @@ export function CostAnalyticsCard() {
               tickFormatter={(val) => `$${Number(val).toFixed(2)}`}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: '#1a1b20',
-                border: '1px solid #292a32',
-                borderRadius: '8px',
-                fontSize: '11px',
+              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const item = payload[0].payload as {
+                  model?: string;
+                  totalCost?: number;
+                  calls?: number;
+                  avgLatencyMs?: number;
+                };
+                return (
+                  <div className="tooltip-panel pointer-events-none min-w-[160px]">
+                    <p className="text-xs font-semibold text-white m-0 mb-2">{item.model}</p>
+                    <div className="space-y-1 text-xs text-brand-text-muted">
+                      <div className="flex justify-between gap-4">
+                        <span>Total Cost</span>
+                        <span className="text-brand-text font-medium">
+                          ${Number(item.totalCost || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Calls</span>
+                        <span className="text-brand-text font-medium">
+                          {Number(item.calls || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Avg Latency</span>
+                        <span className="text-brand-text font-medium">
+                          {Number(item.avgLatencyMs || 0).toLocaleString()}ms
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
               }}
-              itemStyle={{ fontSize: '11px', fontWeight: 600, color: '#ffffff' }}
-              labelStyle={{ color: '#8b8c94', marginBottom: '2px', fontSize: '10px' }}
-              formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Total Cost']}
             />
             <Bar dataKey="totalCost" fill="#20cce0" radius={[3, 3, 0, 0]} />
           </BarChart>

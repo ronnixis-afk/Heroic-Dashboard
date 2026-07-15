@@ -97,7 +97,7 @@ const METRIC_OPTIONS = [
   { id: 'tokens', label: 'Tokens', color: '#3ecf8e' },
   { id: 'cost', label: 'USD Cost', color: '#10b981' },
   { id: 'users', label: 'Active Users', color: '#38bdf8' },
-  { id: 'engagement', label: 'Engagement', color: '#a855f7' }
+  { id: 'engagement', label: 'Engagement', color: '#20cce0' }
 ] as const;
 
 export default function AdminAnalytics() {
@@ -121,8 +121,8 @@ export default function AdminAnalytics() {
   return (
     <div className="page">
       <PageHeader
-        title="Real-Time Analytics"
-        description="Live sessions, API cost, latency, and model usage trends."
+        title="Live Analytics"
+        description="Active sessions, API cost, latency, and model usage trends."
       />
       
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -153,7 +153,7 @@ export default function AdminAnalytics() {
           value={`${avgLatency}ms`} 
           trend={realTimeTrends} 
           dataKey="latency"
-          color="#a855f7"
+          color="#f59e0b"
           loading={loading}
           icon={<Zap size={14} />}
           comparison={formatComparison(latencyComparison)}
@@ -312,9 +312,9 @@ export default function AdminAnalytics() {
                 <Line 
                   type="monotone" 
                   dataKey="avgDurationMin" 
-                  stroke="#a855f7" 
+                  stroke="#20cce0" 
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#a855f7', strokeWidth: 0 }}
+                  dot={{ r: 3, fill: '#20cce0', strokeWidth: 0 }}
                   activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               )}

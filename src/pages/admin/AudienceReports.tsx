@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, AlertTriangle } from 'lucide-react';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import { ActiveUsersCard } from '../../components/dashboard/ActiveUsersCard';
 import RecentSignups from '../../components/dashboard/RecentSignups';
@@ -43,7 +42,7 @@ export default function AudienceReports() {
     <div className="page">
       <PageHeader
         title="Audience Reports"
-        description="User growth, behavior, and retention across the platform."
+        description="Reach, acquisition, retention, and churn risk across the platform."
       />
 
       <motion.div
@@ -76,28 +75,18 @@ export default function AudienceReports() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
+          className="overflow-x-auto"
         >
-          <div className="mb-2 flex items-center gap-2">
-            <TrendingUp size={14} className="text-brand-accent" />
-            <h3 className="section-title">User Retention</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <RetentionTable />
-          </div>
+          <RetentionTable />
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="overflow-x-auto"
         >
-          <div className="mb-2 flex items-center gap-2">
-            <AlertTriangle size={14} className="text-amber-400" />
-            <h3 className="section-title">Churn Signals</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <ChurnSignalsTable />
-          </div>
+          <ChurnSignalsTable />
         </motion.div>
       </div>
     </div>

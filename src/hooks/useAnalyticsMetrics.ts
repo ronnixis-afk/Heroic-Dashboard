@@ -39,6 +39,44 @@ interface SessionLengthApiResponse {
   distribution: { range: string; count: number; percentage: number }[];
 }
 
+interface FeatureUsageApiResponse {
+  usage: {
+    feature: string;
+    totalUses: number;
+    percentage: number;
+    uniqueUsers: number;
+    avgDurationMs: number;
+  }[];
+  chatOnlyUsers: number;
+}
+
+interface CostAnalyticsApiResponse {
+  daily: {
+    date: string;
+    activeUsers: number;
+    totalCost: number;
+    costPerUser: number;
+  }[];
+  byModel: {
+    model: string;
+    calls: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCost: number;
+    avgLatencyMs: number;
+  }[];
+}
+
+function titleCaseFeature(name: string): string {
+  if (!name) return 'Unknown';
+  return name
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 async function fetchAnalyticsMetrics(
   getToken: (options?: { template?: string }) => Promise<string | null>
 ) {
@@ -86,7 +124,7 @@ async function fetchAnalyticsMetrics(
 
   const { data: modelData } = await supabase.from('model_usage_distribution').select('*');
   const totalModelUses = (modelData || []).reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
-  const colors = ['#3ecf8e', '#a855f7', '#38bdf8', '#fbbf24', '#f87171'];
+  const colors = ['#3ecf8e', '#20cce0', '#38bdf8', '#fbbf24', '#f87171'];
 
   const distribution = (modelData || []).map((m, idx) => ({
     name: m.model || 'Unknown',
@@ -94,7 +132,7 @@ async function fetchAnalyticsMetrics(
     color: colors[idx % colors.length],
   }));
 
-  const modelCostData = (modelData || []).map((m) => ({
+  let modelCostData = (modelData || []).map((m) => ({
     model: m.model || 'Unknown',
     calls: Number(m.usage_count) || 0,
     totalInputTokens: Number(m.total_input_tokens) || 0,
@@ -103,12 +141,39 @@ async function fetchAnalyticsMetrics(
     avgLatencyMs: Number(m.avg_latency) || 0,
   }));
 
-  const dailyCostData = (dailyMetrics || []).map((m) => ({
+  let dailyCostData = (dailyMetrics || []).map((m) => ({
     date: m.date,
     activeUsers: m.active_users || 0,
     totalCost: Number(m.total_cost) || 0,
     costPerUser: m.active_users > 0 ? m.total_cost / m.active_users : 0,
   }));
+
+  try {
+    const costAnalytics = await fetchRpgAdmin<CostAnalyticsApiResponse>(
+      '/api/admin/analytics/cost-analytics?days=30',
+      getToken
+    );
+    if (costAnalytics.byModel?.length) {
+      modelCostData = costAnalytics.byModel.map((m) => ({
+        model: m.model || 'Unknown',
+        calls: Number(m.calls) || 0,
+        totalInputTokens: Number(m.totalInputTokens) || 0,
+        totalOutputTokens: Number(m.totalOutputTokens) || 0,
+        totalCost: Number(m.totalCost) || 0,
+        avgLatencyMs: Number(m.avgLatencyMs) || 0,
+      }));
+    }
+    if (costAnalytics.daily?.length) {
+      dailyCostData = costAnalytics.daily.map((d) => ({
+        date: typeof d.date === 'string' ? d.date : String(d.date),
+        activeUsers: Number(d.activeUsers) || 0,
+        totalCost: Number(d.totalCost) || 0,
+        costPerUser: Number(d.costPerUser) || 0,
+      }));
+    }
+  } catch (e) {
+    console.warn('[AnalyticsAudit] cost-analytics API failed, using view fallback:', e);
+  }
 
   const { data: topConsumersData } = await supabase.from('top_consumers_summary').select('*').limit(5);
   const topUserIds = (topConsumersData || []).map((u) => u.userId);
@@ -131,17 +196,51 @@ async function fetchAnalyticsMetrics(
 
   const { data: featureData } = await supabase.from('feature_usage_distribution').select('*');
   const totalUsesAll = (featureData || []).reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
+  const costByFeature = new Map<string, number>();
+  (featureData || []).forEach((f) => {
+    const key = String(f.feature_name || '').toLowerCase();
+    if (key) costByFeature.set(key, Number(f.total_cost) || 0);
+  });
 
-  const featureUsage = (featureData || [])
+  let featureUsageRows = (featureData || [])
     .map((f) => ({
-      feature: f.feature_name,
-      totalUses: f.usage_count,
+      feature: titleCaseFeature(String(f.feature_name || 'Unknown')),
+      totalUses: Number(f.usage_count) || 0,
       percentage: parseFloat(((f.usage_count / totalUsesAll) * 100).toFixed(1)),
-      totalCost: f.total_cost || 0,
+      totalCost: Number(f.total_cost) || 0,
       uniqueUsers: 0,
       avgDurationMs: 0,
     }))
     .sort((a, b) => b.totalUses - a.totalUses);
+
+  let chatOnlyUsers = 0;
+
+  try {
+    const featureApi = await fetchRpgAdmin<FeatureUsageApiResponse>(
+      '/api/admin/analytics/feature-usage',
+      getToken
+    );
+    if (featureApi.usage?.length) {
+      featureUsageRows = featureApi.usage
+        .map((f) => {
+          const feature = titleCaseFeature(String(f.feature || 'Unknown'));
+          return {
+            feature,
+            totalUses: Number(f.totalUses) || 0,
+            percentage: Number(f.percentage) || 0,
+            totalCost: costByFeature.get(String(f.feature || '').toLowerCase()) || 0,
+            uniqueUsers: Number(f.uniqueUsers) || 0,
+            avgDurationMs: Number(f.avgDurationMs) || 0,
+          };
+        })
+        .sort((a, b) => b.totalUses - a.totalUses);
+      chatOnlyUsers = Number(featureApi.chatOnlyUsers) || 0;
+    }
+  } catch (e) {
+    console.warn('[AnalyticsAudit] feature-usage API failed, using view fallback:', e);
+  }
+
+  const featureUsage = featureUsageRows;
 
   const { data: sessionStats } = await supabase
     .from('session_metrics_summary')
@@ -271,7 +370,7 @@ async function fetchAnalyticsMetrics(
     activeSessionsCount: activeSessionsCount || 0,
     avgSessionLength: sessionDaily.length > 0 ? Math.round(sessionDaily[sessionDaily.length - 1].avgDurationMin) : 0,
     sessionTrends: sessionDaily,
-    featureUsage: { usage: featureUsage, chatOnlyUsers: 0 },
+    featureUsage: { usage: featureUsage, chatOnlyUsers },
     messagesPerUser,
     sessionLengths: { daily: sessionDaily, distribution: sessionDistribution },
     realTimeTrends,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
+import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 
 interface AtRiskUser {
   id: string;
@@ -29,25 +30,18 @@ export function ChurnSignalsTable() {
 
   const fetchData = async () => {
     try {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/churn-signals`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
-      }
-      const json = await res.json();
-      if (json && json.error) {
-        throw new Error(json.error);
-      }
+      const json = await fetchRpgAdmin<{ atRiskUsers: AtRiskUser[]; summary: ChurnSummary }>(
+        '/api/admin/analytics/churn-signals',
+        getToken
+      );
       if (!json || !json.summary || !json.atRiskUsers) {
         throw new Error('Invalid data format returned by server.');
       }
       setData(json);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching churn signals analytics:', err);
-      setError(err.message || 'Failed to fetch churn signals.');
+      setError(err instanceof Error ? err.message : 'Failed to fetch churn signals.');
     } finally {
       setLoading(false);
     }
@@ -126,7 +120,7 @@ export function ChurnSignalsTable() {
             {data.atRiskUsers.map((user) => (
               <tr key={user.id} className="group">
                 <td>
-                  <Link to={`/admin/users/${user.id}`} className="block">
+                  <Link to={`/admin/users?userId=${encodeURIComponent(user.id)}`} className="block">
                     <div className="text-xs font-medium text-brand-text group-hover:text-brand-accent transition-colors">
                       {user.email.split('@')[0]}
                     </div>

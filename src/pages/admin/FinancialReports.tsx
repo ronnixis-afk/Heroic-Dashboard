@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, PieChart } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import RevenueOverview from '../../components/dashboard/RevenueOverview';
 import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import { CostAnalyticsCard } from '../../components/dashboard/CostAnalyticsCard';
@@ -57,10 +57,6 @@ export default function FinancialReports() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <div className="mb-2 flex items-center gap-2">
-          <PieChart size={14} className="text-brand-accent" />
-          <h3 className="section-title">API Cost Distribution</h3>
-        </div>
         <CostAnalyticsCard />
       </motion.div>
 

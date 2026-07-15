@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface UserAcquisitionProps {
@@ -11,11 +10,9 @@ export default function UserAcquisition({
   acquisitionData,
   isLoading = false,
 }: UserAcquisitionProps) {
-  const [signupFilter, setSignupFilter] = useState('6 Months');
-
   const getTierColor = (name: string) => {
     const tier = name.toLowerCase();
-    if (tier.includes('super')) return '#6366f1';
+    if (tier.includes('super')) return '#38bdf8';
     if (tier.includes('hero')) return '#3ecf8e';
     if (tier.includes('adventurer')) return '#20cce0';
     return '#ff5a36';
@@ -25,12 +22,6 @@ export default function UserAcquisition({
     <div className="card p-3.5 h-[260px] flex flex-col">
       <div className="card-header mb-2">
         <h3 className="card-title">Active Accounts by Tier</h3>
-        <button
-          onClick={() => setSignupFilter(signupFilter === '6 Months' ? '30 Days' : '6 Months')}
-          className="btn-secondary btn-sm"
-        >
-          {signupFilter} <ChevronDown size={12} />
-        </button>
       </div>
 
       <div className="h-24 w-full relative">

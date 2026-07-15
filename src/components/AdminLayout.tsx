@@ -37,7 +37,7 @@ const NAV_GROUPS = [
   {
     group: 'Intelligence',
     items: [
-      { icon: Activity, label: 'Real-Time Analytics', path: '/admin/analytics' },
+      { icon: Activity, label: 'Live Analytics', path: '/admin/analytics' },
       { icon: Search, label: 'Usage Reports', path: '/admin/reports/usage' },
     ],
   },

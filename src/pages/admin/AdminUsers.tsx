@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUsers } from '../../hooks/useUsers';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -12,6 +13,7 @@ import { formatBytes } from '../../lib/utils';
 export default function AdminUsers() {
   const { users, isSyncing, syncMessage, syncUsers, loading } = useUsers();
   const { trackEvent } = useAnalytics();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -19,6 +21,15 @@ export default function AdminUsers() {
   const [isExporting, setIsExporting] = useState(false);
   const [showManageAccess, setShowManageAccess] = useState(false);
   const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    if (!userId || loading || users.length === 0) return;
+    const match = users.find((user: { id?: string }) => user.id === userId);
+    if (match) {
+      setSelectedUser(match);
+    }
+  }, [searchParams, users, loading]);
 
   const handleExport = () => {
     setIsExporting(true);
@@ -111,6 +122,11 @@ export default function AdminUsers() {
           setSelectedUser(null);
           setShowManageAccess(false);
           setShowSuspendConfirm(false);
+          if (searchParams.has('userId')) {
+            const next = new URLSearchParams(searchParams);
+            next.delete('userId');
+            setSearchParams(next, { replace: true });
+          }
         }}
         showManageAccess={showManageAccess}
         setShowManageAccess={setShowManageAccess}
