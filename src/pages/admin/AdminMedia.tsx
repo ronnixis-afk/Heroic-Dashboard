@@ -34,9 +34,7 @@ import {
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
 const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
-const BASE_IMAGE_ASSET_TYPES = IMAGE_ASSET_TYPES.filter((assetType) => assetType !== 'Monster Portrait');
-const getAssetTypeOptionsForGenre = (genre: ImageGenre): ImageAssetType[] =>
-  genre === 'Any Genre' ? [...IMAGE_ASSET_TYPES] : BASE_IMAGE_ASSET_TYPES;
+const getAssetTypeOptionsForGenre = (_genre: ImageGenre): ImageAssetType[] => [...IMAGE_ASSET_TYPES];
 const TAG_GROUPS = [
   {
     label: 'Warrior',
@@ -738,7 +736,7 @@ export default function AdminMedia() {
     setEditingAsset(asset);
     const assetType = normalizeAssetTypeForForm(asset.assetType);
     setFormData({
-      genre: assetType === 'Monster Portrait' ? 'Any Genre' : asset.genre,
+      genre: asset.genre,
       assetType,
       description: asset.description || '',
       tags: asset.tags || [],
@@ -1143,7 +1141,6 @@ export default function AdminMedia() {
                       const nextAssetType = event.target.value as ImageAssetType;
                       setFormData({
                         ...formData,
-                        genre: nextAssetType === 'Monster Portrait' ? 'Any Genre' : formData.genre,
                         assetType: nextAssetType,
                         metadata: {},
                         description: '',

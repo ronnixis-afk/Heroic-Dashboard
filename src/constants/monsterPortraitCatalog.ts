@@ -319,6 +319,30 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       {
         "name": "Station Engineer",
         "visualDescription": "Looks like a crew worker sealed inside a bulky modular pressurized hazard suit built for hard orbital station repair work."
+      },
+      {
+        "name": "Guard",
+        "visualDescription": "Looks like a disciplined watch or security fighter in practical protective gear, built for holding gates, posts, and public order."
+      },
+      {
+        "name": "Soldier",
+        "visualDescription": "Looks like a trained military combatant in standardized armor or kit, organized for formation fighting and campaign warfare."
+      },
+      {
+        "name": "Thug",
+        "visualDescription": "Looks like a rough street enforcer in improvised armor and scavenged weapons, built for alley brawls and intimidation."
+      },
+      {
+        "name": "Bandit",
+        "visualDescription": "Looks like a hardened outlaw raider in mixed stolen gear, ready for ambushes, road robbery, and quick escapes."
+      },
+      {
+        "name": "Pirate",
+        "visualDescription": "Looks like a seafaring or void-raiding pirate in weatherworn combat kit, armed for boarding actions and plunder."
+      },
+      {
+        "name": "Street Fighter",
+        "visualDescription": "Looks like a lean pit or street brawler in light wraps and scavenged padding, built for close-quarters unarmed or improvised combat."
       }
     ]
   },
