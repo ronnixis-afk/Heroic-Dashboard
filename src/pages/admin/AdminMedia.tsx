@@ -181,9 +181,34 @@ const PORTRAIT_METADATA_OPTIONS = {
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
 const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
+const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait', 'NPC Portrait', 'Service NPC Portrait']);
 
 const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
   LEGACY_NPC_PORTRAIT_TYPES.has(assetType) ? 'NPC Portrait' : (assetType as ImageAssetType);
+
+const mergePortraitRaceOptions = (...lists: string[][]) => {
+  const byLower = new Map<string, string>();
+  for (const list of lists) {
+    for (const value of list) {
+      const race = value.trim();
+      if (!race) continue;
+      const key = race.toLowerCase();
+      if (!byLower.has(key)) byLower.set(key, race);
+    }
+  }
+  return Array.from(byLower.values()).sort((a, b) => a.localeCompare(b));
+};
+
+const getCatalogPortraitRaces = (assets: ImageAsset[], genre: ImageGenre) => {
+  const races: string[] = [];
+  for (const asset of assets) {
+    if (!PORTRAIT_RACE_ASSET_TYPES.has(asset.assetType)) continue;
+    if (genre !== 'Any Genre' && asset.genre !== genre && asset.genre !== 'Any Genre') continue;
+    const race = getStringMetadata(asset.metadata).race?.trim();
+    if (race) races.push(race);
+  }
+  return races;
+};
 
 const isPortraitAssetType = (assetType: string | undefined) =>
   assetType === 'Character Portrait' || assetType === 'NPC Portrait';
@@ -477,13 +502,14 @@ export default function AdminMedia() {
         : 'bg-brand-accent';
   const portraitRaceOptions = useMemo(
     () =>
-      Array.from(
-        new Set([
-          ...PORTRAIT_METADATA_OPTIONS.race,
-          ...(customRacesByGenre[formData.genre] || []),
-        ])
-      ).sort((a, b) => a.localeCompare(b)),
-    [customRacesByGenre, formData.genre]
+      mergePortraitRaceOptions(
+        PORTRAIT_METADATA_OPTIONS.race,
+        getCatalogPortraitRaces(assets, formData.genre),
+        customRacesByGenre[formData.genre] || [],
+        // Keep cross-genre customs discoverable while typing on Any Genre uploads.
+        formData.genre === 'Any Genre' ? Object.values(customRacesByGenre).flat() : []
+      ),
+    [assets, customRacesByGenre, formData.genre]
   );
   const filteredPortraitRaceOptions = useMemo(() => {
     const raceQuery = (formData.metadata.race || '').trim().toLowerCase();
@@ -1192,7 +1218,7 @@ export default function AdminMedia() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Select A Race Or Type A Custom Race For This Genre.
+                        Built-In Races Plus Races Already Used On Uploaded Portraits. Type A New Name To Add A Custom Race.
                       </p>
                     </div>
                   </div>
