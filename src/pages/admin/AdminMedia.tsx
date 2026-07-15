@@ -199,6 +199,25 @@ const mergePortraitRaceOptions = (...lists: string[][]) => {
   return Array.from(byLower.values()).sort((a, b) => a.localeCompare(b));
 };
 
+/**
+ * Suggested custom races beyond the core five — same names for Fantasy, Sci-Fi, and Modern
+ * so uploads and world races stay aligned across genres.
+ */
+const SUGGESTED_PORTRAIT_RACES = [
+  'Vampire',
+  'Werewolf',
+  'Goblin',
+  'Troll',
+  'Demon',
+  'Angel',
+  'Undead',
+  'Ghost',
+  'Giant',
+  'Fey',
+] as const;
+
+const getSuggestedPortraitRacesForGenre = (_genre: ImageGenre): string[] => [...SUGGESTED_PORTRAIT_RACES];
+
 const getCatalogPortraitRaces = (assets: ImageAsset[], genre: ImageGenre) => {
   const races: string[] = [];
   for (const asset of assets) {
@@ -504,6 +523,7 @@ export default function AdminMedia() {
     () =>
       mergePortraitRaceOptions(
         PORTRAIT_METADATA_OPTIONS.race,
+        getSuggestedPortraitRacesForGenre(formData.genre),
         getCatalogPortraitRaces(assets, formData.genre),
         customRacesByGenre[formData.genre] || [],
         // Keep cross-genre customs discoverable while typing on Any Genre uploads.
@@ -1218,7 +1238,7 @@ export default function AdminMedia() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Built-In Races Plus Races Already Used On Uploaded Portraits. Type A New Name To Add A Custom Race.
+                        Core Races, Genre Suggestions, And Races Already Used On Uploaded Portraits. Type A New Name To Add A Custom Race.
                       </p>
                     </div>
                   </div>
