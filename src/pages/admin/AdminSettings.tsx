@@ -53,7 +53,14 @@ export default function AdminSettings() {
         setNpcPortraitSource(data.npcPortraitSource || 'database');
       } catch (err: any) {
         console.error('Failed to load settings:', err);
-        setStatus({ type: 'error', msg: err.message || 'Failed To Load Settings.' });
+        const raw = err?.message || '';
+        const isNetworkError = /could not reach rpg api|failed to fetch|networkerror|load failed/i.test(raw);
+        setStatus({
+          type: 'error',
+          msg: isNetworkError
+            ? raw || 'Could Not Reach The RPG API. Confirm VITE_RPG_API_URL And That The RPG Server Is Running.'
+            : raw || 'Failed To Load Settings.',
+        });
       } finally {
         setLoading(false);
       }
@@ -67,33 +74,23 @@ export default function AdminSettings() {
     setSaving(true);
     try {
       const targetLimit = enableLimit ? limitValue : null;
-      const apiUrl = import.meta.env.VITE_RPG_API_URL;
-      const token = await getToken();
 
-      if (!apiUrl) {
-        throw new Error('Admin API Configuration Missing In Dashboard.');
-      }
-
-      const response = await fetch(`${apiUrl}/api/admin/settings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          maxFreeUsers: targetLimit,
-          referralSignupReward: signupReward,
-          referralPremiumReward: premiumReward,
-          defaultModel: defaultModel,
-          npcPortraitSource: npcPortraitSource,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed To Save Settings.');
-      }
+      // Use the same authenticated helper as load — raw fetch can surface opaque
+      // "Failed to fetch" errors when the RPG API is unreachable or CORS blocks POST.
+      const result = await fetchRpgAdmin<SettingsData & { success?: boolean }>(
+        '/api/admin/settings',
+        getToken,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            maxFreeUsers: targetLimit,
+            referralSignupReward: signupReward,
+            referralPremiumReward: premiumReward,
+            defaultModel: defaultModel,
+            npcPortraitSource: npcPortraitSource,
+          }),
+        }
+      );
 
       setSettings({
         maxFreeUsers: result.maxFreeUsers,
@@ -109,7 +106,14 @@ export default function AdminSettings() {
       setStatus({ type: 'success', msg: 'System Settings Saved Successfully.' });
     } catch (err: any) {
       console.error('Failed to save settings:', err);
-      setStatus({ type: 'error', msg: err.message || 'Failed To Save Settings.' });
+      const raw = err?.message || '';
+      const isNetworkError = /failed to fetch|networkerror|load failed/i.test(raw);
+      setStatus({
+        type: 'error',
+        msg: isNetworkError
+          ? 'Could Not Reach The RPG API. Confirm VITE_RPG_API_URL And That The RPG Server Is Running, Then Try Again.'
+          : raw || 'Failed To Save Settings.',
+      });
     } finally {
       setSaving(false);
     }
