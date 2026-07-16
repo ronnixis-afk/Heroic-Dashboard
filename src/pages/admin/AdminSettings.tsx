@@ -11,6 +11,7 @@ interface SettingsData {
   referralSignupReward: number;
   referralPremiumReward: number;
   defaultModel: string;
+  npcPortraitSource: string;
 }
 
 export default function AdminSettings() {
@@ -25,6 +26,7 @@ export default function AdminSettings() {
     referralSignupReward: 200,
     referralPremiumReward: 1000,
     defaultModel: 'gemini-3.1-flash-lite',
+    npcPortraitSource: 'database',
   });
 
   const [enableLimit, setEnableLimit] = useState(false);
@@ -32,6 +34,7 @@ export default function AdminSettings() {
   const [signupReward, setSignupReward] = useState<number>(200);
   const [premiumReward, setPremiumReward] = useState<number>(1000);
   const [defaultModel, setDefaultModel] = useState<string>('gemini-3.1-flash-lite');
+  const [npcPortraitSource, setNpcPortraitSource] = useState<string>('database');
 
   useEffect(() => {
     async function loadSettings() {
@@ -47,6 +50,7 @@ export default function AdminSettings() {
         setSignupReward(data.referralSignupReward);
         setPremiumReward(data.referralPremiumReward);
         setDefaultModel(data.defaultModel || 'gemini-3.1-flash-lite');
+        setNpcPortraitSource(data.npcPortraitSource || 'database');
       } catch (err: any) {
         console.error('Failed to load settings:', err);
         setStatus({ type: 'error', msg: err.message || 'Failed To Load Settings.' });
@@ -81,6 +85,7 @@ export default function AdminSettings() {
           referralSignupReward: signupReward,
           referralPremiumReward: premiumReward,
           defaultModel: defaultModel,
+          npcPortraitSource: npcPortraitSource,
         }),
       });
 
@@ -96,8 +101,10 @@ export default function AdminSettings() {
         referralSignupReward: result.referralSignupReward,
         referralPremiumReward: result.referralPremiumReward,
         defaultModel: result.defaultModel,
+        npcPortraitSource: result.npcPortraitSource || 'database',
       });
       setDefaultModel(result.defaultModel || 'gemini-3.1-flash-lite');
+      setNpcPortraitSource(result.npcPortraitSource || 'database');
 
       setStatus({ type: 'success', msg: 'System Settings Saved Successfully.' });
     } catch (err: any) {
@@ -116,7 +123,7 @@ export default function AdminSettings() {
     <div className="page">
       <PageHeader
         title="System Settings"
-        description="Configure registration caps, referral rewards, and default AI model routing."
+        description="Configure Registration Caps, Referral Rewards, AI Model Routing, And NPC Image Source."
       />
 
       {status && (
@@ -265,6 +272,33 @@ export default function AdminSettings() {
             </select>
             <p className="help-text mt-1">
               Used for standard game turns, intents, and narrative generation.
+            </p>
+          </div>
+        </div>
+
+        <div className="card p-3.5 space-y-3">
+          <div>
+            <h2 className="section-title mb-1 flex items-center gap-2">
+              <Settings className="text-brand-accent" size={14} />
+              Image Generation Routing
+            </h2>
+            <p className="help-text">
+              Primary source for nearby NPC portraits. Database uses Media Library assets at no image credit cost. Nano Banana 2 Lite bills image credits; Database is always the fallback.
+            </p>
+          </div>
+
+          <div>
+            <label className="input-label">NPC Image Source</label>
+            <select
+              value={npcPortraitSource}
+              onChange={(e) => setNpcPortraitSource(e.target.value)}
+              className="input-field cursor-pointer"
+            >
+              <option value="database">Database</option>
+              <option value="nano_banana_2_lite">Nano Banana 2 Lite</option>
+            </select>
+            <p className="help-text mt-1">
+              Default is Database. Takes effect within about 15 seconds for active sessions.
             </p>
           </div>
         </div>

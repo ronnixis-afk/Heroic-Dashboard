@@ -34,18 +34,12 @@ import {
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
 const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
-/** Uploadable types — NPC portraits are generated in-game (Nano Banana), not uploaded here. */
-const UPLOADABLE_IMAGE_ASSET_TYPES = IMAGE_ASSET_TYPES.filter(
-  (type) => type !== 'NPC Portrait'
-) as ImageAssetType[];
+/** Uploadable types — includes NPC Portrait for Database-sourced nearby NPC art. */
+const UPLOADABLE_IMAGE_ASSET_TYPES = [...IMAGE_ASSET_TYPES] as ImageAssetType[];
 const getAssetTypeOptionsForGenre = (
   _genre: ImageGenre,
-  /** Include when editing a legacy NPC Portrait row so the select still has a valid value. */
-  includeLegacyNpcPortrait = false
-): ImageAssetType[] =>
-  includeLegacyNpcPortrait
-    ? ([...UPLOADABLE_IMAGE_ASSET_TYPES, 'NPC Portrait'] as ImageAssetType[])
-    : [...UPLOADABLE_IMAGE_ASSET_TYPES];
+  _includeLegacyNpcPortrait = false
+): ImageAssetType[] => [...UPLOADABLE_IMAGE_ASSET_TYPES];
 const TAG_GROUPS = [
   {
     label: 'Warrior',

@@ -31,7 +31,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/reports/financial` | Financial Reports | Revenue + cost-analytics API (model latency) |
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News | Announcements CMS |
-| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available under Fantasy / Sci-Fi / Modern / Any Genre; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). Upload Humanoid role subtypes (Guard, Soldier, Thug, Bandit, Pirate, Street Fighter) per genre so Fantasy guards never match Sci-Fi art. RPG match prefers world genre, then Any Genre fallback. **NPC Portrait** is not uploadable — nearby NPC portraits are generated in-game via Nano Banana 2 Lite + Portrait Inspo (admin filter can still show legacy NPC Portrait rows). **Character Portrait** / **Portrait Race** dropdown = core five + 10 shared suggested customs (`SUGGESTED_PORTRAIT_RACES`: Vampire, Werewolf, Goblin, Troll, Demon, Angel, Undead, Ghost, Giant, Fey) + distinct `metadata.race` from uploaded Character portraits (same genre or Any Genre) + local customs typed this browser. |
+| `/admin/media` | Media Library | WebP asset upload/tagging; `useImageAssets` pages through all `ImageAsset` rows (500/request). Genre filter omits "Any Genre" (treats it as All). **Monster Portrait** is available under Fantasy / Sci-Fi / Modern / Any Genre; cascading Monster Type / Monster Subtype metadata auto-tags for filtering (`monsterPortraitCatalog.ts`). Upload Humanoid role subtypes (Guard, Soldier, Thug, Bandit, Pirate, Street Fighter) per genre so Fantasy guards never match Sci-Fi art. RPG match prefers world genre, then Any Genre fallback. **NPC Portrait** is uploadable (race/gender metadata) and used when System Settings NPC Image Source is Database (default); Nano Banana 2 Lite remains an optional AI source with Database fallback. **Character Portrait** / **Portrait Race** dropdown = core five + 10 shared suggested customs (`SUGGESTED_PORTRAIT_RACES`: Vampire, Werewolf, Goblin, Troll, Demon, Angel, Undead, Ghost, Giant, Fey) + distinct `metadata.race` from uploaded Character portraits (same genre or Any Genre) + local customs typed this browser. |
 
 ## Monster Portrait Catalog Sync
 
@@ -42,7 +42,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 - After changing monster types/subtypes/descriptions in the RPG (or adding new ones), run the sync and commit the regenerated catalog so deploys stay current.
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
-| `/admin/settings` | System Settings | Caps, referrals, model routing |
+| `/admin/settings` | System Settings | Caps, referrals, text model routing, NPC image source (`database` default / `nano_banana_2_lite`) |
 
 ## Insights Data Sources
 
