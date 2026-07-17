@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCredits } from '../../hooks/useCredits';
 import { cn } from '../../lib/utils';
 import { Coins, History, Search } from 'lucide-react';
 import { PageHeader, StatusBanner, EmptyState } from '../../components/ui';
 
 export default function AdminCredits() {
+  const [searchParams] = useSearchParams();
   const { history, loading, status, setStatus, isProcessing, adjustCredits } = useCredits();
   const [formData, setFormData] = useState({
-    userEmail: '',
+    userEmail: searchParams.get('email') || '',
     amount: 1000,
     reason: 'Regular Grant',
   });
+
+  useEffect(() => {
+    const email = searchParams.get('email');
+    if (email) {
+      setFormData((current) => ({ ...current, userEmail: email }));
+    }
+  }, [searchParams]);
 
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -4,8 +4,9 @@ import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
-const IMAGE_ASSET_PAGE_SIZE = 500;
+export const IMAGE_ASSET_PAGE_SIZE = 60;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
+const LEGACY_NPC_PORTRAIT_TYPES = ['NPC Portrait', 'Humanoid NPC Portrait', 'Creature NPC Portrait'];
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
 export const IMAGE_ASSET_TYPES = [
@@ -41,6 +42,15 @@ export interface ImageAsset {
   updatedAt: string;
 }
 
+export interface ImageAssetsQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  genre?: string;
+  assetType?: string;
+  tag?: string;
+}
+
 interface ImageAssetsResult {
   assets: ImageAsset[];
   totalCount: number;
@@ -63,6 +73,9 @@ export interface CreateImageAssetInput extends ImageAssetInput {
 }
 
 export type UpdateImageAssetInput = ImageAssetInput;
+
+const SELECT_COLUMNS =
+  'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt';
 
 const normalizeFolderName = (value: string) =>
   value
@@ -121,67 +134,110 @@ const getSupabaseForAdmin = async (getToken: (options?: any) => Promise<string |
   return getSupabaseClient(token);
 };
 
-async function fetchImageAssets(getToken: (options?: any) => Promise<string | null>): Promise<ImageAssetsResult> {
+function escapeIlikeTerm(term: string) {
+  return term.replace(/[%_,]/g, '').trim();
+}
+
+async function fetchImageAssetsPage(
+  getToken: (options?: any) => Promise<string | null>,
+  params: ImageAssetsQueryParams
+): Promise<ImageAssetsResult> {
   const supabase = await getSupabaseForAdmin(getToken);
-  const selectColumns =
-    'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt';
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? IMAGE_ASSET_PAGE_SIZE;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  const assets: ImageAsset[] = [];
-  let totalCount = 0;
-  let from = 0;
+  let query = supabase
+    .from('ImageAsset')
+    .select(SELECT_COLUMNS, { count: 'exact' })
+    .order('createdAt', { ascending: false })
+    .order('id', { ascending: false })
+    .range(from, to);
 
-  // Page through every row so client-side search/filters cover the full library
-  // (PostgREST max-rows caps a single range; 500 stays safely under that).
-  // Fantasy/Modern Human portraits currently sit past the newest 500 rows.
-  while (true) {
-    const to = from + IMAGE_ASSET_PAGE_SIZE - 1;
-    const { data, error, count } = await supabase
-      .from('ImageAsset')
-      .select(selectColumns, from === 0 ? { count: 'exact' } : undefined)
-      .order('createdAt', { ascending: false })
-      .order('id', { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      console.error('[MediaLibrary] Fetch image assets failed:', error);
-      throw error;
-    }
-
-    const page = (data || []) as ImageAsset[];
-    if (from === 0) {
-      totalCount = count ?? page.length;
-    }
-    assets.push(...page);
-
-    if (page.length < IMAGE_ASSET_PAGE_SIZE) {
-      break;
-    }
-    from += IMAGE_ASSET_PAGE_SIZE;
+  const genre = params.genre;
+  if (genre && genre !== 'All' && genre !== 'Any Genre') {
+    query = query.eq('genre', genre);
   }
 
-  if (totalCount > 0 && assets.length < totalCount) {
-    console.warn(
-      `[MediaLibrary] Loaded ${assets.length} of ${totalCount} image assets; search may miss older files.`
-    );
+  const assetType = params.assetType;
+  if (assetType && assetType !== 'All') {
+    if (assetType === 'NPC Portrait') {
+      query = query.in('assetType', LEGACY_NPC_PORTRAIT_TYPES);
+    } else {
+      query = query.eq('assetType', assetType);
+    }
   }
+
+  const tag = params.tag?.trim();
+  if (tag && tag !== 'All') {
+    query = query.contains('tags', [tag]);
+  }
+
+  const searchTerms = (params.search || '')
+    .split(/[,\s]+/)
+    .map(escapeIlikeTerm)
+    .filter(Boolean);
+
+  for (const term of searchTerms) {
+    const pattern = `%${term}%`;
+    query = query.or(`title.ilike."${pattern}",description.ilike."${pattern}"`);
+  }
+
+  const [{ data, error, count }] = await Promise.all([query]);
+
+  if (error) {
+    console.error('[MediaLibrary] Fetch image assets failed:', error);
+    throw error;
+  }
+
+  const assets = (data || []) as ImageAsset[];
 
   return {
     assets,
-    totalCount: Math.max(totalCount, assets.length),
+    totalCount: count ?? assets.length,
   };
 }
 
-export function useImageAssets() {
+async function fetchImageStorageBytes(getToken: (options?: any) => Promise<string | null>) {
+  const supabase = await getSupabaseForAdmin(getToken);
+  const { data, error } = await supabase.from('ImageAsset').select('sizeBytes');
+  if (error) {
+    console.warn('[MediaLibrary] Storage totals fetch failed:', error);
+    return 0;
+  }
+  return (data || []).reduce((total, row) => total + (Number(row.sizeBytes) || 0), 0);
+}
+
+export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   const queryClient = useQueryClient();
   const { getToken, user } = useAuth();
 
-  const { data: imageAssetResult, isLoading: loading } = useQuery({
-    // Versioned key busts the pre-pagination 500-row React Query cache.
-    queryKey: ['image-assets', 'all-pages'],
-    queryFn: () => fetchImageAssets(getToken),
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? IMAGE_ASSET_PAGE_SIZE;
+  const search = params.search?.trim() || '';
+  const genre = params.genre || 'All';
+  const assetType = params.assetType || 'All';
+  const tag = params.tag || 'All';
+
+  const listQueryKey = ['image-assets', { page, pageSize, search, genre, assetType, tag }] as const;
+
+  const { data: imageAssetResult, isLoading: loading, isFetching } = useQuery({
+    queryKey: listQueryKey,
+    queryFn: () =>
+      fetchImageAssetsPage(getToken, { page, pageSize, search, genre, assetType, tag }),
+    placeholderData: (previous) => previous,
   });
+
+  const { data: totalStorageBytes = 0 } = useQuery({
+    queryKey: ['image-assets', 'storage-bytes'],
+    queryFn: () => fetchImageStorageBytes(getToken),
+    staleTime: 1000 * 60 * 5,
+  });
+
   const assets = imageAssetResult?.assets ?? [];
-  const totalAssetCount = imageAssetResult?.totalCount ?? assets.length;
+  const totalAssetCount = imageAssetResult?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalAssetCount / pageSize));
 
   useEffect(() => {
     let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -189,17 +245,13 @@ export function useImageAssets() {
     let isMounted = true;
 
     const setupSubscription = async () => {
-      // getSupabaseForAdmin creates a fresh client (and realtime socket) per call,
-      // so we must capture this exact client instance and tear down the channel on
-      // it during cleanup. Calling removeChannel on a different client would leave
-      // this socket open (an egress/resource leak).
       const supabase = await getSupabaseForAdmin(getToken);
       const subscription = supabase
         .channel('public:ImageAsset')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ImageAsset' }, () => {
           if (invalidateTimer) clearTimeout(invalidateTimer);
           invalidateTimer = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['image-assets', 'all-pages'] });
+            queryClient.invalidateQueries({ queryKey: ['image-assets'] });
           }, REALTIME_INVALIDATE_DEBOUNCE_MS);
         })
         .subscribe();
@@ -305,7 +357,7 @@ export function useImageAssets() {
   };
 
   const addTagsToImageAssets = async (selectedAssets: ImageAsset[], tags: string[]) => {
-    const normalizedTags = Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
+    const normalizedTags = Array.from(new Set(tags.map((tagValue) => tagValue.trim()).filter(Boolean)));
     if (selectedAssets.length === 0 || normalizedTags.length === 0) return;
 
     const supabase = await getSupabaseForAdmin(getToken);
@@ -391,7 +443,12 @@ export function useImageAssets() {
   return {
     assets,
     totalAssetCount,
+    totalStorageBytes,
+    totalPages,
+    page,
+    pageSize,
     loading,
+    isFetching,
     createImageAsset,
     updateImageAsset,
     addTagsToImageAssets,

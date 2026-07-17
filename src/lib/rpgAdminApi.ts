@@ -1,10 +1,16 @@
 /**
  * Authenticated fetch helper for Heroic AI RPG admin API routes.
  * Uses the standard Clerk session token (not the Supabase JWT template).
+ *
+ * Pass a pre-fetched token string to avoid repeated getToken() calls in batched fetches.
  */
+export type RpgAdminTokenSource =
+  | string
+  | ((options?: { template?: string }) => Promise<string | null>);
+
 export async function fetchRpgAdmin<T>(
   path: string,
-  getToken: (options?: { template?: string }) => Promise<string | null>,
+  tokenOrGetter: RpgAdminTokenSource,
   init?: RequestInit
 ): Promise<T> {
   const apiUrl = (import.meta.env.VITE_RPG_API_URL || '').replace(/\/$/, '');
@@ -12,7 +18,8 @@ export async function fetchRpgAdmin<T>(
     throw new Error('VITE_RPG_API_URL is not configured.');
   }
 
-  const token = await getToken();
+  const token =
+    typeof tokenOrGetter === 'string' ? tokenOrGetter : await tokenOrGetter();
   if (!token) {
     throw new Error('Admin Session Expired. Please Sign In Again.');
   }

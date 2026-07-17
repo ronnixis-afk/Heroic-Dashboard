@@ -1,55 +1,124 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUsers } from '../../hooks/useUsers';
+import { useUsers, exportUsersCsv, USERS_PAGE_SIZE } from '../../hooks/useUsers';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useAuth } from '../../lib/AuthContext';
 import UsersFilterBar from '../../components/users/UsersFilterBar';
 import UsersTable from '../../components/users/UsersTable';
 import UserDetailModal from '../../components/users/UserDetailModal';
 import { PageHeader, StatCard, StatusBanner } from '../../components/ui';
-import { Database, Save } from 'lucide-react';
+import { Database, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatBytes } from '../../lib/utils';
 
+const TIER_OPTIONS = ['All', 'newbie', 'adventurer', 'hero', 'super_admin'] as const;
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 export default function AdminUsers() {
-  const { users, isSyncing, syncMessage, syncUsers, loading } = useUsers();
   const { trackEvent } = useAnalytics();
+  const { getToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [showManageAccess, setShowManageAccess] = useState(false);
-  const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [tier, setTier] = useState('All');
+  const [minCredits, setMinCredits] = useState('');
+  const [maxCredits, setMaxCredits] = useState('');
+  const [createdAfter, setCreatedAfter] = useState('');
+  const [createdBefore, setCreatedBefore] = useState('');
+
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, tier, minCredits, maxCredits, createdAfter, createdBefore]);
+
+  const {
+    users,
+    totalCount,
+    totalPages,
+    loading,
+    isFetching,
+    isSyncing,
+    syncMessage,
+    syncUsers,
+    resolveUserById,
+    totalSavesSize,
+    totalSavesCount,
+    exportParams,
+  } = useUsers({
+    page,
+    pageSize: USERS_PAGE_SIZE,
+    search: debouncedSearch,
+    tier,
+    minCredits: minCredits === '' ? null : Number(minCredits),
+    maxCredits: maxCredits === '' ? null : Number(maxCredits),
+    createdAfter: createdAfter || null,
+    createdBefore: createdBefore ? `${createdBefore}T23:59:59.999Z` : null,
+  });
 
   useEffect(() => {
     const userId = searchParams.get('userId');
-    if (!userId || loading || users.length === 0) return;
-    const match = users.find((user: { id?: string }) => user.id === userId);
+    if (!userId || loading) return;
+
+    const match = users.find((user) => user.id === userId);
     if (match) {
       setSelectedUser(match);
+      return;
     }
+
+    let cancelled = false;
+    void (async () => {
+      const user = await resolveUserById(userId);
+      if (!cancelled && user) setSelectedUser(user);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // resolveUserById is stable enough via getToken; intentionally omit to avoid refetch loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, users, loading]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
+    setExportMessage(null);
     trackEvent('export_records_clicked');
-    setTimeout(() => setIsExporting(false), 1500);
+    try {
+      const csv = await exportUsersCsv(() => getToken({ template: 'supabase' }), exportParams);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `heroic-users-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setExportMessage('Exported Current Filter Results (Up To 2,000 Rows).');
+      setTimeout(() => setExportMessage(null), 4000);
+    } catch (err) {
+      console.error('[AdminUsers] Export failed:', err);
+      setExportMessage('Export Failed. Please Try Again.');
+      setTimeout(() => setExportMessage(null), 4000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSyncUsers = () => {
     trackEvent('sync_users_clicked');
     syncUsers();
   };
-
-  const totalSavesSize = users.reduce((acc: number, user: any) => acc + (user.saveStats?.total_bytes || 0), 0);
-  const totalSavesCount = users.reduce((acc: number, user: any) => acc + (Number(user.saveStats?.save_count) || 0), 0);
-
-  const filteredUsers = users.filter(
-    (user: any) =>
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.id?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="page">
@@ -60,8 +129,19 @@ export default function AdminUsers() {
 
       {syncMessage && (
         <StatusBanner
-          type={syncMessage.toLowerCase().includes('fail') || syncMessage.toLowerCase().includes('error') ? 'error' : 'success'}
+          type={
+            syncMessage.toLowerCase().includes('fail') || syncMessage.toLowerCase().includes('error')
+              ? 'error'
+              : 'success'
+          }
           message={syncMessage}
+        />
+      )}
+
+      {exportMessage && (
+        <StatusBanner
+          type={exportMessage.toLowerCase().includes('fail') ? 'error' : 'success'}
+          message={exportMessage}
         />
       )}
 
@@ -101,37 +181,132 @@ export default function AdminUsers() {
             exit={{ opacity: 0, y: -6 }}
             className="card p-3"
           >
-            <p className="help-text">
-              Advanced filters for tier, credits, and date range will appear here.
-            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="input-label" htmlFor="filter-tier">
+                  Tier
+                </label>
+                <select
+                  id="filter-tier"
+                  value={tier}
+                  onChange={(e) => setTier(e.target.value)}
+                  className="input-field"
+                >
+                  {TIER_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'All'
+                        ? 'All Tiers'
+                        : option
+                            .split('_')
+                            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                            .join(' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="input-label" htmlFor="filter-min-credits">
+                  Min Credits
+                </label>
+                <input
+                  id="filter-min-credits"
+                  type="number"
+                  min={0}
+                  value={minCredits}
+                  onChange={(e) => setMinCredits(e.target.value)}
+                  placeholder="0"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="input-label" htmlFor="filter-max-credits">
+                  Max Credits
+                </label>
+                <input
+                  id="filter-max-credits"
+                  type="number"
+                  min={0}
+                  value={maxCredits}
+                  onChange={(e) => setMaxCredits(e.target.value)}
+                  placeholder="Any"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="input-label" htmlFor="filter-created-after">
+                  Registered After
+                </label>
+                <input
+                  id="filter-created-after"
+                  type="date"
+                  value={createdAfter}
+                  onChange={(e) => setCreatedAfter(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="input-label" htmlFor="filter-created-before">
+                  Registered Before
+                </label>
+                <input
+                  id="filter-created-before"
+                  type="date"
+                  value={createdBefore}
+                  onChange={(e) => setCreatedBefore(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <UsersTable
-        filteredUsers={filteredUsers}
+        filteredUsers={users}
         setSelectedUser={setSelectedUser}
-        setShowManageAccess={setShowManageAccess}
-        setShowSuspendConfirm={setShowSuspendConfirm}
         isLoading={loading}
       />
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="help-text">
+          {totalCount.toLocaleString()} Users
+          {isFetching && !loading ? ' · Refreshing…' : ''}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={page <= 1 || loading}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            <ChevronLeft size={12} />
+            Previous
+          </button>
+          <span className="text-xs text-brand-text-muted tabular-nums">
+            Page {page} Of {totalPages}
+          </span>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={page >= totalPages || loading}
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+          >
+            Next
+            <ChevronRight size={12} />
+          </button>
+        </div>
+      </div>
 
       <UserDetailModal
         selectedUser={selectedUser}
         handleCloseModal={() => {
           setSelectedUser(null);
-          setShowManageAccess(false);
-          setShowSuspendConfirm(false);
           if (searchParams.has('userId')) {
             const next = new URLSearchParams(searchParams);
             next.delete('userId');
             setSearchParams(next, { replace: true });
           }
         }}
-        showManageAccess={showManageAccess}
-        setShowManageAccess={setShowManageAccess}
-        showSuspendConfirm={showSuspendConfirm}
-        setShowSuspendConfirm={setShowSuspendConfirm}
       />
     </div>
   );

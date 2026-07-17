@@ -1,5 +1,6 @@
 import React from 'react';
-import { Mail, X, Zap, Activity, ShieldAlert, Database, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, X, Zap, Activity, Database, Eye, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserConsumptionChart from './UserConsumptionChart';
 import { useAuth } from '../../lib/AuthContext';
@@ -12,20 +13,13 @@ import { formatBytes } from '../../lib/utils';
 interface UserDetailModalProps {
   selectedUser: any;
   handleCloseModal: () => void;
-  showManageAccess: boolean;
-  setShowManageAccess: (show: boolean) => void;
-  showSuspendConfirm: boolean;
-  setShowSuspendConfirm: (show: boolean) => void;
 }
 
 export default function UserDetailModal({
   selectedUser,
   handleCloseModal,
-  showManageAccess,
-  setShowManageAccess,
-  showSuspendConfirm,
-  setShowSuspendConfirm
 }: UserDetailModalProps) {
+  const navigate = useNavigate();
   const [telemetry, setTelemetry] = React.useState<TelemetryData | null>(null);
   const [loadingTelemetry, setLoadingTelemetry] = React.useState(false);
   const { getToken } = useAuth();
@@ -189,11 +183,18 @@ export default function UserDetailModal({
 
             <div className="flex flex-col gap-2">
               <h4 className="input-label">Administrative Actions</h4>
-              <button className="btn-primary w-full">
+              <button
+                type="button"
+                className="btn-primary w-full"
+                onClick={() => {
+                  handleCloseModal();
+                  const email = selectedUser.email || '';
+                  navigate(
+                    `/admin/credits?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(selectedUser.id)}`
+                  );
+                }}
+              >
                 Manage Credits
-              </button>
-              <button className="btn-secondary w-full">
-                Suspend Access
               </button>
             </div>
           </div>

@@ -3,60 +3,246 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
-const USERS_PAGE_SIZE = 250;
+export const USERS_PAGE_SIZE = 50;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
+const EXPORT_CAP = 2000;
 
-async function fetchUsers(getToken: (options?: any) => Promise<string | null>) {
+export interface UsersQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  tier?: string;
+  minCredits?: number | null;
+  maxCredits?: number | null;
+  createdAfter?: string | null;
+  createdBefore?: string | null;
+}
+
+export interface UserListItem {
+  id: string;
+  email: string;
+  tier: string;
+  currentCredits: number;
+  maxCredits: number;
+  createdAt: string;
+  UserSession?: { lastPing: string; endTime: string | null; startTime: string }[];
+  saveStats: { save_count: number; total_bytes: number };
+}
+
+async function getAdminSupabase(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
     token = await getToken({ template: 'supabase' });
   } catch (e) {
     console.error('[UsersAudit] getToken failed, falling back to anonymous:', e);
   }
-  
-  const supabase = getSupabaseClient(token || undefined);
-  
-  const [usersRes, saveStatsRes] = await Promise.all([
-    supabase
-      .from('User')
-      .select('id, email, tier, currentCredits, maxCredits, createdAt, UserSession(lastPing, endTime, startTime)')
-      .order('createdAt', { ascending: false })
-      .order('lastPing', { foreignTable: 'UserSession', ascending: false })
-      .limit(1, { foreignTable: 'UserSession' })
-      .limit(USERS_PAGE_SIZE),
-    supabase
-      .from('user_save_sizes_summary')
-      .select('userId, save_count, total_bytes')
-  ]);
-  
+  return getSupabaseClient(token || undefined);
+}
+
+function applyUserFilters(
+  query: any,
+  params: UsersQueryParams
+) {
+  const search = params.search?.trim();
+  if (search) {
+    const pattern = `%${search.replace(/[%_,]/g, '')}%`;
+    query = query.or(`email.ilike."${pattern}",id.ilike."${pattern}"`);
+  }
+  if (params.tier && params.tier !== 'All') {
+    query = query.eq('tier', params.tier);
+  }
+  if (params.minCredits != null && !Number.isNaN(params.minCredits)) {
+    query = query.gte('currentCredits', params.minCredits);
+  }
+  if (params.maxCredits != null && !Number.isNaN(params.maxCredits)) {
+    query = query.lte('currentCredits', params.maxCredits);
+  }
+  if (params.createdAfter) {
+    query = query.gte('createdAt', params.createdAfter);
+  }
+  if (params.createdBefore) {
+    query = query.lte('createdAt', params.createdBefore);
+  }
+  return query;
+}
+
+async function fetchUsersPage(
+  getToken: (options?: any) => Promise<string | null>,
+  params: UsersQueryParams
+): Promise<{ users: UserListItem[]; totalCount: number }> {
+  const supabase = await getAdminSupabase(getToken);
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? USERS_PAGE_SIZE;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let usersQuery = supabase
+    .from('User')
+    .select(
+      'id, email, tier, currentCredits, maxCredits, createdAt, UserSession(lastPing, endTime, startTime)',
+      { count: 'exact' }
+    )
+    .order('createdAt', { ascending: false })
+    .order('lastPing', { foreignTable: 'UserSession', ascending: false })
+    .limit(1, { foreignTable: 'UserSession' })
+    .range(from, to);
+
+  usersQuery = applyUserFilters(usersQuery, params);
+
+  const usersRes = await usersQuery;
+
   if (usersRes.error) {
     console.error('[UsersAudit] Supabase error fetching users:', usersRes.error);
     throw usersRes.error;
   }
-  
-  if (saveStatsRes.error) {
-    console.warn('[UsersAudit] Supabase error fetching save sizes:', saveStatsRes.error);
-  }
 
   const users = usersRes.data || [];
-  const saveStats = saveStatsRes.data || [];
-  const saveStatsMap = new Map(saveStats.map((s: any) => [s.userId, s]));
+  const totalCount = usersRes.count ?? users.length;
+  const userIds = users.map((u) => u.id);
 
-  return users.map((user) => ({
-    ...user,
-    saveStats: saveStatsMap.get(user.id) || { save_count: 0, total_bytes: 0 }
-  }));
+  let saveStatsMap = new Map<string, { save_count: number; total_bytes: number }>();
+  if (userIds.length > 0) {
+    const saveStatsRes = await supabase
+      .from('user_save_sizes_summary')
+      .select('userId, save_count, total_bytes')
+      .in('userId', userIds);
+
+    if (saveStatsRes.error) {
+      console.warn('[UsersAudit] Supabase error fetching save sizes:', saveStatsRes.error);
+    } else {
+      saveStatsMap = new Map(
+        (saveStatsRes.data || []).map((s: any) => [s.userId, s])
+      );
+    }
+  }
+
+  return {
+    totalCount,
+    users: users.map((user) => ({
+      ...user,
+      saveStats: saveStatsMap.get(user.id) || { save_count: 0, total_bytes: 0 },
+    })),
+  };
 }
 
-export function useUsers() {
+async function fetchSaveTotals(getToken: (options?: any) => Promise<string | null>) {
+  const supabase = await getAdminSupabase(getToken);
+  const { data, error } = await supabase
+    .from('user_save_sizes_summary')
+    .select('save_count, total_bytes');
+
+  if (error) {
+    console.warn('[UsersAudit] Save totals fetch failed:', error);
+    return { totalBytes: 0, totalCount: 0 };
+  }
+
+  const rows = data || [];
+  return {
+    totalBytes: rows.reduce((acc, row) => acc + (Number(row.total_bytes) || 0), 0),
+    totalCount: rows.reduce((acc, row) => acc + (Number(row.save_count) || 0), 0),
+  };
+}
+
+async function fetchUserById(
+  getToken: (options?: any) => Promise<string | null>,
+  userId: string
+): Promise<UserListItem | null> {
+  const supabase = await getAdminSupabase(getToken);
+  const { data, error } = await supabase
+    .from('User')
+    .select(
+      'id, email, tier, currentCredits, maxCredits, createdAt, UserSession(lastPing, endTime, startTime)'
+    )
+    .eq('id', userId)
+    .order('lastPing', { foreignTable: 'UserSession', ascending: false })
+    .limit(1, { foreignTable: 'UserSession' })
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const saveStatsRes = await supabase
+    .from('user_save_sizes_summary')
+    .select('userId, save_count, total_bytes')
+    .eq('userId', userId)
+    .maybeSingle();
+
+  return {
+    ...data,
+    saveStats: saveStatsRes.data || { save_count: 0, total_bytes: 0 },
+  };
+}
+
+/** Export current filter result up to EXPORT_CAP rows. */
+export async function exportUsersCsv(
+  getToken: (options?: any) => Promise<string | null>,
+  params: UsersQueryParams
+): Promise<string> {
+  const supabase = await getAdminSupabase(getToken);
+  let query = supabase
+    .from('User')
+    .select('id, email, tier, currentCredits, maxCredits, createdAt')
+    .order('createdAt', { ascending: false })
+    .limit(EXPORT_CAP);
+
+  query = applyUserFilters(query, params);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = data || [];
+  const header = 'id,email,tier,currentCredits,maxCredits,createdAt';
+  const escape = (value: unknown) => {
+    const str = String(value ?? '');
+    if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+    return str;
+  };
+  const lines = rows.map((row) =>
+    [row.id, row.email, row.tier, row.currentCredits, row.maxCredits, row.createdAt]
+      .map(escape)
+      .join(',')
+  );
+  return [header, ...lines].join('\n');
+}
+
+export function useUsers(params: UsersQueryParams = {}) {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
-  const { data: users = [], isLoading: loading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => fetchUsers(() => getToken({ template: 'supabase' })),
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? USERS_PAGE_SIZE;
+  const search = params.search?.trim() || '';
+  const tier = params.tier || 'All';
+  const minCredits = params.minCredits ?? null;
+  const maxCredits = params.maxCredits ?? null;
+  const createdAfter = params.createdAfter || null;
+  const createdBefore = params.createdBefore || null;
+
+  const queryKey = [
+    'users',
+    { page, pageSize, search, tier, minCredits, maxCredits, createdAfter, createdBefore },
+  ] as const;
+
+  const { data, isLoading: loading, isFetching } = useQuery({
+    queryKey,
+    queryFn: () =>
+      fetchUsersPage(() => getToken({ template: 'supabase' }), {
+        page,
+        pageSize,
+        search,
+        tier,
+        minCredits,
+        maxCredits,
+        createdAfter,
+        createdBefore,
+      }),
+    placeholderData: (previous) => previous,
+  });
+
+  const { data: saveTotals } = useQuery({
+    queryKey: ['user-save-totals'],
+    queryFn: () => fetchSaveTotals(() => getToken({ template: 'supabase' })),
+    staleTime: 1000 * 60 * 5,
   });
 
   useEffect(() => {
@@ -74,6 +260,7 @@ export function useUsers() {
             if (invalidateTimer) clearTimeout(invalidateTimer);
             invalidateTimer = setTimeout(() => {
               queryClient.invalidateQueries({ queryKey: ['users'] });
+              queryClient.invalidateQueries({ queryKey: ['user-save-totals'] });
             }, REALTIME_INVALIDATE_DEBOUNCE_MS);
           })
           .subscribe();
@@ -85,7 +272,7 @@ export function useUsers() {
         console.error('[UsersAudit] Real-time setup failed:', e);
       }
     };
-    
+
     setupSubscription().then((result) => {
       if (isMounted) {
         cleanup = result;
@@ -108,18 +295,19 @@ export function useUsers() {
       const token = await getToken().catch(() => null);
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      
+
       const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/sync-users`, {
         method: 'POST',
-        headers
+        headers,
       });
-      const data = await response.json();
-      if (data.success) {
+      const result = await response.json();
+      if (result.success) {
         setSyncMessage('Sync Successful');
         queryClient.invalidateQueries({ queryKey: ['users'] });
+        queryClient.invalidateQueries({ queryKey: ['user-save-totals'] });
         setTimeout(() => setSyncMessage(''), 3000);
       } else {
-        console.error('Sync failed:', data.error);
+        console.error('Sync failed:', result.error);
         setSyncMessage('Sync Failed');
         setTimeout(() => setSyncMessage(''), 3000);
       }
@@ -132,12 +320,33 @@ export function useUsers() {
     }
   };
 
+  const resolveUserById = (userId: string) =>
+    fetchUserById(() => getToken({ template: 'supabase' }), userId);
+
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   return {
-    users,
+    users: data?.users ?? [],
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
     loading,
+    isFetching,
     isSyncing,
     syncMessage,
-    syncUsers
+    syncUsers,
+    resolveUserById,
+    totalSavesSize: saveTotals?.totalBytes ?? 0,
+    totalSavesCount: saveTotals?.totalCount ?? 0,
+    exportParams: {
+      search,
+      tier,
+      minCredits,
+      maxCredits,
+      createdAfter,
+      createdBefore,
+    } satisfies UsersQueryParams,
   };
 }
-

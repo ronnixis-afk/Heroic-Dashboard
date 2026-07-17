@@ -1,9 +1,9 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useAnalyticsMetrics } from '../../hooks/useAnalyticsMetrics';
+import { useCostAnalytics } from '../../hooks/useCostAnalytics';
 import { SkeletonText } from '../Skeleton';
 
 export function CostAnalyticsCard() {
-  const { modelCostData: byModel = [], dailyCostData: daily = [], loading } = useAnalyticsMetrics();
+  const { modelCostData: byModel = [], dailyCostData: daily = [], loading } = useCostAnalytics();
 
   const isLoading = loading;
   const today = daily?.[0] || { totalCost: 0, costPerUser: 0 };

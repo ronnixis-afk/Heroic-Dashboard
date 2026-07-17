@@ -2,11 +2,13 @@
  * ANALYTICS METRICS HOOK
  *
  * Aggregates platform metrics from Supabase views and Heroic AI RPG admin APIs.
+ * Independent reads run in parallel; RPG calls share one pre-fetched Clerk token.
  */
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
+import { fetchCostAnalyticsBundle, fetchTopConsumersWithEmails } from '../lib/metricsFetches';
 
 const ANALYTICS_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -50,23 +52,6 @@ interface FeatureUsageApiResponse {
   chatOnlyUsers: number;
 }
 
-interface CostAnalyticsApiResponse {
-  daily: {
-    date: string;
-    activeUsers: number;
-    totalCost: number;
-    costPerUser: number;
-  }[];
-  byModel: {
-    model: string;
-    calls: number;
-    totalInputTokens: number;
-    totalOutputTokens: number;
-    totalCost: number;
-    avgLatencyMs: number;
-  }[];
-}
-
 function titleCaseFeature(name: string): string {
   if (!name) return 'Unknown';
   return name
@@ -88,20 +73,80 @@ async function fetchAnalyticsMetrics(
   }
 
   const supabase = getSupabaseClient(supabaseToken || undefined);
+  const rpgToken = (await getToken()) || '';
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const { data: dailyMetrics, error: dailyError } = await supabase
-    .from('daily_usage_summary')
-    .select('*')
-    .gte('date', dateStr)
-    .order('date', { ascending: false });
+  const now = new Date();
+  const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
+  const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
 
-  if (dailyError) console.error('[AnalyticsAudit] daily_usage_summary error:', dailyError);
+  const [
+    costBundle,
+    topConsumersBundle,
+    featureRes,
+    sessionStatsRes,
+    activeSessionsRes,
+    priorActiveSessionsRes,
+    hourlyStatsRes,
+    pageVisitRes,
+    featureApi,
+    sessionLengthData,
+    messagesData,
+  ] = await Promise.all([
+    fetchCostAnalyticsBundle(supabase, rpgToken || getToken, 30),
+    fetchTopConsumersWithEmails(supabase, 5),
+    supabase.from('feature_usage_distribution').select('*'),
+    supabase
+      .from('session_metrics_summary')
+      .select('*')
+      .gte('date', dateStr)
+      .order('date', { ascending: false }),
+    supabase
+      .from('UserSession')
+      .select('*', { count: 'exact', head: true })
+      .is('endTime', null)
+      .gt('lastPing', fifteenMinsAgo),
+    supabase
+      .from('UserSession')
+      .select('*', { count: 'exact', head: true })
+      .is('endTime', null)
+      .gt('lastPing', thirtyMinsAgo)
+      .lte('lastPing', fifteenMinsAgo),
+    supabase.from('real_time_hourly_stats').select('*'),
+    supabase.from('page_visit_summary').select('*'),
+    rpgToken
+      ? fetchRpgAdmin<FeatureUsageApiResponse>('/api/admin/analytics/feature-usage', rpgToken).catch(
+          (e) => {
+            console.warn('[AnalyticsAudit] feature-usage API failed, using view fallback:', e);
+            return null;
+          }
+        )
+      : Promise.resolve(null),
+    rpgToken
+      ? fetchRpgAdmin<SessionLengthApiResponse>(
+          '/api/admin/analytics/session-length?days=30',
+          rpgToken
+        ).catch((e) => {
+          console.warn('[AnalyticsAudit] session-length API failed, using view fallback:', e);
+          return null;
+        })
+      : Promise.resolve(null),
+    rpgToken
+      ? fetchRpgAdmin<MessagesPerUserRow[]>('/api/admin/analytics/messages-per-user', rpgToken).catch(
+          (e) => {
+            console.warn('[AnalyticsAudit] messages-per-user API failed:', e);
+            return null;
+          }
+        )
+      : Promise.resolve(null),
+  ]);
 
-  const usageTrends = (dailyMetrics || [])
+  const { dailyMetrics, modelData, modelCostData, dailyCostData } = costBundle;
+
+  const usageTrends = dailyMetrics
     .map((m) => ({
       date: new Date(m.date).toISOString().split('T')[0],
       tokens: m.total_tokens || 0,
@@ -110,9 +155,9 @@ async function fetchAnalyticsMetrics(
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const totalCost = (dailyMetrics || []).reduce((acc, curr) => acc + (curr.total_cost || 0), 0);
+  const totalCost = dailyMetrics.reduce((acc, curr) => acc + (curr.total_cost || 0), 0);
 
-  const sortedDailyCosts = [...(dailyMetrics || [])].sort(
+  const sortedDailyCosts = [...dailyMetrics].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   const latestDay = sortedDailyCosts[sortedDailyCosts.length - 1];
@@ -122,68 +167,16 @@ async function fetchAnalyticsMetrics(
     Number(priorDay?.total_cost || 0)
   );
 
-  const { data: modelData } = await supabase.from('model_usage_distribution').select('*');
-  const totalModelUses = (modelData || []).reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
+  const totalModelUses = modelData.reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
   const colors = ['#3ecf8e', '#20cce0', '#38bdf8', '#fbbf24', '#f87171'];
-
-  const distribution = (modelData || []).map((m, idx) => ({
+  const distribution = modelData.map((m, idx) => ({
     name: m.model || 'Unknown',
     value: Math.round((m.usage_count / totalModelUses) * 100),
     color: colors[idx % colors.length],
   }));
 
-  let modelCostData = (modelData || []).map((m) => ({
-    model: m.model || 'Unknown',
-    calls: Number(m.usage_count) || 0,
-    totalInputTokens: Number(m.total_input_tokens) || 0,
-    totalOutputTokens: Number(m.total_output_tokens) || 0,
-    totalCost: Number(m.total_cost) || 0,
-    avgLatencyMs: Number(m.avg_latency) || 0,
-  }));
-
-  let dailyCostData = (dailyMetrics || []).map((m) => ({
-    date: m.date,
-    activeUsers: m.active_users || 0,
-    totalCost: Number(m.total_cost) || 0,
-    costPerUser: m.active_users > 0 ? m.total_cost / m.active_users : 0,
-  }));
-
-  try {
-    const costAnalytics = await fetchRpgAdmin<CostAnalyticsApiResponse>(
-      '/api/admin/analytics/cost-analytics?days=30',
-      getToken
-    );
-    if (costAnalytics.byModel?.length) {
-      modelCostData = costAnalytics.byModel.map((m) => ({
-        model: m.model || 'Unknown',
-        calls: Number(m.calls) || 0,
-        totalInputTokens: Number(m.totalInputTokens) || 0,
-        totalOutputTokens: Number(m.totalOutputTokens) || 0,
-        totalCost: Number(m.totalCost) || 0,
-        avgLatencyMs: Number(m.avgLatencyMs) || 0,
-      }));
-    }
-    if (costAnalytics.daily?.length) {
-      dailyCostData = costAnalytics.daily.map((d) => ({
-        date: typeof d.date === 'string' ? d.date : String(d.date),
-        activeUsers: Number(d.activeUsers) || 0,
-        totalCost: Number(d.totalCost) || 0,
-        costPerUser: Number(d.costPerUser) || 0,
-      }));
-    }
-  } catch (e) {
-    console.warn('[AnalyticsAudit] cost-analytics API failed, using view fallback:', e);
-  }
-
-  const { data: topConsumersData } = await supabase.from('top_consumers_summary').select('*').limit(5);
-  const topUserIds = (topConsumersData || []).map((u) => u.userId);
-  const { data: usersData } = await supabase.from('User').select('id, email').in('id', topUserIds);
-  const userEmailMap: Record<string, string> = {};
-  (usersData || []).forEach((u) => {
-    userEmailMap[u.id] = u.email;
-  });
-
-  const leaders = (topConsumersData || []).map((entry) => {
+  const { topConsumersData, userEmailMap } = topConsumersBundle;
+  const leaders = topConsumersData.map((entry) => {
     const email = userEmailMap[entry.userId] || 'Unknown';
     const tokens = entry.total_tokens || 0;
     return {
@@ -194,15 +187,15 @@ async function fetchAnalyticsMetrics(
     };
   });
 
-  const { data: featureData } = await supabase.from('feature_usage_distribution').select('*');
-  const totalUsesAll = (featureData || []).reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
+  const featureData = featureRes.data || [];
+  const totalUsesAll = featureData.reduce((acc, curr) => acc + (curr.usage_count || 0), 0) || 1;
   const costByFeature = new Map<string, number>();
-  (featureData || []).forEach((f) => {
+  featureData.forEach((f) => {
     const key = String(f.feature_name || '').toLowerCase();
     if (key) costByFeature.set(key, Number(f.total_cost) || 0);
   });
 
-  let featureUsageRows = (featureData || [])
+  let featureUsageRows = featureData
     .map((f) => ({
       feature: titleCaseFeature(String(f.feature_name || 'Unknown')),
       totalUses: Number(f.usage_count) || 0,
@@ -214,41 +207,24 @@ async function fetchAnalyticsMetrics(
     .sort((a, b) => b.totalUses - a.totalUses);
 
   let chatOnlyUsers = 0;
-
-  try {
-    const featureApi = await fetchRpgAdmin<FeatureUsageApiResponse>(
-      '/api/admin/analytics/feature-usage',
-      getToken
-    );
-    if (featureApi.usage?.length) {
-      featureUsageRows = featureApi.usage
-        .map((f) => {
-          const feature = titleCaseFeature(String(f.feature || 'Unknown'));
-          return {
-            feature,
-            totalUses: Number(f.totalUses) || 0,
-            percentage: Number(f.percentage) || 0,
-            totalCost: costByFeature.get(String(f.feature || '').toLowerCase()) || 0,
-            uniqueUsers: Number(f.uniqueUsers) || 0,
-            avgDurationMs: Number(f.avgDurationMs) || 0,
-          };
-        })
-        .sort((a, b) => b.totalUses - a.totalUses);
-      chatOnlyUsers = Number(featureApi.chatOnlyUsers) || 0;
-    }
-  } catch (e) {
-    console.warn('[AnalyticsAudit] feature-usage API failed, using view fallback:', e);
+  if (featureApi?.usage?.length) {
+    featureUsageRows = featureApi.usage
+      .map((f) => {
+        const feature = titleCaseFeature(String(f.feature || 'Unknown'));
+        return {
+          feature,
+          totalUses: Number(f.totalUses) || 0,
+          percentage: Number(f.percentage) || 0,
+          totalCost: costByFeature.get(String(f.feature || '').toLowerCase()) || 0,
+          uniqueUsers: Number(f.uniqueUsers) || 0,
+          avgDurationMs: Number(f.avgDurationMs) || 0,
+        };
+      })
+      .sort((a, b) => b.totalUses - a.totalUses);
+    chatOnlyUsers = Number(featureApi.chatOnlyUsers) || 0;
   }
 
-  const featureUsage = featureUsageRows;
-
-  const { data: sessionStats } = await supabase
-    .from('session_metrics_summary')
-    .select('*')
-    .gte('date', dateStr)
-    .order('date', { ascending: false });
-
-  let sessionDaily = (sessionStats || [])
+  let sessionDaily = (sessionStatsRes.data || [])
     .map((s) => ({
       date: new Date(s.date).toISOString().split('T')[0],
       totalSessions: s.total_sessions,
@@ -259,72 +235,33 @@ async function fetchAnalyticsMetrics(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   let sessionDistribution: { range: string; count: number; percentage: number }[] = [];
-  let messagesPerUser: MessagesPerUserRow[] = [];
-
-  try {
-    const sessionLengthData = await fetchRpgAdmin<SessionLengthApiResponse>(
-      '/api/admin/analytics/session-length?days=30',
-      getToken
-    );
-    if (sessionLengthData.daily?.length) {
-      sessionDaily = sessionLengthData.daily
-        .map((d) => ({
-          date: d.date,
-          totalSessions: d.totalSessions,
-          avgDurationMin: d.avgDurationMin,
-          medianDurationMin: d.medianDurationMin,
-          p95DurationMin: d.p95DurationMin,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-    }
-    sessionDistribution = sessionLengthData.distribution || [];
-  } catch (e) {
-    console.warn('[AnalyticsAudit] session-length API failed, using view fallback:', e);
-  }
-
-  try {
-    const messagesData = await fetchRpgAdmin<MessagesPerUserRow[]>(
-      '/api/admin/analytics/messages-per-user',
-      getToken
-    );
-    messagesPerUser = (messagesData || [])
-      .map((row) => ({
-        date: row.date,
-        activeUsers: Number(row.activeUsers) || 0,
-        totalMessages: Number(row.totalMessages) || 0,
-        msgsPerUser: Number(row.msgsPerUser) || 0,
+  if (sessionLengthData?.daily?.length) {
+    sessionDaily = sessionLengthData.daily
+      .map((d) => ({
+        date: d.date,
+        totalSessions: d.totalSessions,
+        avgDurationMin: d.avgDurationMin,
+        medianDurationMin: d.medianDurationMin,
+        p95DurationMin: d.p95DurationMin,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  } catch (e) {
-    console.warn('[AnalyticsAudit] messages-per-user API failed:', e);
   }
+  sessionDistribution = sessionLengthData?.distribution || [];
 
-  const now = new Date();
-  const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
-  const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
+  const messagesPerUser = (messagesData || [])
+    .map((row) => ({
+      date: row.date,
+      activeUsers: Number(row.activeUsers) || 0,
+      totalMessages: Number(row.totalMessages) || 0,
+      msgsPerUser: Number(row.msgsPerUser) || 0,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Live open sessions with a ping in the last 15 minutes (snapshot shown on the card).
-  const { count: activeSessionsCount } = await supabase
-    .from('UserSession')
-    .select('*', { count: 'exact', head: true })
-    .is('endTime', null)
-    .gt('lastPing', fifteenMinsAgo);
+  const activeSessionsCount = activeSessionsRes.count || 0;
+  const priorActiveSessionsCount = priorActiveSessionsRes.count || 0;
+  const sessionsComparison = percentChange(activeSessionsCount, priorActiveSessionsCount);
 
-  // Same definition for the prior 15-minute window (compare snapshot vs snapshot, not hourly aggregates).
-  const { count: priorActiveSessionsCount } = await supabase
-    .from('UserSession')
-    .select('*', { count: 'exact', head: true })
-    .is('endTime', null)
-    .gt('lastPing', thirtyMinsAgo)
-    .lte('lastPing', fifteenMinsAgo);
-
-  const sessionsComparison = percentChange(
-    activeSessionsCount || 0,
-    priorActiveSessionsCount || 0
-  );
-
-  const { data: hourlyStatsData } = await supabase.from('real_time_hourly_stats').select('*');
-  const sortedHourly = [...(hourlyStatsData || [])].sort(
+  const sortedHourly = [...(hourlyStatsRes.data || [])].sort(
     (a, b) => new Date(a.hour).getTime() - new Date(b.hour).getTime()
   );
   const recentHours = sortedHourly.slice(-12);
@@ -341,19 +278,16 @@ async function fetchAnalyticsMetrics(
     if (rows.length === 0) return 0;
     return rows.reduce((acc, h) => acc + (Number(h[key]) || 0), 0) / rows.length;
   };
-  const recentLatency = avgOf(recentHours, 'avg_latency');
-  const priorLatency = avgOf(priorHours, 'avg_latency');
-  const latencyComparison = percentChange(recentLatency, priorLatency);
+  const latencyComparison = percentChange(avgOf(recentHours, 'avg_latency'), avgOf(priorHours, 'avg_latency'));
 
   const avgLatency =
     realTimeTrends.length > 0
       ? Math.round(realTimeTrends.reduce((acc, curr) => acc + curr.latency, 0) / realTimeTrends.length)
       : 0;
 
-  const { data: pageVisitData } = await supabase.from('page_visit_summary').select('*');
-  const totalPageVisits = (pageVisitData || []).reduce((acc, curr) => acc + (curr.visit_count || 0), 0) || 1;
-
-  const pageVisitUsage = (pageVisitData || [])
+  const pageVisitData = pageVisitRes.data || [];
+  const totalPageVisits = pageVisitData.reduce((acc, curr) => acc + (curr.visit_count || 0), 0) || 1;
+  const pageVisitUsage = pageVisitData
     .map((p) => ({
       page: p.page,
       visits: p.visit_count || 0,
@@ -367,10 +301,11 @@ async function fetchAnalyticsMetrics(
     totalCost,
     modelDistribution: distribution,
     topUsers: leaders,
-    activeSessionsCount: activeSessionsCount || 0,
-    avgSessionLength: sessionDaily.length > 0 ? Math.round(sessionDaily[sessionDaily.length - 1].avgDurationMin) : 0,
+    activeSessionsCount,
+    avgSessionLength:
+      sessionDaily.length > 0 ? Math.round(sessionDaily[sessionDaily.length - 1].avgDurationMin) : 0,
     sessionTrends: sessionDaily,
-    featureUsage: { usage: featureUsage, chatOnlyUsers },
+    featureUsage: { usage: featureUsageRows, chatOnlyUsers },
     messagesPerUser,
     sessionLengths: { daily: sessionDaily, distribution: sessionDistribution },
     realTimeTrends,

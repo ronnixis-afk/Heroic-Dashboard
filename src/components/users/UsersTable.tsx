@@ -7,17 +7,13 @@ import { Skeleton, SkeletonText } from '../Skeleton';
 interface UsersTableProps {
   filteredUsers: any[];
   setSelectedUser: (user: any) => void;
-  setShowManageAccess: (show: boolean) => void;
-  setShowSuspendConfirm: (show: boolean) => void;
   isLoading?: boolean;
 }
 
-export default function UsersTable({ 
-  filteredUsers, 
-  setSelectedUser, 
-  setShowManageAccess, 
-  setShowSuspendConfirm,
-  isLoading = false
+export default function UsersTable({
+  filteredUsers,
+  setSelectedUser,
+  isLoading = false,
 }: UsersTableProps) {
   const displayUsers = isLoading ? Array.from({ length: 8 }) : filteredUsers;
 
@@ -176,8 +172,6 @@ export default function UsersTable({
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedUser(user);
-                            setShowManageAccess(false);
-                            setShowSuspendConfirm(false);
                           }}
                           className="btn-icon"
                         >

@@ -8,9 +8,12 @@ import {
   Trash2,
   UploadCloud,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { PageHeader, StatusBanner } from '../../components/ui';
 import {
+  IMAGE_ASSET_PAGE_SIZE,
   IMAGE_ASSET_TYPES,
   IMAGE_GENRES,
   ImageAsset,
@@ -252,7 +255,7 @@ const initialForm = {
 };
 
 const SUPABASE_FREE_STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024;
-const MEDIA_GRID_PAGE_SIZE = 60;
+const MEDIA_GRID_PAGE_SIZE = IMAGE_ASSET_PAGE_SIZE;
 
 interface OptimizedImageDraft extends OptimizedImageResult {
   sourceFileName: string;
@@ -406,17 +409,49 @@ const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
   return Array.from(new Set([...baseTags, ...selectionTags]));
 };
 
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 export default function AdminMedia() {
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({
+    search: '',
+    genre: 'All',
+    assetType: 'All',
+    tag: 'All',
+  });
+  const debouncedSearch = useDebouncedValue(filters.search, 300);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters.genre, filters.assetType, filters.tag]);
+
   const {
     assets,
     totalAssetCount,
+    totalStorageBytes,
+    totalPages,
     loading,
+    isFetching,
     createImageAsset,
     updateImageAsset,
     addTagsToImageAssets,
     deleteImageAsset,
     deleteImageAssets,
-  } = useImageAssets();
+  } = useImageAssets({
+    page,
+    pageSize: MEDIA_GRID_PAGE_SIZE,
+    search: debouncedSearch,
+    genre: filters.genre,
+    assetType: filters.assetType,
+    tag: filters.tag,
+  });
   const [formData, setFormData] = useState(initialForm);
   const [editingAsset, setEditingAsset] = useState<ImageAsset | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<ImageAsset | null>(null);
@@ -431,15 +466,8 @@ export default function AdminMedia() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
-  const [visibleAssetCount, setVisibleAssetCount] = useState(MEDIA_GRID_PAGE_SIZE);
   const [customRacesByGenre, setCustomRacesByGenre] = useState<Record<string, string[]>>({});
   const [isRaceMenuOpen, setIsRaceMenuOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    search: '',
-    genre: 'All',
-    assetType: 'All',
-    tag: 'All',
-  });
 
   useEffect(() => {
     return () => {
@@ -460,49 +488,13 @@ export default function AdminMedia() {
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
+    if (filters.tag !== 'All') tags.add(filters.tag);
     assets.forEach((asset) => asset.tags?.forEach((tag) => tags.add(tag)));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
-  }, [assets]);
+  }, [assets, filters.tag]);
 
-  const filteredAssets = useMemo(() => {
-    const searchTerms = filters.search
-      .split(/[,\s]+/)
-      .map((term) => term.trim().toLowerCase())
-      .filter(Boolean);
-
-    return assets.filter((asset) => {
-      const searchableValues = [
-        asset.title,
-        asset.description || '',
-        asset.genre,
-        normalizeAssetTypeForForm(asset.assetType),
-        ...asset.tags,
-        ...Object.values(asset.metadata || {}).map((value) => String(value)),
-      ].map((value) => value.toLowerCase());
-      const matchesSearch =
-        searchTerms.length === 0 ||
-        searchTerms.every((term) => searchableValues.some((value) => value.includes(term)));
-      // "Any Genre" in the filter means no genre restriction (upload form still uses the literal value).
-      const matchesGenre =
-        filters.genre === 'All' ||
-        filters.genre === 'Any Genre' ||
-        asset.genre === filters.genre;
-      const matchesType = filters.assetType === 'All' || normalizeAssetTypeForForm(asset.assetType) === filters.assetType;
-      const matchesTag = filters.tag === 'All' || asset.tags.includes(filters.tag);
-
-      return matchesSearch && matchesGenre && matchesType && matchesTag;
-    });
-  }, [assets, filters]);
-
-  useEffect(() => {
-    setVisibleAssetCount(MEDIA_GRID_PAGE_SIZE);
-  }, [filters]);
-
-  const visibleAssets = useMemo(
-    () => filteredAssets.slice(0, visibleAssetCount),
-    [filteredAssets, visibleAssetCount]
-  );
-  const hiddenAssetCount = Math.max(0, filteredAssets.length - visibleAssets.length);
+  const filteredAssets = assets;
+  const visibleAssets = assets;
   const selectedAssets = useMemo(
     () => assets.filter((asset) => selectedAssetIds.includes(asset.id)),
     [assets, selectedAssetIds]
@@ -510,10 +502,6 @@ export default function AdminMedia() {
   const selectedCount = selectedAssets.length;
   const areAllVisibleSelected =
     visibleAssets.length > 0 && visibleAssets.every((asset) => selectedAssetIds.includes(asset.id));
-  const totalStorageBytes = useMemo(
-    () => assets.reduce((total, asset) => total + (asset.sizeBytes || 0), 0),
-    [assets]
-  );
   const storageUsagePercent = Math.min(100, (totalStorageBytes / SUPABASE_FREE_STORAGE_LIMIT_BYTES) * 100);
   const remainingStorageBytes = Math.max(0, SUPABASE_FREE_STORAGE_LIMIT_BYTES - totalStorageBytes);
   const storageBarClassName =
@@ -1528,8 +1516,8 @@ export default function AdminMedia() {
                   Image Assets ({totalAssetCount.toLocaleString()})
                 </h3>
                 <p className="card-subtitle">
-                  Showing {visibleAssets.length} Of {filteredAssets.length} Filtered Image Assets
-                  {totalAssetCount > assets.length ? ` (${assets.length.toLocaleString()} Loaded).` : '.'}
+                  Showing {visibleAssets.length} Of {totalAssetCount.toLocaleString()} Matching Image Assets
+                  {isFetching && !loading ? ' · Refreshing…' : '.'}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -1739,14 +1727,28 @@ export default function AdminMedia() {
                     </div>
                   ))}
                 </div>
-                {hiddenAssetCount > 0 && (
-                  <div className="mt-4 flex justify-center">
+                {totalPages > 1 && (
+                  <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
                     <button
                       type="button"
-                      onClick={() => setVisibleAssetCount((current) => current + MEDIA_GRID_PAGE_SIZE)}
+                      disabled={page <= 1 || loading}
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
                       className="btn-secondary"
                     >
-                      Show More ({Math.min(MEDIA_GRID_PAGE_SIZE, hiddenAssetCount)} Of {hiddenAssetCount} Remaining)
+                      <ChevronLeft size={14} />
+                      Previous
+                    </button>
+                    <span className="text-xs text-brand-text-muted tabular-nums">
+                      Page {page} Of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages || loading}
+                      onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                      className="btn-secondary"
+                    >
+                      Next
+                      <ChevronRight size={14} />
                     </button>
                   </div>
                 )}
