@@ -185,6 +185,38 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
+/** Suggested mount types aligned with RPG stables templates + common breeds. */
+const MOUNT_TYPE_SUGGESTIONS: Record<SpecificImageGenre, string[]> = {
+  Fantasy: ['War Destrier', 'Elven Stag', 'Dire Wolf', 'Giant Eagle', 'Pack Mule', 'Horse', 'Wolf', 'Griffon', 'Drake'],
+  Modern: ['Patrol Motorcycle', 'Armored Suv', 'Dirt Bike', 'Tactical Quad', 'Cargo Truck', 'Motorcycle', 'Suv', 'Truck'],
+  'Sci-Fi': ['Hover-Bike', 'Mech-Walker', 'Recon Glider', 'Xeno-Raptor', 'Cargo Skiff', 'Hoverbike', 'Walker', 'Speeder'],
+};
+
+/** Suggested ship / vehicle types aligned with RPG shipyard templates + common hulls. */
+const SHIP_TYPE_SUGGESTIONS: Record<SpecificImageGenre, string[]> = {
+  Fantasy: ['War Galley', 'Elven Cutter', 'Ghost Ship', 'Floating Cathedral', 'Explorer Cog', 'Galley', 'Sloop', 'Galleon'],
+  Modern: [
+    'SWAT Command Van',
+    'SNN Broadcast Truck',
+    'Response Unit',
+    'Hauler Juggernaut',
+    'Mobile Safehouse',
+    'Truck',
+    'Boat',
+    'Helicopter',
+  ],
+  'Sci-Fi': [
+    'Heavy Dreadnought',
+    'Stealth Interceptor',
+    'Science Explorer',
+    'Medical Frigate',
+    "Smuggler's Runner",
+    'Frigate',
+    'Fighter',
+    'Freighter',
+  ],
+};
+
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
 const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
 const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait', 'NPC Portrait', 'Service NPC Portrait']);
@@ -306,6 +338,8 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
   'NPC Portrait': ['race', 'gender'],
   'Monster Portrait': ['monsterType', 'monsterSubtype'],
+  'Mount Portrait': ['mountType'],
+  'Ship Portrait': ['shipType'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
@@ -316,13 +350,17 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
   assetType === 'Point Of Interest Image' ||
   assetType === 'Zone Image' ||
   assetType === 'Item Image' ||
-  assetType === 'Monster Portrait';
+  assetType === 'Monster Portrait' ||
+  assetType === 'Mount Portrait' ||
+  assetType === 'Ship Portrait';
 
 /** Primary "Type" field kept after a successful upload for faster repeat uploads. */
 const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'Character Portrait': 'race',
   'NPC Portrait': 'race',
   'Monster Portrait': 'monsterType',
+  'Mount Portrait': 'mountType',
+  'Ship Portrait': 'shipType',
   'Point Of Interest Image': 'poiBaseType',
   'Zone Image': 'zoneProperty',
   'Item Image': 'itemCategory',
@@ -390,6 +428,12 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
   }
   if (assetType === 'Monster Portrait') {
     return ALL_MONSTER_PORTRAIT_TAG_OPTIONS;
+  }
+  if (assetType === 'Mount Portrait') {
+    return new Set(Object.values(MOUNT_TYPE_SUGGESTIONS).flat());
+  }
+  if (assetType === 'Ship Portrait') {
+    return new Set(Object.values(SHIP_TYPE_SUGGESTIONS).flat());
   }
   return new Set();
 };
@@ -538,6 +582,30 @@ export default function AdminMedia() {
     () => getMonsterSubtypes(formData.metadata.monsterType || ''),
     [formData.metadata.monsterType]
   );
+  const mountTypeOptions = useMemo(() => {
+    const catalogTypes = assets
+      .filter((asset) => asset.assetType === 'Mount Portrait')
+      .map((asset) => getStringMetadata(asset.metadata).mountType?.trim())
+      .filter((value): value is string => Boolean(value));
+    const current = formData.metadata.mountType?.trim();
+    return mergePortraitRaceOptions(
+      MOUNT_TYPE_SUGGESTIONS[structuredGenre],
+      catalogTypes,
+      current ? [current] : []
+    );
+  }, [assets, formData.metadata.mountType, structuredGenre]);
+  const shipTypeOptions = useMemo(() => {
+    const catalogTypes = assets
+      .filter((asset) => asset.assetType === 'Ship Portrait')
+      .map((asset) => getStringMetadata(asset.metadata).shipType?.trim())
+      .filter((value): value is string => Boolean(value));
+    const current = formData.metadata.shipType?.trim();
+    return mergePortraitRaceOptions(
+      SHIP_TYPE_SUGGESTIONS[structuredGenre],
+      catalogTypes,
+      current ? [current] : []
+    );
+  }, [assets, formData.metadata.shipType, structuredGenre]);
   const previewUploadOrder = useMemo(
     () => (editingAsset ? getTrailingUploadOrder(editingAsset.title) || 1 : getNextUploadOrder(assets, formData)),
     [assets, editingAsset, formData]
@@ -1356,6 +1424,48 @@ export default function AdminMedia() {
                   </div>
                 )}
 
+                {formData.assetType === 'Mount Portrait' && (
+                  <div>
+                    <label className="input-label">Template Name</label>
+                    <select
+                      value={formData.metadata.mountType || ''}
+                      onChange={(event) => setMetadataField('mountType', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Any Mount Type</option>
+                      {mountTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      Stables Template Names (E.g. War Destrier, Elven Stag) Used For RPG Auto-Match On Recruit.
+                    </p>
+                  </div>
+                )}
+
+                {formData.assetType === 'Ship Portrait' && (
+                  <div>
+                    <label className="input-label">Template Name</label>
+                    <select
+                      value={formData.metadata.shipType || ''}
+                      onChange={(event) => setMetadataField('shipType', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Any Ship Type</option>
+                      {shipTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      Shipyard Template Names (E.g. War Galley, Heavy Dreadnought) Used For RPG Auto-Match On Recruit.
+                    </p>
+                  </div>
+                )}
+
                 {formData.assetType === 'Monster Portrait' && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1692,7 +1802,7 @@ export default function AdminMedia() {
                       <button
                         type="button"
                         onClick={() => setSelectedAsset(asset)}
-                        className="h-full w-full bg-brand-bg text-left"
+                        className="relative h-full w-full bg-brand-bg text-left"
                         title={`Open ${asset.title}`}
                       >
                         <img
@@ -1701,6 +1811,16 @@ export default function AdminMedia() {
                           className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
                           loading="lazy"
                         />
+                        {(asset.assetType === 'Mount Portrait' || asset.assetType === 'Ship Portrait') &&
+                          (() => {
+                            const meta = getStringMetadata(asset.metadata);
+                            const templateName = meta.mountType || meta.shipType;
+                            return templateName ? (
+                              <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-white backdrop-blur">
+                                {templateName}
+                              </span>
+                            ) : null;
+                          })()}
                       </button>
                       <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                         <button
