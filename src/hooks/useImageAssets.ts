@@ -14,6 +14,7 @@ export const IMAGE_ASSET_TYPES = [
   'NPC Portrait',
   'Monster Portrait',
   'Mount Portrait',
+  'Vehicle Portrait',
   'Ship Portrait',
   'Point Of Interest Image',
   'Zone Image',
@@ -98,6 +99,8 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
       return compactSegments([metadata.race, metadata.gender]);
     case 'Mount Portrait':
       return compactSegments([metadata.mountType]);
+    case 'Vehicle Portrait':
+      return compactSegments([metadata.vehicleType]);
     case 'Ship Portrait':
       return compactSegments([metadata.shipType]);
     case 'Point Of Interest Image':

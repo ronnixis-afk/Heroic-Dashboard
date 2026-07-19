@@ -29,6 +29,10 @@ import {
   OptimizedImageResult,
 } from '../../lib/imageOptimizer';
 import {
+  getRideableTypeSuggestions,
+  RideablePortraitGenre,
+} from '../../constants/rideablePortraitCatalog';
+import {
   getMonsterSubtypeDescription,
   getMonsterSubtypes,
   getMonsterTypeNames,
@@ -185,37 +189,11 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
-/** Suggested mount types aligned with RPG stables templates + common breeds. */
-const MOUNT_TYPE_SUGGESTIONS: Record<SpecificImageGenre, string[]> = {
-  Fantasy: ['War Destrier', 'Elven Stag', 'Dire Wolf', 'Giant Eagle', 'Pack Mule', 'Horse', 'Wolf', 'Griffon', 'Drake'],
-  Modern: ['Patrol Motorcycle', 'Armored Suv', 'Dirt Bike', 'Tactical Quad', 'Cargo Truck', 'Motorcycle', 'Suv', 'Truck'],
-  'Sci-Fi': ['Hover-Bike', 'Mech-Walker', 'Recon Glider', 'Xeno-Raptor', 'Cargo Skiff', 'Hoverbike', 'Walker', 'Speeder'],
-};
-
-/** Suggested ship / vehicle types aligned with RPG shipyard templates + common hulls. */
-const SHIP_TYPE_SUGGESTIONS: Record<SpecificImageGenre, string[]> = {
-  Fantasy: ['War Galley', 'Elven Cutter', 'Ghost Ship', 'Floating Cathedral', 'Explorer Cog', 'Galley', 'Sloop', 'Galleon'],
-  Modern: [
-    'SWAT Command Van',
-    'SNN Broadcast Truck',
-    'Response Unit',
-    'Hauler Juggernaut',
-    'Mobile Safehouse',
-    'Truck',
-    'Boat',
-    'Helicopter',
-  ],
-  'Sci-Fi': [
-    'Heavy Dreadnought',
-    'Stealth Interceptor',
-    'Science Explorer',
-    'Medical Frigate',
-    "Smuggler's Runner",
-    'Frigate',
-    'Fighter',
-    'Freighter',
-  ],
-};
+/** Suggested rideable types from RPG rideableCatalog (synced via npm run sync:rideable-catalog). */
+const getCatalogRideableSuggestions = (
+  genre: SpecificImageGenre,
+  category: 'mount' | 'vehicle' | 'ship'
+): string[] => [...getRideableTypeSuggestions(genre as RideablePortraitGenre, category)];
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
 const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
@@ -339,6 +317,7 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'NPC Portrait': ['race', 'gender'],
   'Monster Portrait': ['monsterType', 'monsterSubtype'],
   'Mount Portrait': ['mountType'],
+  'Vehicle Portrait': ['vehicleType'],
   'Ship Portrait': ['shipType'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
@@ -352,6 +331,7 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
   assetType === 'Item Image' ||
   assetType === 'Monster Portrait' ||
   assetType === 'Mount Portrait' ||
+  assetType === 'Vehicle Portrait' ||
   assetType === 'Ship Portrait';
 
 /** Primary "Type" field kept after a successful upload for faster repeat uploads. */
@@ -360,6 +340,7 @@ const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'NPC Portrait': 'race',
   'Monster Portrait': 'monsterType',
   'Mount Portrait': 'mountType',
+  'Vehicle Portrait': 'vehicleType',
   'Ship Portrait': 'shipType',
   'Point Of Interest Image': 'poiBaseType',
   'Zone Image': 'zoneProperty',
@@ -430,10 +411,25 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
     return ALL_MONSTER_PORTRAIT_TAG_OPTIONS;
   }
   if (assetType === 'Mount Portrait') {
-    return new Set(Object.values(MOUNT_TYPE_SUGGESTIONS).flat());
+    return new Set([
+      ...getCatalogRideableSuggestions('Fantasy', 'mount'),
+      ...getCatalogRideableSuggestions('Modern', 'mount'),
+      ...getCatalogRideableSuggestions('Sci-Fi', 'mount'),
+    ]);
+  }
+  if (assetType === 'Vehicle Portrait') {
+    return new Set([
+      ...getCatalogRideableSuggestions('Fantasy', 'vehicle'),
+      ...getCatalogRideableSuggestions('Modern', 'vehicle'),
+      ...getCatalogRideableSuggestions('Sci-Fi', 'vehicle'),
+    ]);
   }
   if (assetType === 'Ship Portrait') {
-    return new Set(Object.values(SHIP_TYPE_SUGGESTIONS).flat());
+    return new Set([
+      ...getCatalogRideableSuggestions('Fantasy', 'ship'),
+      ...getCatalogRideableSuggestions('Modern', 'ship'),
+      ...getCatalogRideableSuggestions('Sci-Fi', 'ship'),
+    ]);
   }
   return new Set();
 };
@@ -589,11 +585,23 @@ export default function AdminMedia() {
       .filter((value): value is string => Boolean(value));
     const current = formData.metadata.mountType?.trim();
     return mergePortraitRaceOptions(
-      MOUNT_TYPE_SUGGESTIONS[structuredGenre],
+      getCatalogRideableSuggestions(structuredGenre, 'mount'),
       catalogTypes,
       current ? [current] : []
     );
   }, [assets, formData.metadata.mountType, structuredGenre]);
+  const vehicleTypeOptions = useMemo(() => {
+    const catalogTypes = assets
+      .filter((asset) => asset.assetType === 'Vehicle Portrait')
+      .map((asset) => getStringMetadata(asset.metadata).vehicleType?.trim())
+      .filter((value): value is string => Boolean(value));
+    const current = formData.metadata.vehicleType?.trim();
+    return mergePortraitRaceOptions(
+      getCatalogRideableSuggestions(structuredGenre, 'vehicle'),
+      catalogTypes,
+      current ? [current] : []
+    );
+  }, [assets, formData.metadata.vehicleType, structuredGenre]);
   const shipTypeOptions = useMemo(() => {
     const catalogTypes = assets
       .filter((asset) => asset.assetType === 'Ship Portrait')
@@ -601,7 +609,7 @@ export default function AdminMedia() {
       .filter((value): value is string => Boolean(value));
     const current = formData.metadata.shipType?.trim();
     return mergePortraitRaceOptions(
-      SHIP_TYPE_SUGGESTIONS[structuredGenre],
+      getCatalogRideableSuggestions(structuredGenre, 'ship'),
       catalogTypes,
       current ? [current] : []
     );
@@ -1445,6 +1453,27 @@ export default function AdminMedia() {
                   </div>
                 )}
 
+                {formData.assetType === 'Vehicle Portrait' && (
+                  <div>
+                    <label className="input-label">Template Name</label>
+                    <select
+                      value={formData.metadata.vehicleType || ''}
+                      onChange={(event) => setMetadataField('vehicleType', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Any Vehicle Type</option>
+                      {vehicleTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      Stables Vehicle Template Names (E.g. Travel Wagon, Cargo Truck) Used For RPG Auto-Match On Recruit.
+                    </p>
+                  </div>
+                )}
+
                 {formData.assetType === 'Ship Portrait' && (
                   <div>
                     <label className="input-label">Template Name</label>
@@ -1811,10 +1840,12 @@ export default function AdminMedia() {
                           className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
                           loading="lazy"
                         />
-                        {(asset.assetType === 'Mount Portrait' || asset.assetType === 'Ship Portrait') &&
+                        {(asset.assetType === 'Mount Portrait' ||
+                          asset.assetType === 'Vehicle Portrait' ||
+                          asset.assetType === 'Ship Portrait') &&
                           (() => {
                             const meta = getStringMetadata(asset.metadata);
-                            const templateName = meta.mountType || meta.shipType;
+                            const templateName = meta.mountType || meta.vehicleType || meta.shipType;
                             return templateName ? (
                               <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-white backdrop-blur">
                                 {templateName}

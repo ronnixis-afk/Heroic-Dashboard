@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3002 --host=0.0.0.0",
-    "predev": "node scripts/extract-monster-catalog.mjs --optional",
+    "predev": "node scripts/extract-monster-catalog.mjs --optional && node scripts/extract-rideable-catalog.mjs --optional",
     "build": "vite build",
-    "prebuild": "node scripts/extract-monster-catalog.mjs --optional",
+    "prebuild": "node scripts/extract-monster-catalog.mjs --optional && node scripts/extract-rideable-catalog.mjs --optional",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "sync:monster-catalog": "node scripts/extract-monster-catalog.mjs"
+    "sync:monster-catalog": "node scripts/extract-monster-catalog.mjs",
+    "sync:rideable-catalog": "node scripts/extract-rideable-catalog.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.6",
