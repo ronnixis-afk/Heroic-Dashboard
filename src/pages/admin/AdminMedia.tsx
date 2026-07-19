@@ -216,6 +216,38 @@ const mergePortraitRaceOptions = (...lists: string[][]) => {
 };
 
 /**
+ * Catalog rideable names first (game order), then any same-genre orphan metadata
+ * values from existing uploads — never mix types from other genres into the dropdown.
+ */
+const mergeRideableTypeOptions = (
+  catalogTypes: string[],
+  assetTypes: string[],
+  currentType?: string
+): string[] => {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const push = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(trimmed);
+  };
+  catalogTypes.forEach(push);
+  assetTypes.forEach(push);
+  if (currentType) push(currentType);
+  return out;
+};
+
+const assetMatchesStructuredGenre = (assetGenre: string, formGenre: ImageGenre, structuredGenre: SpecificImageGenre) => {
+  if (formGenre === 'Any Genre') {
+    return assetGenre === structuredGenre || assetGenre === 'Any Genre';
+  }
+  return assetGenre === formGenre;
+};
+
+/**
  * Suggested custom races beyond the core five — same names for Fantasy, Sci-Fi, and Modern
  * so uploads and world races stay aligned across genres.
  */
@@ -579,41 +611,50 @@ export default function AdminMedia() {
     [formData.metadata.monsterType]
   );
   const mountTypeOptions = useMemo(() => {
-    const catalogTypes = assets
-      .filter((asset) => asset.assetType === 'Mount Portrait')
+    const fromAssets = assets
+      .filter(
+        (asset) =>
+          asset.assetType === 'Mount Portrait' &&
+          assetMatchesStructuredGenre(asset.genre, formData.genre, structuredGenre)
+      )
       .map((asset) => getStringMetadata(asset.metadata).mountType?.trim())
       .filter((value): value is string => Boolean(value));
-    const current = formData.metadata.mountType?.trim();
-    return mergePortraitRaceOptions(
+    return mergeRideableTypeOptions(
       getCatalogRideableSuggestions(structuredGenre, 'mount'),
-      catalogTypes,
-      current ? [current] : []
+      fromAssets,
+      formData.metadata.mountType
     );
-  }, [assets, formData.metadata.mountType, structuredGenre]);
+  }, [assets, formData.genre, formData.metadata.mountType, structuredGenre]);
   const vehicleTypeOptions = useMemo(() => {
-    const catalogTypes = assets
-      .filter((asset) => asset.assetType === 'Vehicle Portrait')
+    const fromAssets = assets
+      .filter(
+        (asset) =>
+          asset.assetType === 'Vehicle Portrait' &&
+          assetMatchesStructuredGenre(asset.genre, formData.genre, structuredGenre)
+      )
       .map((asset) => getStringMetadata(asset.metadata).vehicleType?.trim())
       .filter((value): value is string => Boolean(value));
-    const current = formData.metadata.vehicleType?.trim();
-    return mergePortraitRaceOptions(
+    return mergeRideableTypeOptions(
       getCatalogRideableSuggestions(structuredGenre, 'vehicle'),
-      catalogTypes,
-      current ? [current] : []
+      fromAssets,
+      formData.metadata.vehicleType
     );
-  }, [assets, formData.metadata.vehicleType, structuredGenre]);
+  }, [assets, formData.genre, formData.metadata.vehicleType, structuredGenre]);
   const shipTypeOptions = useMemo(() => {
-    const catalogTypes = assets
-      .filter((asset) => asset.assetType === 'Ship Portrait')
+    const fromAssets = assets
+      .filter(
+        (asset) =>
+          asset.assetType === 'Ship Portrait' &&
+          assetMatchesStructuredGenre(asset.genre, formData.genre, structuredGenre)
+      )
       .map((asset) => getStringMetadata(asset.metadata).shipType?.trim())
       .filter((value): value is string => Boolean(value));
-    const current = formData.metadata.shipType?.trim();
-    return mergePortraitRaceOptions(
+    return mergeRideableTypeOptions(
       getCatalogRideableSuggestions(structuredGenre, 'ship'),
-      catalogTypes,
-      current ? [current] : []
+      fromAssets,
+      formData.metadata.shipType
     );
-  }, [assets, formData.metadata.shipType, structuredGenre]);
+  }, [assets, formData.genre, formData.metadata.shipType, structuredGenre]);
   const previewUploadOrder = useMemo(
     () => (editingAsset ? getTrailingUploadOrder(editingAsset.title) || 1 : getNextUploadOrder(assets, formData)),
     [assets, editingAsset, formData]
@@ -1448,7 +1489,7 @@ export default function AdminMedia() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-brand-text-muted">
-                      Stables Template Names (E.g. War Destrier, Elven Stag) Used For RPG Auto-Match On Recruit.
+                      Combat Mounts Sold At Stables For This Genre (E.g. War Destrier, Patrol Motorcycle). Must Match The RPG Catalog Exactly.
                     </p>
                   </div>
                 )}
@@ -1469,7 +1510,7 @@ export default function AdminMedia() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-brand-text-muted">
-                      Stables Vehicle Template Names (E.g. Travel Wagon, Cargo Truck) Used For RPG Auto-Match On Recruit.
+                      Travel Vehicles Also Sold At Stables For This Genre (E.g. Travel Wagon, Cargo Truck). Stables Lists Mounts + Vehicles Together.
                     </p>
                   </div>
                 )}
@@ -1490,7 +1531,7 @@ export default function AdminMedia() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-brand-text-muted">
-                      Shipyard Template Names (E.g. War Galley, Heavy Dreadnought) Used For RPG Auto-Match On Recruit.
+                      Shipyard Templates For This Genre (E.g. War Galley, SWAT Command Van, Heavy Dreadnought). Must Match The RPG Catalog Exactly.
                     </p>
                   </div>
                 )}

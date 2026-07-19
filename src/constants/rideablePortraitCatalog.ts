@@ -46,12 +46,12 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
   Modern: {
     mount: [
     'Patrol Motorcycle',
-    'Armored Suv',
+    'Armored SUV',
     'Dirt Bike',
     'Tactical Quad',
     'Pursuit Interceptor',
-    'Riot Apc',
-    'Combat Atv',
+    'Riot APC',
+    'Combat ATV',
     'Enforcer Cruiser',
   ],
     vehicle: [
