@@ -1,11 +1,10 @@
 /**
  * ANALYTICS METRICS HOOK
  *
- * Aggregates platform metrics from Supabase views and Heroic AI RPG admin APIs.
+ * Aggregates platform metrics from Clerk-gated Heroic AI RPG admin APIs.
  * Independent reads run in parallel; RPG calls share one pre-fetched Clerk token.
  */
 import { useQuery } from '@tanstack/react-query';
-import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 import { fetchCostAnalyticsBundle, fetchTopConsumersWithEmails } from '../lib/metricsFetches';
@@ -52,6 +51,8 @@ interface FeatureUsageApiResponse {
   chatOnlyUsers: number;
 }
 
+type ViewDataResponse<T> = { resource: string; data: T };
+
 function titleCaseFeature(name: string): string {
   if (!name) return 'Unknown';
   return name
@@ -65,23 +66,10 @@ function titleCaseFeature(name: string): string {
 async function fetchAnalyticsMetrics(
   getToken: (options?: { template?: string }) => Promise<string | null>
 ) {
-  let supabaseToken: string | null = null;
-  try {
-    supabaseToken = await getToken({ template: 'supabase' });
-  } catch (e) {
-    console.warn('[AnalyticsAudit] Failed to get specialized token:', e);
-  }
-
-  const supabase = getSupabaseClient(supabaseToken || undefined);
   const rpgToken = (await getToken()) || '';
-
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const dateStr = thirtyDaysAgo.toISOString().split('T')[0];
-
-  const now = new Date();
-  const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
-  const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000).toISOString();
+  if (!rpgToken) {
+    throw new Error('Admin Session Expired. Please Sign In Again.');
+  }
 
   const [
     costBundle,
@@ -89,59 +77,68 @@ async function fetchAnalyticsMetrics(
     featureRes,
     sessionStatsRes,
     activeSessionsRes,
-    priorActiveSessionsRes,
     hourlyStatsRes,
     pageVisitRes,
     featureApi,
     sessionLengthData,
     messagesData,
   ] = await Promise.all([
-    fetchCostAnalyticsBundle(supabase, rpgToken || getToken, 30),
-    fetchTopConsumersWithEmails(supabase, 5),
-    supabase.from('feature_usage_distribution').select('*'),
-    supabase
-      .from('session_metrics_summary')
-      .select('*')
-      .gte('date', dateStr)
-      .order('date', { ascending: false }),
-    supabase
-      .from('UserSession')
-      .select('*', { count: 'exact', head: true })
-      .is('endTime', null)
-      .gt('lastPing', fifteenMinsAgo),
-    supabase
-      .from('UserSession')
-      .select('*', { count: 'exact', head: true })
-      .is('endTime', null)
-      .gt('lastPing', thirtyMinsAgo)
-      .lte('lastPing', fifteenMinsAgo),
-    supabase.from('real_time_hourly_stats').select('*'),
-    supabase.from('page_visit_summary').select('*'),
-    rpgToken
-      ? fetchRpgAdmin<FeatureUsageApiResponse>('/api/admin/analytics/feature-usage', rpgToken).catch(
-          (e) => {
-            console.warn('[AnalyticsAudit] feature-usage API failed, using view fallback:', e);
-            return null;
-          }
-        )
-      : Promise.resolve(null),
-    rpgToken
-      ? fetchRpgAdmin<SessionLengthApiResponse>(
-          '/api/admin/analytics/session-length?days=30',
-          rpgToken
-        ).catch((e) => {
-          console.warn('[AnalyticsAudit] session-length API failed, using view fallback:', e);
-          return null;
-        })
-      : Promise.resolve(null),
-    rpgToken
-      ? fetchRpgAdmin<MessagesPerUserRow[]>('/api/admin/analytics/messages-per-user', rpgToken).catch(
-          (e) => {
-            console.warn('[AnalyticsAudit] messages-per-user API failed:', e);
-            return null;
-          }
-        )
-      : Promise.resolve(null),
+    fetchCostAnalyticsBundle(rpgToken, 30),
+    fetchTopConsumersWithEmails(rpgToken, 5),
+    fetchRpgAdmin<ViewDataResponse<any[]>>(
+      '/api/admin/analytics/view-data?resource=feature-usage',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] feature-usage view failed:', e);
+      return { data: [] as any[] };
+    }),
+    fetchRpgAdmin<ViewDataResponse<any[]>>(
+      '/api/admin/analytics/view-data?resource=session-metrics&days=30',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] session-metrics view failed:', e);
+      return { data: [] as any[] };
+    }),
+    fetchRpgAdmin<ViewDataResponse<{ current: number; prior: number }>>(
+      '/api/admin/analytics/view-data?resource=active-sessions',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] active-sessions failed:', e);
+      return { data: { current: 0, prior: 0 } };
+    }),
+    fetchRpgAdmin<ViewDataResponse<any[]>>(
+      '/api/admin/analytics/view-data?resource=hourly-stats',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] hourly-stats failed:', e);
+      return { data: [] as any[] };
+    }),
+    fetchRpgAdmin<ViewDataResponse<any[]>>(
+      '/api/admin/analytics/view-data?resource=page-visits',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] page-visits failed:', e);
+      return { data: [] as any[] };
+    }),
+    fetchRpgAdmin<FeatureUsageApiResponse>('/api/admin/analytics/feature-usage', rpgToken).catch(
+      (e) => {
+        console.warn('[AnalyticsAudit] feature-usage API failed:', e);
+        return null;
+      }
+    ),
+    fetchRpgAdmin<SessionLengthApiResponse>(
+      '/api/admin/analytics/session-length?days=30',
+      rpgToken
+    ).catch((e) => {
+      console.warn('[AnalyticsAudit] session-length API failed:', e);
+      return null;
+    }),
+    fetchRpgAdmin<MessagesPerUserRow[]>('/api/admin/analytics/messages-per-user', rpgToken).catch(
+      (e) => {
+        console.warn('[AnalyticsAudit] messages-per-user API failed:', e);
+        return null;
+      }
+    ),
   ]);
 
   const { dailyMetrics, modelData, modelCostData, dailyCostData } = costBundle;
@@ -257,8 +254,8 @@ async function fetchAnalyticsMetrics(
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const activeSessionsCount = activeSessionsRes.count || 0;
-  const priorActiveSessionsCount = priorActiveSessionsRes.count || 0;
+  const activeSessionsCount = activeSessionsRes.data?.current || 0;
+  const priorActiveSessionsCount = activeSessionsRes.data?.prior || 0;
   const sessionsComparison = percentChange(activeSessionsCount, priorActiveSessionsCount);
 
   const sortedHourly = [...(hourlyStatsRes.data || [])].sort(

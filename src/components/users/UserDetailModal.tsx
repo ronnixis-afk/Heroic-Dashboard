@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData } from '../../services/EngineTelemetryService';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { Skeleton } from '../Skeleton';
-import { getSupabaseClient } from '../../lib/supabase';
+import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 import { formatBytes } from '../../lib/utils';
 
 interface UserDetailModalProps {
@@ -57,16 +57,11 @@ export default function UserDetailModal({
     const loadSaves = async () => {
       setLoadingSaves(true);
       try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
-        const { data, error } = await supabase
-          .from('game_save_metadata')
-          .select('*')
-          .eq('userId', selectedUser.id)
-          .order('updatedAt', { ascending: false });
-
-        if (error) throw error;
-        if (!cancelled) setSaves(data || []);
+        const result = await fetchRpgAdmin<{ data: any[] }>(
+          `/api/admin/analytics/view-data?resource=save-metadata&userId=${encodeURIComponent(selectedUser.id)}`,
+          getToken
+        );
+        if (!cancelled) setSaves(result.data || []);
       } catch (err) {
         console.error('[UserDetailModal] Saves fetch failed:', err);
       } finally {

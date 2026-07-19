@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
 export const USERS_PAGE_SIZE = 50;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
@@ -102,17 +103,18 @@ async function fetchUsersPage(
 
   let saveStatsMap = new Map<string, { save_count: number; total_bytes: number }>();
   if (userIds.length > 0) {
-    const saveStatsRes = await supabase
-      .from('user_save_sizes_summary')
-      .select('userId, save_count, total_bytes')
-      .in('userId', userIds);
-
-    if (saveStatsRes.error) {
-      console.warn('[UsersAudit] Supabase error fetching save sizes:', saveStatsRes.error);
-    } else {
-      saveStatsMap = new Map(
-        (saveStatsRes.data || []).map((s: any) => [s.userId, s])
+    try {
+      const saveStatsRes = await fetchRpgAdmin<{
+        data: { userId: string; save_count: number; total_bytes: number }[];
+      }>(
+        `/api/admin/analytics/view-data?resource=save-sizes&userIds=${encodeURIComponent(userIds.join(','))}`,
+        getToken
       );
+      saveStatsMap = new Map(
+        (saveStatsRes.data || []).map((s) => [s.userId, s])
+      );
+    } catch (err) {
+      console.warn('[UsersAudit] Save sizes fetch failed:', err);
     }
   }
 
@@ -126,21 +128,19 @@ async function fetchUsersPage(
 }
 
 async function fetchSaveTotals(getToken: (options?: any) => Promise<string | null>) {
-  const supabase = await getAdminSupabase(getToken);
-  const { data, error } = await supabase
-    .from('user_save_sizes_summary')
-    .select('save_count, total_bytes');
-
-  if (error) {
+  try {
+    const result = await fetchRpgAdmin<{
+      data: { save_count: number; total_bytes: number }[];
+    }>('/api/admin/analytics/view-data?resource=save-sizes', getToken);
+    const rows = result.data || [];
+    return {
+      totalBytes: rows.reduce((acc, row) => acc + (Number(row.total_bytes) || 0), 0),
+      totalCount: rows.reduce((acc, row) => acc + (Number(row.save_count) || 0), 0),
+    };
+  } catch (error) {
     console.warn('[UsersAudit] Save totals fetch failed:', error);
     return { totalBytes: 0, totalCount: 0 };
   }
-
-  const rows = data || [];
-  return {
-    totalBytes: rows.reduce((acc, row) => acc + (Number(row.total_bytes) || 0), 0),
-    totalCount: rows.reduce((acc, row) => acc + (Number(row.save_count) || 0), 0),
-  };
 }
 
 async function fetchUserById(
@@ -160,15 +160,22 @@ async function fetchUserById(
 
   if (error || !data) return null;
 
-  const saveStatsRes = await supabase
-    .from('user_save_sizes_summary')
-    .select('userId, save_count, total_bytes')
-    .eq('userId', userId)
-    .maybeSingle();
+  let saveStats = { save_count: 0, total_bytes: 0 };
+  try {
+    const saveStatsRes = await fetchRpgAdmin<{
+      data: { userId: string; save_count: number; total_bytes: number }[];
+    }>(
+      `/api/admin/analytics/view-data?resource=save-sizes&userIds=${encodeURIComponent(userId)}`,
+      getToken
+    );
+    saveStats = saveStatsRes.data?.[0] || saveStats;
+  } catch (err) {
+    console.warn('[UsersAudit] Save stats for user failed:', err);
+  }
 
   return {
     ...data,
-    saveStats: saveStatsRes.data || { save_count: 0, total_bytes: 0 },
+    saveStats,
   };
 }
 

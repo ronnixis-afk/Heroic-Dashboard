@@ -1,16 +1,12 @@
 /**
  * SUPABASE CLIENT CONFIGURATION
  *
- * This module initializes the Supabase client used for RESTful data access.
+ * Browser Supabase client (anon key). Analytics / PII views are NOT readable via
+ * anon or authenticated PostgREST — use Clerk-gated RPG admin APIs
+ * (`fetchRpgAdmin` → `/api/admin/analytics/*`) instead.
  *
- * ARCHITECTURE NOTE:
- * The Dashboard relies heavily on Postgres Views for analytics (e.g., daily_usage_summary).
- * These views are managed via DIRECT SQL in the Supabase Dashboard or via the DIRECT_URL
- * connection string in the RPG engine.
- *
- * If views appear stale or columns are missing, they must be updated via SQL, as
- * PostgREST (the Supabase API) cannot modify view definitions or bypass RLS
- * without specific 'SECURITY DEFINER' view configurations.
+ * Remaining direct Supabase usage is limited to non-analytics tables that still
+ * have intentional RLS (e.g. User list, News, ImageAsset, Feedback).
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 

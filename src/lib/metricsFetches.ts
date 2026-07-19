@@ -1,7 +1,6 @@
 /**
- * Shared Supabase/RPG metric fetch helpers with stable shapes for React Query keys.
+ * Shared RPG admin metric fetch helpers with stable shapes for React Query keys.
  */
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchRpgAdmin, type RpgAdminTokenSource } from './rpgAdminApi';
 
 export const metricsQueryKeys = {
@@ -10,41 +9,29 @@ export const metricsQueryKeys = {
   costAnalytics: (days: number) => ['metrics', 'cost-analytics', days] as const,
 };
 
-export async function fetchDailyUsageSummary(supabase: SupabaseClient, days = 30) {
-  const since = new Date();
-  since.setDate(since.getDate() - days);
-  const dateStr = since.toISOString().split('T')[0];
+type ViewDataResponse<T> = { resource: string; data: T };
 
-  const { data, error } = await supabase
-    .from('daily_usage_summary')
-    .select('*')
-    .gte('date', dateStr)
-    .order('date', { ascending: false });
-
-  if (error) {
-    console.error('[Metrics] daily_usage_summary error:', error);
-  }
-  return data || [];
+export async function fetchDailyUsageSummary(tokenOrGetter: RpgAdminTokenSource, days = 30) {
+  const result = await fetchRpgAdmin<ViewDataResponse<any[]>>(
+    `/api/admin/analytics/view-data?resource=daily-usage&days=${days}`,
+    tokenOrGetter
+  );
+  return result.data || [];
 }
 
-export async function fetchTopConsumersWithEmails(supabase: SupabaseClient, limit = 5) {
-  const { data: topConsumersData } = await supabase
-    .from('top_consumers_summary')
-    .select('*')
-    .order('total_cost', { ascending: false })
-    .limit(limit);
-
-  const topUserIds = (topConsumersData || []).map((u) => u.userId).filter(Boolean);
-  let userEmailMap: Record<string, string> = {};
-
-  if (topUserIds.length > 0) {
-    const { data: usersData } = await supabase.from('User').select('id, email').in('id', topUserIds);
-    (usersData || []).forEach((u) => {
-      userEmailMap[u.id] = u.email;
-    });
-  }
-
-  return { topConsumersData: topConsumersData || [], userEmailMap };
+export async function fetchTopConsumersWithEmails(tokenOrGetter: RpgAdminTokenSource, limit = 5) {
+  const result = await fetchRpgAdmin<ViewDataResponse<any[]>>(
+    `/api/admin/analytics/view-data?resource=top-consumers&limit=${limit}`,
+    tokenOrGetter
+  );
+  const topConsumersData = result.data || [];
+  const userEmailMap: Record<string, string> = {};
+  topConsumersData.forEach((entry) => {
+    if (entry.userId) {
+      userEmailMap[entry.userId] = entry.email || `User ${String(entry.userId).slice(0, 5)}`;
+    }
+  });
+  return { topConsumersData, userEmailMap };
 }
 
 export interface CostAnalyticsApiResponse {
@@ -64,19 +51,21 @@ export interface CostAnalyticsApiResponse {
   }[];
 }
 
-export async function fetchCostAnalyticsBundle(
-  supabase: SupabaseClient,
-  tokenOrGetter: RpgAdminTokenSource,
-  days = 30
-) {
-  const [modelRes, dailyMetrics, costAnalytics] = await Promise.all([
-    supabase.from('model_usage_distribution').select('*'),
-    fetchDailyUsageSummary(supabase, days),
+export async function fetchCostAnalyticsBundle(tokenOrGetter: RpgAdminTokenSource, days = 30) {
+  const [dailyMetrics, modelRes, costAnalytics] = await Promise.all([
+    fetchDailyUsageSummary(tokenOrGetter, days),
+    fetchRpgAdmin<ViewDataResponse<any[]>>(
+      '/api/admin/analytics/view-data?resource=model-usage',
+      tokenOrGetter
+    ).catch((e) => {
+      console.warn('[Metrics] model-usage view-data failed:', e);
+      return { data: [] as any[] };
+    }),
     fetchRpgAdmin<CostAnalyticsApiResponse>(
       `/api/admin/analytics/cost-analytics?days=${days}`,
       tokenOrGetter
     ).catch((e) => {
-      console.warn('[Metrics] cost-analytics API failed, using view fallback:', e);
+      console.warn('[Metrics] cost-analytics API failed:', e);
       return null;
     }),
   ]);
