@@ -6,22 +6,26 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 interface ModelOption {
   name: string;
   blendedRate: number; // per 1M tokens
+  /** Credit weight vs Gemini 3.1 Flash Lite (1 credit ≈ 1,000 tokens). */
+  creditMultiplier?: number;
 }
 
 const MODELS: ModelOption[] = [
-  { name: 'Gemini 3.1 Flash Lite', blendedRate: 0.60 },
-  { name: 'Gemini 3.5 Flash', blendedRate: 3.00 },
-  { name: 'Gemini 3 Flash', blendedRate: 1.00 },
-  { name: 'Gemini 3.1 / 3.5 Pro', blendedRate: 4.00 },
-  { name: 'Gemini 1.5 / 2.5 Pro', blendedRate: 2.00 },
-  { name: 'Gemini 1.5 / 2.0 / 2.5 Flash', blendedRate: 0.12 },
-  { name: 'Gemini 1.5 Flash 8b', blendedRate: 0.06 }
+  { name: 'Gemini 3.1 Flash Lite', blendedRate: 0.875, creditMultiplier: 1 },
+  { name: 'DeepSeek V4 Flash', blendedRate: 0.21, creditMultiplier: 0.24 },
+  { name: 'DeepSeek V4 Pro', blendedRate: 0.6525, creditMultiplier: 0.75 },
+  { name: 'Gemini 3.5 Flash', blendedRate: 5.25 },
+  { name: 'Gemini 3 Flash', blendedRate: 1.75 },
+  { name: 'Gemini 3.1 / 3.5 Pro', blendedRate: 7.00 },
+  { name: 'Gemini 1.5 / 2.5 Pro', blendedRate: 3.125 },
+  { name: 'Gemini 1.5 / 2.0 / 2.5 Flash', blendedRate: 0.1875 },
+  { name: 'Gemini 1.5 Flash 8b', blendedRate: 0.09375 }
 ];
 
 export default function TokenEstimator() {
   const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
   const [selectedModel, setSelectedModel] = useState<ModelOption>(MODELS[0]);
-  const [estimatedCost, setEstimatedCost] = useState('0.19');
+  const [estimatedCost, setEstimatedCost] = useState('2.19');
   const [showInputDropdown, setShowInputDropdown] = useState(false);
   const [showUsdDropdown, setShowUsdDropdown] = useState(false);
   const [inputType, setInputType] = useState('Tokens');
@@ -32,7 +36,8 @@ export default function TokenEstimator() {
     const tokens = parseInt(value.replace(/,/g, '')) || 0;
     
     if (type === 'Credits') {
-      const credits = Math.max(1, Math.ceil(tokens / 1000));
+      const multiplier = modelObj.creditMultiplier ?? 1;
+      const credits = Math.max(1, Math.ceil((tokens / 1000) * multiplier));
       setEstimatedCost(credits.toString());
     } else if (type === 'EUR') {
       const costUsd = (tokens / 1000000) * modelObj.blendedRate;

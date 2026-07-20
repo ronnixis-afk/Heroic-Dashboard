@@ -1,3 +1,12 @@
+/**
+ * Centralized Cost Calculator (Dashboard fallback / recompute path).
+ * Keep rates in sync with heroic-ai-rpg/src/lib/costCalculator.ts.
+ *
+ * DeepSeek rates from https://api-docs.deepseek.com/quick_start/pricing (cache-miss):
+ * - DeepSeek V4 Pro: Input $0.435 / 1M, Output $0.87 / 1M
+ * - DeepSeek V4 Flash: Input $0.14 / 1M, Output $0.28 / 1M
+ */
+
 export function calculateFallbackCost(log: any): number {
   let cost = Number(log.costUsd) || 0;
   if (cost > 0) return cost;
@@ -11,6 +20,7 @@ export function calculateFallbackCost(log: any): number {
   const isImageModel = modelLower.includes('image') || modelLower.includes('vision') || modelLower.includes('imagen');
 
   if (isImageModel) {
+    if (modelLower.includes('flash-lite-image')) return 0.0336;
     if (modelLower.includes('ultra')) return 0.06;
     if (modelLower.includes('fast')) return 0.02;
     return 0.04;
@@ -41,7 +51,12 @@ export function calculateFallbackCost(log: any): number {
     return (inT * 0.25 / 1000000) + (outT * 1.50 / 1000000);
   }
 
-  // 5b. DeepSeek V4 Flash
+  // 5b. DeepSeek V4 Pro (must be checked before the generic deepseek catch-all)
+  if (modelLower.includes('deepseek-v4-pro')) {
+    return (inT * 0.435 / 1000000) + (outT * 0.87 / 1000000);
+  }
+
+  // 5c. DeepSeek V4 Flash
   if (modelLower.includes('deepseek-v4-flash') || modelLower.includes('deepseek')) {
     return (inT * 0.14 / 1000000) + (outT * 0.28 / 1000000);
   }
@@ -71,5 +86,3 @@ export function calculateFallbackCost(log: any): number {
   
   return estimatedCost;
 }
-
-
