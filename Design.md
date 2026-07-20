@@ -159,6 +159,7 @@ import FilterTabs from '../components/ui/FilterTabs';
 * **Touch Targets:** Minimum 28px height on buttons; use `btn-icon` padding for small controls
 * **Transitions:** 150ms for hover; `active:scale-[0.98]` on buttons
 * **Honesty:** Do not show unread indicators when there are no notifications
+* **Notifications:** Header bell → generic `NotificationPanel` (sources under `src/lib/notifications/`; signups first)
 
 ---
 

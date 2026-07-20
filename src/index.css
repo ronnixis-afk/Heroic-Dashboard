@@ -103,6 +103,15 @@
   @apply bg-brand-surface border border-brand-primary rounded-lg shadow-lg p-2.5 transition-all;
 }
 
+/* Unread count on header bell — same accent language as CTAs, quiet chrome */
+.notification-bell-badge {
+  @apply absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1;
+  @apply bg-brand-accent text-xs font-semibold leading-none text-black;
+  transform: scale(0.78);
+  transform-origin: top right;
+  box-shadow: 0 0 0 2px var(--color-brand-bg);
+}
+
 /* ─── Buttons ─── */
 .btn-primary {
   @apply inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-xs h-8 px-3 bg-white text-black hover:bg-gray-200 transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;

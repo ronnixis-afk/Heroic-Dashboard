@@ -12,6 +12,15 @@ Shared conventions for all routes under `/admin`.
 </div>
 ```
 
+## Header Notifications
+
+- Bell in `AdminLayout` opens generic `NotificationPanel`
+- Inbox: `useNotifications` aggregates pluggable sources under `src/lib/notifications/sources/`
+- Current source: `signupSource` (recent `User` inserts → `/admin/users?userId=`)
+- Shared model: `AdminNotification` (`type`, `title`, `body`, `href`, `badge`, `createdAt`)
+- Unread via `localStorage` key `heroic.admin.notifications.lastSeenAt`; badge only when `unreadCount > 0`
+- To add a feed: implement a source hook returning `NotificationSourceResult`, register it in `useNotificationSources()`
+
 Use primitives from `src/components/ui/`:
 
 - `PageHeader`, `Card`, `FilterTabs`

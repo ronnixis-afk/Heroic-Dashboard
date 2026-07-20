@@ -21,6 +21,9 @@ import {
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationPanel from './notifications/NotificationPanel';
+import { useNotifications } from '../hooks/useNotifications';
+import type { AdminNotificationItem } from '../lib/notifications/types';
 
 const NAV_GROUPS = [
   {
@@ -72,6 +75,14 @@ export default function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(window.innerWidth >= 1024);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 1024);
+  const notificationRef = React.useRef<HTMLDivElement>(null);
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    isError: notificationsError,
+    markAllSeen,
+  } = useNotifications();
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -94,9 +105,40 @@ export default function AdminLayout() {
     }
   }, [location.pathname, isMobile]);
 
+  React.useEffect(() => {
+    setShowNotifications(false);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    if (!showNotifications) return;
+
+    markAllSeen();
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (!notificationRef.current?.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowNotifications(false);
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showNotifications, markAllSeen]);
+
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleSelectNotification = (notification: AdminNotificationItem) => {
+    setShowNotifications(false);
+    navigate(notification.href);
   };
 
   const currentPage = NAV_GROUPS.flatMap((g) => g.items).find(
@@ -236,38 +278,39 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 relative shrink-0">
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
               <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="btn-icon relative"
-                aria-label="Notifications"
+                type="button"
+                onClick={() => setShowNotifications((open) => !open)}
+                className={cn(
+                  'btn-icon relative',
+                  showNotifications && 'bg-brand-hover text-brand-text'
+                )}
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications, ${unreadCount} unread`
+                    : 'Notifications'
+                }
                 aria-expanded={showNotifications}
+                aria-haspopup="dialog"
               >
                 <Bell size={14} />
+                {unreadCount > 0 && (
+                  <span className="notification-bell-badge" aria-hidden="true">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
                 {showNotifications && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    className="absolute right-0 top-full mt-1.5 w-64 tooltip-panel z-50"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-xs font-semibold text-brand-text">Notifications</h4>
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        className="btn-icon w-6 h-6"
-                        aria-label="Close Notifications"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                    <p className="text-center py-6 text-xs text-brand-text-muted">
-                      No New Notifications
-                    </p>
-                  </motion.div>
+                  <NotificationPanel
+                    notifications={notifications}
+                    isLoading={notificationsLoading}
+                    isError={notificationsError}
+                    onClose={() => setShowNotifications(false)}
+                    onSelect={handleSelectNotification}
+                  />
                 )}
               </AnimatePresence>
             </div>
