@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
-import { Settings, ShieldAlert, Users, Gift } from 'lucide-react';
+import { Settings, ShieldAlert, Users, Gift, BarChart3 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PageHeader, StatusBanner, PageLoader } from '../../components/ui';
 
@@ -12,6 +12,9 @@ interface SettingsData {
   referralPremiumReward: number;
   defaultModel: string;
   npcPortraitSource: string;
+  excludeAdminFromAnalytics?: boolean;
+  analyticsExcludeEmails?: string[];
+  adminTestingEmails?: string[];
 }
 
 export default function AdminSettings() {
@@ -35,6 +38,11 @@ export default function AdminSettings() {
   const [premiumReward, setPremiumReward] = useState<number>(1000);
   const [defaultModel, setDefaultModel] = useState<string>('gemini-3.1-flash-lite');
   const [npcPortraitSource, setNpcPortraitSource] = useState<string>('database');
+  const [excludeAdminFromAnalytics, setExcludeAdminFromAnalytics] = useState(false);
+  const [analyticsExcludeEmails, setAnalyticsExcludeEmails] = useState<string[]>([
+    'ronnixis@gmail.com',
+    'ronnixis@hotmail.com',
+  ]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -51,6 +59,12 @@ export default function AdminSettings() {
         setPremiumReward(data.referralPremiumReward);
         setDefaultModel(data.defaultModel || 'gemini-3.1-flash-lite');
         setNpcPortraitSource(data.npcPortraitSource || 'database');
+        setExcludeAdminFromAnalytics(Boolean(data.excludeAdminFromAnalytics));
+        if (data.analyticsExcludeEmails?.length) {
+          setAnalyticsExcludeEmails(data.analyticsExcludeEmails);
+        } else if (data.adminTestingEmails?.length) {
+          setAnalyticsExcludeEmails(data.adminTestingEmails);
+        }
       } catch (err: any) {
         console.error('Failed to load settings:', err);
         const raw = err?.message || '';
@@ -88,6 +102,7 @@ export default function AdminSettings() {
             referralPremiumReward: premiumReward,
             defaultModel: defaultModel,
             npcPortraitSource: npcPortraitSource,
+            excludeAdminFromAnalytics,
           }),
         }
       );
@@ -99,9 +114,15 @@ export default function AdminSettings() {
         referralPremiumReward: result.referralPremiumReward,
         defaultModel: result.defaultModel,
         npcPortraitSource: result.npcPortraitSource || 'database',
+        excludeAdminFromAnalytics: result.excludeAdminFromAnalytics,
+        analyticsExcludeEmails: result.analyticsExcludeEmails,
       });
       setDefaultModel(result.defaultModel || 'gemini-3.1-flash-lite');
       setNpcPortraitSource(result.npcPortraitSource || 'database');
+      setExcludeAdminFromAnalytics(Boolean(result.excludeAdminFromAnalytics));
+      if (result.analyticsExcludeEmails?.length) {
+        setAnalyticsExcludeEmails(result.analyticsExcludeEmails);
+      }
 
       setStatus({ type: 'success', msg: 'System Settings Saved Successfully.' });
     } catch (err: any) {
@@ -127,7 +148,7 @@ export default function AdminSettings() {
     <div className="page">
       <PageHeader
         title="System Settings"
-        description="Configure Registration Caps, Referral Rewards, AI Model Routing, And NPC Image Source."
+        description="Configure Registration Caps, Referral Rewards, Analytics Filters, AI Model Routing, And NPC Image Source."
       />
 
       {status && (
@@ -250,6 +271,39 @@ export default function AdminSettings() {
                 Credits awarded to the referrer when the friend upgrades to a paid plan.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="card p-3.5 space-y-3">
+          <div>
+            <h2 className="section-title mb-1 flex items-center gap-2">
+              <BarChart3 className="text-brand-accent" size={14} />
+              Analytics Filters
+            </h2>
+            <p className="help-text">
+              Hide admin testing activity from dashboard analytics (page visits, sessions, costs, retention, and related charts).
+            </p>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-md border border-brand-primary/50 bg-brand-bg/50 p-3">
+            <input
+              type="checkbox"
+              id="excludeAdminFromAnalytics"
+              checked={excludeAdminFromAnalytics}
+              onChange={(e) => setExcludeAdminFromAnalytics(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 accent-brand-accent rounded border-brand-primary cursor-pointer"
+            />
+            <label htmlFor="excludeAdminFromAnalytics" className="cursor-pointer select-none">
+              <span className="block text-xs font-medium text-brand-text">
+                Exclude Admin Testing From Analytics
+              </span>
+              <span className="help-text mt-1 block">
+                Currently filters:{' '}
+                {analyticsExcludeEmails.length > 0
+                  ? analyticsExcludeEmails.join(', ')
+                  : 'ronnixis@gmail.com, ronnixis@hotmail.com'}
+              </span>
+            </label>
           </div>
         </div>
 
