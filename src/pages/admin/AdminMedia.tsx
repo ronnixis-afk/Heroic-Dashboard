@@ -21,6 +21,16 @@ import {
   ImageGenre,
   useImageAssets,
 } from '../../hooks/useImageAssets';
+import {
+  countByAssetType,
+  countByGenre,
+  countByMetadataKey,
+  countByTag,
+  countScopedTotal,
+  expandAssetTypeFilter,
+  formatOptionLabel,
+  getCount,
+} from '../../lib/imageAssetFacetCounts';
 import { formatBytes } from '../../lib/utils';
 import {
   optimizeImageToOriginalWebp,
@@ -506,6 +516,7 @@ export default function AdminMedia() {
 
   const {
     assets,
+    facetRows,
     totalAssetCount,
     totalStorageBytes,
     totalPages,
@@ -561,9 +572,10 @@ export default function AdminMedia() {
   const allTags = useMemo(() => {
     const tags = new Set<string>();
     if (filters.tag !== 'All') tags.add(filters.tag);
+    facetRows.forEach((row) => row.tags?.forEach((tag) => tags.add(tag)));
     assets.forEach((asset) => asset.tags?.forEach((tag) => tags.add(tag)));
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
-  }, [assets, filters.tag]);
+  }, [assets, facetRows, filters.tag]);
 
   const filteredAssets = assets;
   const visibleAssets = assets;
@@ -601,6 +613,124 @@ export default function AdminMedia() {
   }, [formData.metadata.race, portraitRaceOptions]);
 
   const structuredGenre = getStructuredGenre(formData.genre);
+
+  const formGenreScope = useMemo(
+    () => ({ genre: formData.genre }),
+    [formData.genre]
+  );
+  const formAssetTypeScope = useMemo(
+    () => ({
+      genre: formData.genre,
+      assetTypes: expandAssetTypeFilter(formData.assetType),
+    }),
+    [formData.assetType, formData.genre]
+  );
+  const genreCounts = useMemo(() => countByGenre(facetRows), [facetRows]);
+  const formAssetTypeCounts = useMemo(
+    () => countByAssetType(facetRows, formGenreScope),
+    [facetRows, formGenreScope]
+  );
+  const portraitGenderCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'gender', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const portraitRaceCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'race', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const formAssetTypeTotal = useMemo(
+    () => countScopedTotal(facetRows, formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const poiTypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'poiBaseType', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const poiSubtypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'poiModifier', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const zonePropertyCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'zoneProperty', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const zoneQualityScope = useMemo(
+    () => ({
+      ...formAssetTypeScope,
+      metadata: { zoneProperty: formData.metadata.zoneProperty || '' },
+    }),
+    [formAssetTypeScope, formData.metadata.zoneProperty]
+  );
+  const zoneQualityCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'zoneQuality', zoneQualityScope),
+    [facetRows, zoneQualityScope]
+  );
+  const zoneQualityTotal = useMemo(
+    () => countScopedTotal(facetRows, zoneQualityScope),
+    [facetRows, zoneQualityScope]
+  );
+  const itemCategoryCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'itemCategory', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const itemSubtypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'itemSubtype', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const mountTypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'mountType', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const vehicleTypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'vehicleType', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const shipTypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'shipType', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const monsterTypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'monsterType', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const monsterSubtypeScope = useMemo(
+    () => ({
+      ...formAssetTypeScope,
+      metadata: { monsterType: formData.metadata.monsterType || '' },
+    }),
+    [formAssetTypeScope, formData.metadata.monsterType]
+  );
+  const monsterSubtypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'monsterSubtype', monsterSubtypeScope),
+    [facetRows, monsterSubtypeScope]
+  );
+  const monsterSubtypeTotal = useMemo(
+    () => countScopedTotal(facetRows, monsterSubtypeScope),
+    [facetRows, monsterSubtypeScope]
+  );
+  const libraryAssetTypeCounts = useMemo(
+    () => countByAssetType(facetRows, { genre: filters.genre }),
+    [facetRows, filters.genre]
+  );
+  const libraryAssetTypeTotal = useMemo(
+    () => countScopedTotal(facetRows, { genre: filters.genre }),
+    [facetRows, filters.genre]
+  );
+  const libraryTagScope = useMemo(
+    () => ({
+      genre: filters.genre,
+      assetTypes: expandAssetTypeFilter(filters.assetType),
+    }),
+    [filters.assetType, filters.genre]
+  );
+  const libraryTagCounts = useMemo(
+    () => countByTag(facetRows, libraryTagScope),
+    [facetRows, libraryTagScope]
+  );
+  const libraryTagTotal = useMemo(
+    () => countScopedTotal(facetRows, libraryTagScope),
+    [facetRows, libraryTagScope]
+  );
   const zonePropertyOptions = useMemo(() => Object.keys(ZONE_TAG_SUGGESTIONS[structuredGenre]), [structuredGenre]);
   const zoneQualityOptions = useMemo(
     () => ZONE_TAG_SUGGESTIONS[structuredGenre][formData.metadata.zoneProperty] || [],
@@ -1240,7 +1370,7 @@ export default function AdminMedia() {
                   >
                     {IMAGE_GENRES.map((genre) => (
                       <option key={genre} value={genre}>
-                        {genre}
+                        {formatOptionLabel(genre, getCount(genreCounts, genre))}
                       </option>
                     ))}
                   </select>
@@ -1266,7 +1396,7 @@ export default function AdminMedia() {
                       formData.assetType === 'NPC Portrait'
                     ).map((assetType) => (
                       <option key={assetType} value={assetType}>
-                        {assetType}
+                        {formatOptionLabel(assetType, getCount(formAssetTypeCounts, assetType))}
                       </option>
                     ))}
                   </select>
@@ -1283,10 +1413,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('gender', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Gender</option>
+                        <option value="">
+                          {formatOptionLabel('Any Gender', formAssetTypeTotal)}
+                        </option>
                         {PORTRAIT_METADATA_OPTIONS.gender.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(portraitGenderCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1325,7 +1457,7 @@ export default function AdminMedia() {
                               }}
                               className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text-muted hover:bg-brand-primary/30 hover:text-brand-text"
                             >
-                              Any Race
+                              {formatOptionLabel('Any Race', formAssetTypeTotal)}
                             </button>
                             {filteredPortraitRaceOptions.map((option) => (
                               <button
@@ -1339,7 +1471,7 @@ export default function AdminMedia() {
                                 }}
                                 className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
                               >
-                                {option}
+                                {formatOptionLabel(option, getCount(portraitRaceCounts, option))}
                               </button>
                             ))}
                             {filteredPortraitRaceOptions.length === 0 && (
@@ -1376,10 +1508,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('poiBaseType', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Type</option>
+                        <option value="">
+                          {formatOptionLabel('Any Type', formAssetTypeTotal)}
+                        </option>
                         {POI_TAG_SUGGESTIONS[structuredGenre].baseTypes.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(poiTypeCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1391,10 +1525,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('poiModifier', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Subtype</option>
+                        <option value="">
+                          {formatOptionLabel('Any Subtype', formAssetTypeTotal)}
+                        </option>
                         {POI_TAG_SUGGESTIONS[structuredGenre].modifiers.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(poiSubtypeCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1411,10 +1547,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('zoneProperty', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Property</option>
+                        <option value="">
+                          {formatOptionLabel('Any Property', formAssetTypeTotal)}
+                        </option>
                         {zonePropertyOptions.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(zonePropertyCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1427,10 +1565,12 @@ export default function AdminMedia() {
                         className="input-field"
                         disabled={!formData.metadata.zoneProperty}
                       >
-                        <option value="">Any Quality</option>
+                        <option value="">
+                          {formatOptionLabel('Any Quality', zoneQualityTotal)}
+                        </option>
                         {zoneQualityOptions.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(zoneQualityCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1447,10 +1587,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('itemCategory', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Type</option>
+                        <option value="">
+                          {formatOptionLabel('Any Type', formAssetTypeTotal)}
+                        </option>
                         {ITEM_METADATA_OPTIONS.itemCategory.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(itemCategoryCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1462,10 +1604,12 @@ export default function AdminMedia() {
                         onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
                         className="input-field"
                       >
-                        <option value="">Any Subtype</option>
+                        <option value="">
+                          {formatOptionLabel('Any Subtype', formAssetTypeTotal)}
+                        </option>
                         {ITEM_METADATA_OPTIONS.itemSubtype.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatOptionLabel(option, getCount(itemSubtypeCounts, option))}
                           </option>
                         ))}
                       </select>
@@ -1481,10 +1625,12 @@ export default function AdminMedia() {
                       onChange={(event) => setMetadataField('mountType', event.target.value)}
                       className="input-field"
                     >
-                      <option value="">Any Mount Type</option>
+                      <option value="">
+                        {formatOptionLabel('Any Mount Type', formAssetTypeTotal)}
+                      </option>
                       {mountTypeOptions.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {formatOptionLabel(option, getCount(mountTypeCounts, option))}
                         </option>
                       ))}
                     </select>
@@ -1502,10 +1648,12 @@ export default function AdminMedia() {
                       onChange={(event) => setMetadataField('vehicleType', event.target.value)}
                       className="input-field"
                     >
-                      <option value="">Any Vehicle Type</option>
+                      <option value="">
+                        {formatOptionLabel('Any Vehicle Type', formAssetTypeTotal)}
+                      </option>
                       {vehicleTypeOptions.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {formatOptionLabel(option, getCount(vehicleTypeCounts, option))}
                         </option>
                       ))}
                     </select>
@@ -1523,10 +1671,12 @@ export default function AdminMedia() {
                       onChange={(event) => setMetadataField('shipType', event.target.value)}
                       className="input-field"
                     >
-                      <option value="">Any Ship Type</option>
+                      <option value="">
+                        {formatOptionLabel('Any Ship Type', formAssetTypeTotal)}
+                      </option>
                       {shipTypeOptions.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {formatOptionLabel(option, getCount(shipTypeCounts, option))}
                         </option>
                       ))}
                     </select>
@@ -1546,10 +1696,12 @@ export default function AdminMedia() {
                           onChange={(event) => setMetadataField('monsterType', event.target.value)}
                           className="input-field"
                         >
-                          <option value="">Any Type</option>
+                          <option value="">
+                            {formatOptionLabel('Any Type', formAssetTypeTotal)}
+                          </option>
                           {MONSTER_TYPE_OPTIONS.map((option) => (
                             <option key={option} value={option}>
-                              {option}
+                              {formatOptionLabel(option, getCount(monsterTypeCounts, option))}
                             </option>
                           ))}
                         </select>
@@ -1562,10 +1714,15 @@ export default function AdminMedia() {
                           className="input-field"
                           disabled={!formData.metadata.monsterType}
                         >
-                          <option value="">Any Subtype</option>
+                          <option value="">
+                            {formatOptionLabel('Any Subtype', monsterSubtypeTotal)}
+                          </option>
                           {monsterSubtypeOptions.map((option) => (
                             <option key={option.name} value={option.name}>
-                              {option.name}
+                              {formatOptionLabel(
+                                option.name,
+                                getCount(monsterSubtypeCounts, option.name)
+                              )}
                             </option>
                           ))}
                         </select>
@@ -1716,10 +1873,12 @@ export default function AdminMedia() {
                   onChange={(event) => setFilters({ ...filters, genre: event.target.value })}
                   className="input-field"
                 >
-                  <option value="All">All Genres</option>
+                  <option value="All">
+                    {formatOptionLabel('All Genres', facetRows.length)}
+                  </option>
                   {IMAGE_GENRES.filter((genre) => genre !== 'Any Genre').map((genre) => (
                     <option key={genre} value={genre}>
-                      {genre}
+                      {formatOptionLabel(genre, getCount(genreCounts, genre))}
                     </option>
                   ))}
                 </select>
@@ -1728,10 +1887,12 @@ export default function AdminMedia() {
                   onChange={(event) => setFilters({ ...filters, assetType: event.target.value })}
                   className="input-field"
                 >
-                  <option value="All">All Asset Types</option>
+                  <option value="All">
+                    {formatOptionLabel('All Asset Types', libraryAssetTypeTotal)}
+                  </option>
                   {IMAGE_ASSET_TYPES.map((assetType) => (
                     <option key={assetType} value={assetType}>
-                      {assetType}
+                      {formatOptionLabel(assetType, getCount(libraryAssetTypeCounts, assetType))}
                     </option>
                   ))}
                 </select>
@@ -1740,10 +1901,12 @@ export default function AdminMedia() {
                   onChange={(event) => setFilters({ ...filters, tag: event.target.value })}
                   className="input-field"
                 >
-                  <option value="All">All Tags</option>
+                  <option value="All">
+                    {formatOptionLabel('All Tags', libraryTagTotal)}
+                  </option>
                   {allTags.map((tag) => (
                     <option key={tag} value={tag}>
-                      {tag}
+                      {formatOptionLabel(tag, getCount(libraryTagCounts, tag))}
                     </option>
                   ))}
                 </select>

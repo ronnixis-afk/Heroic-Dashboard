@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ImageAssetFacetRow,
+  LEGACY_NPC_PORTRAIT_ASSET_TYPES,
+} from '../lib/imageAssetFacetCounts';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 export const IMAGE_ASSET_PAGE_SIZE = 60;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
-const LEGACY_NPC_PORTRAIT_TYPES = ['NPC Portrait', 'Humanoid NPC Portrait', 'Creature NPC Portrait'];
+const LEGACY_NPC_PORTRAIT_TYPES = [...LEGACY_NPC_PORTRAIT_ASSET_TYPES];
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
 export const IMAGE_ASSET_TYPES = [
@@ -218,6 +222,25 @@ async function fetchImageStorageBytes(getToken: (options?: any) => Promise<strin
   return (data || []).reduce((total, row) => total + (Number(row.sizeBytes) || 0), 0);
 }
 
+async function fetchImageAssetFacets(
+  getToken: (options?: any) => Promise<string | null>
+): Promise<ImageAssetFacetRow[]> {
+  const supabase = await getSupabaseForAdmin(getToken);
+  const { data, error } = await supabase.from('ImageAsset').select('genre,assetType,metadata,tags');
+  if (error) {
+    console.warn('[MediaLibrary] Facet fetch failed:', error);
+    return [];
+  }
+  return (data || []).map((row) => ({
+    genre: String(row.genre || ''),
+    assetType: String(row.assetType || ''),
+    metadata: (row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {}) as Record<string, unknown>,
+    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
+  }));
+}
+
 export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   const queryClient = useQueryClient();
   const { getToken, user } = useAuth();
@@ -241,6 +264,12 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   const { data: totalStorageBytes = 0 } = useQuery({
     queryKey: ['image-assets', 'storage-bytes'],
     queryFn: () => fetchImageStorageBytes(getToken),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: facetRows = [] } = useQuery({
+    queryKey: ['image-assets', 'facets'],
+    queryFn: () => fetchImageAssetFacets(getToken),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -451,6 +480,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
 
   return {
     assets,
+    facetRows,
     totalAssetCount,
     totalStorageBytes,
     totalPages,
