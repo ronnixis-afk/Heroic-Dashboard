@@ -13,6 +13,7 @@ const AdminNews = lazy(() => import('./pages/admin/AdminNews'));
 const AdminCredits = lazy(() => import('./pages/admin/AdminCredits'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
+const AdminSurveys = lazy(() => import('./pages/admin/AdminSurveys'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const AdminMedia = lazy(() => import('./pages/admin/AdminMedia'));
 const AdminEmails = lazy(() => import('./pages/admin/AdminEmails'));
@@ -135,6 +136,7 @@ export default function App() {
                   <Route path="credits" element={<AdminCredits />} />
                   <Route path="analytics" element={<AdminAnalytics />} />
                   <Route path="feedback" element={<AdminFeedback />} />
+                  <Route path="surveys" element={<AdminSurveys />} />
                   <Route path="emails" element={<AdminEmails />} />
                   <Route path="settings" element={<AdminSettings />} />
 

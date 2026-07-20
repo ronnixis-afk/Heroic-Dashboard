@@ -58,12 +58,13 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 - After changing rideable names/categories in the RPG, run the sync and commit the regenerated catalog.
 - **Upload dropdowns:** Mount / Vehicle / Ship template selects use catalog order for the selected genre only (do not mix orphan types from other genres). Stables in-game = Mount Portrait + Vehicle Portrait lists; Shipyard = Ship Portrait list.
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
+| `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
 | `/admin/settings` | System Settings | Caps, referrals, analytics admin-testing exclusion toggle (`exclude_admin_from_analytics`), text model routing, NPC image source (`database` default / `nano_banana_2_lite`) |
 
 ## Insights Data Sources
 
-Analytics / PII views are **not** readable via PostgREST (anon grants revoked). All metric reads go through Clerk-gated RPG admin APIs (`fetchRpgAdmin` → `/api/admin/analytics/*`) using the **standard Clerk session token**. Use `getToken({ template: 'supabase' })` only for remaining PostgREST tables with RLS (`User`, `News`, `ImageAsset`, `Feedback`, `CreditAdjustment`).
+Analytics / PII views are **not** readable via PostgREST (anon grants revoked). All metric reads go through Clerk-gated RPG admin APIs (`fetchRpgAdmin` → `/api/admin/analytics/*`) using the **standard Clerk session token**. Use `getToken({ template: 'supabase' })` only for remaining PostgREST tables with RLS (`User`, `News`, `ImageAsset`, `Feedback`, `SurveyResponse`, `CreditAdjustment`).
 
 | Surface | Primary sources |
 |---------|-----------------|
