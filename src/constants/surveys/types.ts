@@ -10,6 +10,10 @@ export interface SurveyQuestionDef {
   label: string;
   type: SurveyQuestionType;
   max?: number;
+  /** Label for rating 1 (shown under the scale). */
+  lowLabel?: string;
+  /** Label for the highest rating (shown under the scale). */
+  highLabel?: string;
   maxLength?: number;
   required?: boolean;
 }

@@ -1,8 +1,8 @@
-import { PRODUCT_COMPLETENESS_SURVEY } from './productCompleteness';
+import { NEW_PLAYER_UI_SURVEY } from './newPlayerUi';
 import type { SurveyDefinition } from './types';
 
 /** Mirror of heroic-ai-rpg/src/lib/surveys/catalog.ts */
-export const SURVEY_CATALOG: SurveyDefinition[] = [PRODUCT_COMPLETENESS_SURVEY];
+export const SURVEY_CATALOG: SurveyDefinition[] = [NEW_PLAYER_UI_SURVEY];
 
 const byId = new Map(SURVEY_CATALOG.map((s) => [s.id, s]));
 

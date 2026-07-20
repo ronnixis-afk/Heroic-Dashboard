@@ -49,14 +49,14 @@ function parseAnswers(raw: unknown): SurveyAnswer[] {
 }
 
 function normalizeSurveyId(raw: string | undefined | null): string {
-  if (!raw || raw === 'v1') return 'product-completeness';
+  if (!raw || raw === 'v1') return 'new-player-ui';
   return raw;
 }
 
 export default function AdminSurveys() {
   const { getToken } = useAuth();
   const catalog = listAllSurveys();
-  const [selectedSurveyId, setSelectedSurveyId] = useState(catalog[0]?.id ?? 'product-completeness');
+  const [selectedSurveyId, setSelectedSurveyId] = useState(catalog[0]?.id ?? 'new-player-ui');
   const [rows, setRows] = useState<SurveyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
