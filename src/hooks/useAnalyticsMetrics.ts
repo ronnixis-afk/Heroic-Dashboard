@@ -318,7 +318,7 @@ async function fetchAnalyticsMetrics(
 
 export function useAnalyticsMetrics() {
   const { getToken } = useAuth();
-  const { data, isLoading: loading } = useQuery({
+  const { data, isLoading: loading, error } = useQuery({
     queryKey: ['analytics-metrics'],
     queryFn: () => fetchAnalyticsMetrics(getToken),
     refetchInterval: ANALYTICS_REFETCH_INTERVAL_MS,
@@ -327,6 +327,7 @@ export function useAnalyticsMetrics() {
 
   return {
     loading,
+    error,
     usageTrends: data?.usageTrends || [],
     modelDistribution: data?.modelDistribution || [],
     modelCostData: data?.modelCostData || [],

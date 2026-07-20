@@ -47,6 +47,7 @@ export default function AdminUsers() {
 
   const {
     users,
+    error: usersError,
     totalCount,
     totalPages,
     loading,
@@ -96,7 +97,7 @@ export default function AdminUsers() {
     setExportMessage(null);
     trackEvent('export_records_clicked');
     try {
-      const csv = await exportUsersCsv(() => getToken({ template: 'supabase' }), exportParams);
+      const csv = await exportUsersCsv(getToken, exportParams);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -142,6 +143,17 @@ export default function AdminUsers() {
         <StatusBanner
           type={exportMessage.toLowerCase().includes('fail') ? 'error' : 'success'}
           message={exportMessage}
+        />
+      )}
+
+      {usersError && (
+        <StatusBanner
+          type="error"
+          message={
+            usersError instanceof Error
+              ? usersError.message
+              : 'Unable To Load Users From Supabase Or The RPG API.'
+          }
         />
       )}
 

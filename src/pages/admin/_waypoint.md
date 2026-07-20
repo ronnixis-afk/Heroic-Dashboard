@@ -54,12 +54,15 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 
 ## Insights Data Sources
 
+Analytics / PII views are **not** readable via PostgREST (anon grants revoked). All metric reads go through Clerk-gated RPG admin APIs (`fetchRpgAdmin` → `/api/admin/analytics/*`) using the **standard Clerk session token**. Use `getToken({ template: 'supabase' })` only for remaining PostgREST tables with RLS (`User`, `News`, `ImageAsset`, `Feedback`, `CreditAdjustment`).
+
 | Surface | Primary sources |
 |---------|-----------------|
-| Audience | RPG `active-users`, `retention`, `churn-signals`; Supabase dashboard RPC/views for tiers & signups |
-| Live Analytics | Supabase usage/session views + RPG `session-length`, `messages-per-user`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior` |
-| Usage Reports | RPG `feature-usage` (unique users / avg duration; Supabase cost merge); Product Surfaces strip from `UsageLog.type` |
-| Financial | Supabase revenue RPC + RPG `cost-analytics` (fallback: model/daily views) |
+| Audience | RPG `active-users`, `retention`, `churn-signals`; dashboard metrics API for tiers & signups |
+| Live Analytics | RPG `view-data` + `session-length`, `messages-per-user`, `feature-usage`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior` |
+| Usage Reports | RPG `feature-usage` (unique users / avg duration) + `view-data` cost merge; Product Surfaces from usage views |
+| Financial | RPG `dashboard-metrics` + `cost-analytics` / `view-data` model-usage |
+| Users list | Supabase `User` (+ RLS) for rows; RPG `view-data?resource=save-sizes` for cloud save stats |
 
 Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminMedia is operations-only (no reporting KPIs).
 

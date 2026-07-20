@@ -30,6 +30,12 @@ export interface UserListItem {
   saveStats: { save_count: number; total_bytes: number };
 }
 
+/**
+ * PostgREST client with Clerk's Supabase JWT template (for RLS).
+ * Callers that also hit RPG admin APIs must pass the raw Clerk getToken —
+ * do not wrap with `{ template: 'supabase' }` at the call site, or RPG routes
+ * will receive a Supabase-audience JWT and return 401.
+ */
 async function getAdminSupabase(getToken: (options?: any) => Promise<string | null>) {
   let token: string | null = null;
   try {
@@ -230,10 +236,10 @@ export function useUsers(params: UsersQueryParams = {}) {
     { page, pageSize, search, tier, minCredits, maxCredits, createdAfter, createdBefore },
   ] as const;
 
-  const { data, isLoading: loading, isFetching } = useQuery({
+  const { data, isLoading: loading, isFetching, error: usersError } = useQuery({
     queryKey,
     queryFn: () =>
-      fetchUsersPage(() => getToken({ template: 'supabase' }), {
+      fetchUsersPage(getToken, {
         page,
         pageSize,
         search,
@@ -248,7 +254,9 @@ export function useUsers(params: UsersQueryParams = {}) {
 
   const { data: saveTotals } = useQuery({
     queryKey: ['user-save-totals'],
-    queryFn: () => fetchSaveTotals(() => getToken({ template: 'supabase' })),
+    // Save totals come from the RPG admin API — use the standard Clerk session token,
+    // not the Supabase JWT template (that template is only for PostgREST RLS).
+    queryFn: () => fetchSaveTotals(getToken),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -327,8 +335,7 @@ export function useUsers(params: UsersQueryParams = {}) {
     }
   };
 
-  const resolveUserById = (userId: string) =>
-    fetchUserById(() => getToken({ template: 'supabase' }), userId);
+  const resolveUserById = (userId: string) => fetchUserById(getToken, userId);
 
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -341,6 +348,7 @@ export function useUsers(params: UsersQueryParams = {}) {
     pageSize,
     loading,
     isFetching,
+    error: usersError,
     isSyncing,
     syncMessage,
     syncUsers,

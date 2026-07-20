@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
+import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 
 interface RetentionData {
   cohort: string;
@@ -17,26 +18,19 @@ export function RetentionTable() {
 
   const fetchData = async () => {
     try {
-      const token = await getToken();
-      const res = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/analytics/retention`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
-      }
-      const json = await res.json();
-      if (json && json.error) {
-        throw new Error(json.error);
-      }
+      const json = await fetchRpgAdmin<RetentionData[]>(
+        '/api/admin/analytics/retention',
+        getToken
+      );
       if (Array.isArray(json)) {
         setData(json);
         setError(null);
       } else {
-        throw new Error('Invalid data format returned by server.');
+        throw new Error('Invalid Data Format Returned By Server.');
       }
     } catch (err: any) {
       console.error('Error fetching retention analytics:', err);
-      setError(err.message || 'Failed to fetch retention analytics.');
+      setError(err.message || 'Failed To Fetch Retention Analytics.');
     } finally {
       setLoading(false);
     }

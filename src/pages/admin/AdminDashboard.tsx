@@ -6,11 +6,12 @@ import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import UserAcquisition from '../../components/dashboard/UserAcquisition';
 import RecentSignups from '../../components/dashboard/RecentSignups';
 import TopConsumers from '../../components/dashboard/TopConsumers';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatusBanner } from '../../components/ui';
 
 export default function AdminDashboard() {
   const {
     loading,
+    error,
     totalRevenue,
     dailyData,
     weeklyData,
@@ -25,12 +26,23 @@ export default function AdminDashboard() {
 
   useAnalytics();
 
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : error
+        ? 'Unable To Load Dashboard Metrics From The RPG API.'
+        : null;
+
   return (
     <div className="page">
       <PageHeader
         title="Admin Dashboard"
         description="Revenue, profitability, acquisition, and top consumer overview."
       />
+
+      {errorMessage && (
+        <StatusBanner type="error" message={errorMessage} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-2">

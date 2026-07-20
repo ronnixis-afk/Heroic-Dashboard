@@ -18,7 +18,7 @@ import { Zap, Activity, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-
 import { useAnalyticsMetrics, formatComparison } from '../../hooks/useAnalyticsMetrics';
 import EngineHealthDashboard from '../../components/analytics/EngineHealthDashboard';
 import ModelUsagePie from '../../components/analytics/ModelUsagePie';
-import { PageHeader, FilterTabs } from '../../components/ui';
+import { PageHeader, FilterTabs, StatusBanner } from '../../components/ui';
 import { SkeletonText } from '../../components/Skeleton';
 
 interface TrendCardProps {
@@ -103,7 +103,8 @@ const METRIC_OPTIONS = [
 export default function AdminAnalytics() {
   const [activeMetric, setActiveMetric] = useState<'tokens' | 'users' | 'engagement' | 'cost'>('tokens');
   const { 
-    loading, 
+    loading,
+    error,
     usageTrends, 
     modelDistribution, 
     topUsers,
@@ -118,12 +119,21 @@ export default function AdminAnalytics() {
     avgLatency
   } = useAnalyticsMetrics();
 
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : error
+        ? 'Unable To Load Live Analytics From The RPG API.'
+        : null;
+
   return (
     <div className="page">
       <PageHeader
         title="Live Analytics"
         description="Active sessions, API cost, latency, and model usage trends."
       />
+
+      {errorMessage && <StatusBanner type="error" message={errorMessage} />}
       
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 

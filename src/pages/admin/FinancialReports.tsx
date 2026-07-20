@@ -5,11 +5,12 @@ import RevenueOverview from '../../components/dashboard/RevenueOverview';
 import NetProfitWidget from '../../components/dashboard/NetProfitWidget';
 import { CostAnalyticsCard } from '../../components/dashboard/CostAnalyticsCard';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatusBanner } from '../../components/ui';
 
 export default function FinancialReports() {
   const {
     loading,
+    error,
     totalRevenue,
     dailyData,
     weeklyData,
@@ -19,12 +20,21 @@ export default function FinancialReports() {
     profitMargin,
   } = useDashboardMetrics();
 
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : error
+        ? 'Unable To Load Financial Metrics From The RPG API.'
+        : null;
+
   return (
     <div className="page">
       <PageHeader
         title="Financial Reports"
         description="Revenue, API costs, and platform profitability."
       />
+
+      {errorMessage && <StatusBanner type="error" message={errorMessage} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <motion.div
