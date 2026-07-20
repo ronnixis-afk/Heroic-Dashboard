@@ -6,11 +6,11 @@ import RecentSignups from '../../components/dashboard/RecentSignups';
 import { RetentionTable } from '../../components/dashboard/RetentionTable';
 import { ChurnSignalsTable } from '../../components/dashboard/ChurnSignalsTable';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
-import { PageHeader } from '../../components/ui';
+import { PageHeader, StatusBanner } from '../../components/ui';
 import { Skeleton, ChartSkeleton, CardSkeleton, TableSkeleton } from '../../components/Skeleton';
 
 export default function AudienceReports() {
-  const { acquisitionData, recentSignups, loading } = useDashboardMetrics();
+  const { acquisitionData, recentSignups, loading, error } = useDashboardMetrics();
 
   if (loading) {
     return (
@@ -44,6 +44,17 @@ export default function AudienceReports() {
         title="Audience Reports"
         description="Reach, acquisition, retention, and churn risk across the platform."
       />
+
+      {error && (
+        <StatusBanner
+          type="error"
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Unable To Load Audience Metrics From The RPG API.'
+          }
+        />
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}

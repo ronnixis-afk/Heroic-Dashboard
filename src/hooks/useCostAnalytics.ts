@@ -27,6 +27,7 @@ export function useCostAnalytics(days = 30) {
   return {
     loading,
     error,
+    degradedMessage: data?.degradedMessage || null,
     modelCostData: data?.modelCostData || [],
     dailyCostData: data?.dailyCostData || [],
   };

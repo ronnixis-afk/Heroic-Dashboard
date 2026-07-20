@@ -30,7 +30,11 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/clerk-proxy/:path*",
+      "destination": "/api/clerk-proxy?path=:path*"
+    },
+    {
+      "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ]

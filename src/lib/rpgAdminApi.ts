@@ -43,13 +43,15 @@ export async function fetchRpgAdmin<T>(
   }
 
   const data = await response.json().catch(() => ({}));
+  const payload = data as { error?: string; message?: string };
 
   if (!response.ok) {
-    throw new Error((data as { error?: string }).error || `Server returned status ${response.status}`);
+    const detail = [payload.error, payload.message].filter(Boolean).join(' — ');
+    throw new Error(detail || `Server Returned Status ${response.status}`);
   }
 
-  if (data && typeof data === 'object' && 'error' in data && (data as { error?: string }).error) {
-    throw new Error((data as { error: string }).error);
+  if (payload.error) {
+    throw new Error(payload.error);
   }
 
   return data as T;

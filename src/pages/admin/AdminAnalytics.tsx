@@ -105,6 +105,7 @@ export default function AdminAnalytics() {
   const { 
     loading,
     error,
+    degradedMessage,
     usageTrends, 
     modelDistribution, 
     topUsers,
@@ -134,6 +135,9 @@ export default function AdminAnalytics() {
       />
 
       {errorMessage && <StatusBanner type="error" message={errorMessage} />}
+      {!errorMessage && degradedMessage && (
+        <StatusBanner type="info" message={degradedMessage} />
+      )}
       
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         <RealTimeTrendCard 

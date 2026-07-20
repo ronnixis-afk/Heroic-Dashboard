@@ -66,7 +66,15 @@ Analytics / PII views are **not** readable via PostgREST (anon grants revoked). 
 
 Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminMedia is operations-only (no reporting KPIs).
 
+## Production Verification
+
+- `npm run test:e2e:production` runs authenticated Playwright smoke coverage against the production dashboard.
+- The suite requires `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and optionally `E2E_ADMIN_EMAIL` (defaults to the configured super admin).
+- Coverage includes all analytics/report pages, admin data pages, RPG API status/payload checks, unauthenticated rejection, and production CORS preflight.
+
 ## Email Templates
 
 - Templates, low-credit threshold, test send, and recent send logs
+- Keys include `welcome`, `subscription_purchase`, `credits_low`, `credit_adjustment`, `feedback_received`, `feedback_admin`
+- `credit_adjustment` fires from RPG admin credit grants (`amount > 0`) with `{{amount}}`, `{{credits}}`, and `{{reason}}`
 - Resend API key stays on the RPG server only

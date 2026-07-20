@@ -25,21 +25,20 @@ export type DashboardMetricsPayload = {
 };
 
 async function fetchDashboardMetrics(
-  getToken: (options?: { template?: string }) => Promise<string | null>,
-  timeframe: string = 'Month'
+  getToken: (options?: { template?: string }) => Promise<string | null>
 ) {
   return fetchRpgAdmin<DashboardMetricsPayload>(
-    `/api/admin/analytics/dashboard-metrics?timeframe=${encodeURIComponent(timeframe)}`,
+    '/api/admin/analytics/dashboard-metrics',
     getToken
   );
 }
 
-export function useDashboardMetrics(timeframe: string = 'Month') {
+export function useDashboardMetrics() {
   const { getToken } = useAuth();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard-metrics', timeframe],
-    queryFn: () => fetchDashboardMetrics(getToken, timeframe),
+    queryKey: ['dashboard-metrics'],
+    queryFn: () => fetchDashboardMetrics(getToken),
     refetchInterval: DASHBOARD_REFETCH_INTERVAL_MS,
     refetchIntervalInBackground: false,
   });

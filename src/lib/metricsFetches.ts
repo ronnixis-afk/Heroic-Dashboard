@@ -52,22 +52,33 @@ export interface CostAnalyticsApiResponse {
 }
 
 export async function fetchCostAnalyticsBundle(tokenOrGetter: RpgAdminTokenSource, days = 30) {
+  const failures: string[] = [];
+  const recover = <T,>(label: string, request: Promise<T>, fallback: T): Promise<T> =>
+    request.catch((error) => {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.warn(`[Metrics] ${label} failed:`, error);
+      failures.push(`${label}: ${detail}`);
+      return fallback;
+    });
+
   const [dailyMetrics, modelRes, costAnalytics] = await Promise.all([
-    fetchDailyUsageSummary(tokenOrGetter, days),
-    fetchRpgAdmin<ViewDataResponse<any[]>>(
-      '/api/admin/analytics/view-data?resource=model-usage',
-      tokenOrGetter
-    ).catch((e) => {
-      console.warn('[Metrics] model-usage view-data failed:', e);
-      return { data: [] as any[] };
-    }),
-    fetchRpgAdmin<CostAnalyticsApiResponse>(
-      `/api/admin/analytics/cost-analytics?days=${days}`,
-      tokenOrGetter
-    ).catch((e) => {
-      console.warn('[Metrics] cost-analytics API failed:', e);
-      return null;
-    }),
+    recover('Daily Usage', fetchDailyUsageSummary(tokenOrGetter, days), []),
+    recover(
+      'Model Usage',
+      fetchRpgAdmin<ViewDataResponse<any[]>>(
+        '/api/admin/analytics/view-data?resource=model-usage',
+        tokenOrGetter
+      ),
+      { resource: 'model-usage', data: [] }
+    ),
+    recover(
+      'Cost Analytics',
+      fetchRpgAdmin<CostAnalyticsApiResponse>(
+        `/api/admin/analytics/cost-analytics?days=${days}`,
+        tokenOrGetter
+      ),
+      null
+    ),
   ]);
 
   const modelData = modelRes.data || [];
@@ -107,5 +118,14 @@ export async function fetchCostAnalyticsBundle(tokenOrGetter: RpgAdminTokenSourc
     }));
   }
 
-  return { modelCostData, dailyCostData, dailyMetrics, modelData };
+  return {
+    modelCostData,
+    dailyCostData,
+    dailyMetrics,
+    modelData,
+    degradedMessage:
+      failures.length > 0
+        ? `Some Cost Analytics Could Not Be Loaded. ${failures.join(' | ')}`
+        : null,
+  };
 }

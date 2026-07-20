@@ -91,7 +91,7 @@ export function ActiveUsersCard() {
       icon: CalendarRange,
       label: 'MAU',
       value: data.mau?.toLocaleString() || 0,
-      suffix: 'users this month',
+      suffix: 'users in 30 days',
       valueClass: 'text-brand-text',
     },
     {

@@ -9,7 +9,7 @@ interface AtRiskUser {
   tier: string;
   totalSessions: number;
   lastSession: string | null;
-  daysSinceLastSession: number;
+  daysSinceLastSession: number | null;
   sessionsLast3Days: number;
   sessionsLast7Days: number;
   msgsLast7Days: number;
@@ -137,7 +137,9 @@ export function ChurnSignalsTable() {
                   </span>
                 </td>
                 <td className="text-right text-xs text-brand-text-muted">
-                  {user.daysSinceLastSession}d ago
+                  {user.daysSinceLastSession === null
+                    ? 'Never Active'
+                    : `${user.daysSinceLastSession}d Ago`}
                 </td>
                 <td className="text-center text-xs text-brand-text-muted">
                   {user.msgsLast7Days}

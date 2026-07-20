@@ -1,6 +1,4 @@
-// src/services/EngineTelemetryService.ts
-
-const RPG_API_URL = import.meta.env.VITE_RPG_API_URL || 'http://localhost:3001';
+import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
 export interface TelemetryData {
     avgTokensByPhase: { phase: string; avgTokens: number }[];
@@ -12,6 +10,7 @@ export interface TelemetryData {
 }
 
 export interface BehaviorData {
+    mock?: boolean;
     topMechanics: { name: string; count: number }[];
     tutorialDropOff: { event: string; count: number }[];
     gmModeRatio: { mode: string; count: number }[];
@@ -19,31 +18,15 @@ export interface BehaviorData {
 
 class EngineTelemetryService {
     async getTelemetry(token?: string, userId?: string): Promise<TelemetryData> {
-        const url = new URL(`${RPG_API_URL}/api/admin/telemetry`);
-        if (userId) url.searchParams.append('userId', userId);
-
-        const response = await fetch(url.toString(), {
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                'Content-Type': 'application/json',
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch telemetry');
-        return response.json();
+        if (!token) throw new Error('Admin Session Expired. Please Sign In Again.');
+        const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+        return fetchRpgAdmin<TelemetryData>(`/api/admin/telemetry${query}`, token);
     }
 
     async getBehavior(token?: string, userId?: string): Promise<BehaviorData> {
-        const url = new URL(`${RPG_API_URL}/api/analytics/behavior`);
-        if (userId) url.searchParams.append('userId', userId);
-
-        const response = await fetch(url.toString(), {
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                'Content-Type': 'application/json',
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch behavior data');
-        return response.json();
+        if (!token) throw new Error('Admin Session Expired. Please Sign In Again.');
+        const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+        return fetchRpgAdmin<BehaviorData>(`/api/analytics/behavior${query}`, token);
     }
 }
 

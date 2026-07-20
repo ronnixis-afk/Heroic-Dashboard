@@ -71,6 +71,15 @@ async function fetchAnalyticsMetrics(
     throw new Error('Admin Session Expired. Please Sign In Again.');
   }
 
+  const degradedSources: string[] = [];
+  const optional = <T,>(label: string, request: Promise<T>, fallback: T): Promise<T> =>
+    request.catch((error) => {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.warn(`[AnalyticsAudit] ${label} failed:`, error);
+      degradedSources.push(`${label}: ${detail}`);
+      return fallback;
+    });
+
   const [
     costBundle,
     topConsumersBundle,
@@ -83,65 +92,84 @@ async function fetchAnalyticsMetrics(
     sessionLengthData,
     messagesData,
   ] = await Promise.all([
-    fetchCostAnalyticsBundle(rpgToken, 30),
-    fetchTopConsumersWithEmails(rpgToken, 5),
-    fetchRpgAdmin<ViewDataResponse<any[]>>(
-      '/api/admin/analytics/view-data?resource=feature-usage',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] feature-usage view failed:', e);
-      return { data: [] as any[] };
+    optional('Cost Analytics', fetchCostAnalyticsBundle(rpgToken, 30), {
+      dailyMetrics: [],
+      modelData: [],
+      modelCostData: [],
+      dailyCostData: [],
+      degradedMessage: null,
     }),
-    fetchRpgAdmin<ViewDataResponse<any[]>>(
-      '/api/admin/analytics/view-data?resource=session-metrics&days=30',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] session-metrics view failed:', e);
-      return { data: [] as any[] };
+    optional('Top Consumers', fetchTopConsumersWithEmails(rpgToken, 5), {
+      topConsumersData: [],
+      userEmailMap: {},
     }),
-    fetchRpgAdmin<ViewDataResponse<{ current: number; prior: number }>>(
-      '/api/admin/analytics/view-data?resource=active-sessions',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] active-sessions failed:', e);
-      return { data: { current: 0, prior: 0 } };
-    }),
-    fetchRpgAdmin<ViewDataResponse<any[]>>(
-      '/api/admin/analytics/view-data?resource=hourly-stats',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] hourly-stats failed:', e);
-      return { data: [] as any[] };
-    }),
-    fetchRpgAdmin<ViewDataResponse<any[]>>(
-      '/api/admin/analytics/view-data?resource=page-visits',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] page-visits failed:', e);
-      return { data: [] as any[] };
-    }),
-    fetchRpgAdmin<FeatureUsageApiResponse>('/api/admin/analytics/feature-usage', rpgToken).catch(
-      (e) => {
-        console.warn('[AnalyticsAudit] feature-usage API failed:', e);
-        return null;
-      }
+    optional(
+      'Feature Cost Data',
+      fetchRpgAdmin<ViewDataResponse<any[]>>(
+        '/api/admin/analytics/view-data?resource=feature-usage',
+        rpgToken
+      ),
+      { resource: 'feature-usage', data: [] }
     ),
-    fetchRpgAdmin<SessionLengthApiResponse>(
-      '/api/admin/analytics/session-length?days=30',
-      rpgToken
-    ).catch((e) => {
-      console.warn('[AnalyticsAudit] session-length API failed:', e);
-      return null;
-    }),
-    fetchRpgAdmin<MessagesPerUserRow[]>('/api/admin/analytics/messages-per-user', rpgToken).catch(
-      (e) => {
-        console.warn('[AnalyticsAudit] messages-per-user API failed:', e);
-        return null;
-      }
+    optional(
+      'Session Metrics',
+      fetchRpgAdmin<ViewDataResponse<any[]>>(
+        '/api/admin/analytics/view-data?resource=session-metrics&days=30',
+        rpgToken
+      ),
+      { resource: 'session-metrics', data: [] }
+    ),
+    optional(
+      'Active Sessions',
+      fetchRpgAdmin<ViewDataResponse<{ current: number; prior: number }>>(
+        '/api/admin/analytics/view-data?resource=active-sessions',
+        rpgToken
+      ),
+      { resource: 'active-sessions', data: { current: 0, prior: 0 } }
+    ),
+    optional(
+      'Hourly Statistics',
+      fetchRpgAdmin<ViewDataResponse<any[]>>(
+        '/api/admin/analytics/view-data?resource=hourly-stats',
+        rpgToken
+      ),
+      { resource: 'hourly-stats', data: [] }
+    ),
+    optional(
+      'Page Visits',
+      fetchRpgAdmin<ViewDataResponse<any[]>>(
+        '/api/admin/analytics/view-data?resource=page-visits',
+        rpgToken
+      ),
+      { resource: 'page-visits', data: [] }
+    ),
+    optional(
+      'Feature Usage',
+      fetchRpgAdmin<FeatureUsageApiResponse>('/api/admin/analytics/feature-usage', rpgToken),
+      null
+    ),
+    optional(
+      'Session Lengths',
+      fetchRpgAdmin<SessionLengthApiResponse>(
+        '/api/admin/analytics/session-length?days=30',
+        rpgToken
+      ),
+      null
+    ),
+    optional(
+      'Messages Per User',
+      fetchRpgAdmin<MessagesPerUserRow[]>(
+        '/api/admin/analytics/messages-per-user?days=7',
+        rpgToken
+      ),
+      null
     ),
   ]);
 
   const { dailyMetrics, modelData, modelCostData, dailyCostData } = costBundle;
+  if (costBundle.degradedMessage) {
+    degradedSources.push(costBundle.degradedMessage);
+  }
 
   const usageTrends = dailyMetrics
     .map((m) => ({
@@ -264,12 +292,21 @@ async function fetchAnalyticsMetrics(
   const recentHours = sortedHourly.slice(-12);
   const priorHours = sortedHourly.slice(-24, -12);
 
-  const realTimeTrends = sortedHourly.map((h) => ({
-    hour: new Date(h.hour).getHours() + ':00',
-    users: h.active_users || 0,
-    cost: h.total_cost || 0,
-    latency: h.avg_latency || 0,
-  }));
+  const realTimeTrends = sortedHourly.map((h) => {
+    const date = new Date(h.hour);
+    return {
+      hour: Number.isNaN(date.getTime())
+        ? String(h.hour)
+        : date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+          }),
+      users: h.active_users || 0,
+      cost: h.total_cost || 0,
+      latency: h.avg_latency || 0,
+    };
+  });
 
   const avgOf = (rows: typeof sortedHourly, key: 'avg_latency') => {
     if (rows.length === 0) return 0;
@@ -313,6 +350,10 @@ async function fetchAnalyticsMetrics(
     pageVisitUsage,
     modelCostData,
     dailyCostData,
+    degradedMessage:
+      degradedSources.length > 0
+        ? `Some Analytics Could Not Be Loaded. ${degradedSources.join(' | ')}`
+        : null,
   };
 }
 
@@ -328,6 +369,7 @@ export function useAnalyticsMetrics() {
   return {
     loading,
     error,
+    degradedMessage: data?.degradedMessage || null,
     usageTrends: data?.usageTrends || [],
     modelDistribution: data?.modelDistribution || [],
     modelCostData: data?.modelCostData || [],

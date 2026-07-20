@@ -17,11 +17,13 @@ import { Zap, ShieldAlert, Users, TrendingUp, Filter } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { telemetryService, TelemetryData, BehaviorData } from '../../services/EngineTelemetryService';
 import { SkeletonText } from '../Skeleton';
+import { StatusBanner } from '../ui';
 
 export default function EngineHealthDashboard() {
     const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
     const [behavior, setBehavior] = useState<BehaviorData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const { getToken } = useAuth();
 
@@ -29,15 +31,24 @@ export default function EngineHealthDashboard() {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                setError(null);
                 const token = await getToken();
+                if (!token) {
+                    throw new Error('Admin Session Expired. Please Sign In Again.');
+                }
                 const [t, b] = await Promise.all([
-                    telemetryService.getTelemetry(token as string),
-                    telemetryService.getBehavior(token as string)
+                    telemetryService.getTelemetry(token),
+                    telemetryService.getBehavior(token)
                 ]);
                 setTelemetry(t);
                 setBehavior(b);
             } catch (error) {
                 console.error("Failed to fetch engine health data:", error);
+                setError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Unable To Load Engine Health Data From The RPG API.'
+                );
             } finally {
                 setLoading(false);
             }
@@ -49,6 +60,13 @@ export default function EngineHealthDashboard() {
 
     return (
         <div className="space-y-3">
+            {error && <StatusBanner type="error" message={error} />}
+            {behavior?.mock && (
+                <StatusBanner
+                    type="info"
+                    message="Google Analytics Is Not Configured. Behavior Charts Are Showing Demonstration Data."
+                />
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card p-3.5 border-l-4 border-brand-accent">
                     <div className="flex justify-between items-start">

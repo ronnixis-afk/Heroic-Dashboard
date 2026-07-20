@@ -1,12 +1,27 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCostAnalytics } from '../../hooks/useCostAnalytics';
+import { StatusBanner } from '../ui';
 import { SkeletonText } from '../Skeleton';
 
 export function CostAnalyticsCard() {
-  const { modelCostData: byModel = [], dailyCostData: daily = [], loading } = useCostAnalytics();
+  const {
+    modelCostData: byModel = [],
+    dailyCostData: daily = [],
+    loading,
+    error,
+    degradedMessage,
+  } = useCostAnalytics();
 
   const isLoading = loading;
-  const today = daily?.[0] || { totalCost: 0, costPerUser: 0 };
+  const todayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dubai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const today =
+    daily.find((row) => String(row.date).slice(0, 10) === todayKey) ||
+    { totalCost: 0, costPerUser: 0 };
   const totalCost30d = byModel?.reduce((acc, m) => acc + m.totalCost, 0) || 0;
   const totalCalls30d = byModel?.reduce((acc, m) => acc + m.calls, 0) || 0;
   const costPerMessage = totalCalls30d > 0 ? totalCost30d / totalCalls30d : 0;
@@ -14,6 +29,19 @@ export function CostAnalyticsCard() {
   return (
     <div className="card p-3.5">
       <h3 className="card-title mb-3">API Cost Distribution</h3>
+      {error && (
+        <StatusBanner
+          type="error"
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Unable To Load Cost Analytics From The RPG API.'
+          }
+        />
+      )}
+      {!error && degradedMessage && (
+        <StatusBanner type="info" message={degradedMessage} />
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <h4 className="text-xs text-brand-text-muted mb-0.5">Today's Cost</h4>

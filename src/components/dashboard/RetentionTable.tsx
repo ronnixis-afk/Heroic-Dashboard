@@ -5,9 +5,9 @@ import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 interface RetentionData {
   cohort: string;
   newUsers: number;
-  day1Retention: number;
-  day7Retention: number;
-  day30Retention: number;
+  day1Retention: number | null;
+  day7Retention: number | null;
+  day30Retention: number | null;
 }
 
 export function RetentionTable() {
@@ -72,7 +72,8 @@ export function RetentionTable() {
     );
   }
 
-  const getHeatmapColor = (percentage: number) => {
+  const getHeatmapColor = (percentage: number | null) => {
+    if (percentage === null) return 'text-brand-text-muted';
     if (percentage >= 40) return 'bg-[#3ecf8e]/40 text-brand-text font-medium';
     if (percentage >= 20) return 'bg-[#3ecf8e]/20 text-brand-text';
     if (percentage > 0) return 'bg-[#3ecf8e]/10 text-brand-text';
@@ -93,23 +94,30 @@ export function RetentionTable() {
           </tr>
         </thead>
         <tbody>
+          {data.length === 0 && (
+            <tr>
+              <td colSpan={5} className="py-6 text-center text-xs text-brand-text-muted">
+                No Retention Cohorts Are Available Yet.
+              </td>
+            </tr>
+          )}
           {data.map((row, idx) => (
             <tr key={idx}>
               <td className="font-medium">{row.cohort}</td>
               <td className="text-center text-brand-text-muted">{row.newUsers}</td>
               <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day1Retention)}`}>
-                  {row.day1Retention}%
+                  {row.day1Retention === null ? '—' : `${row.day1Retention}%`}
                 </div>
               </td>
               <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day7Retention)}`}>
-                  {row.day7Retention}%
+                  {row.day7Retention === null ? '—' : `${row.day7Retention}%`}
                 </div>
               </td>
               <td className="text-center">
                 <div className={`px-2 py-0.5 rounded text-center text-xs ${getHeatmapColor(row.day30Retention)}`}>
-                  {row.day30Retention}%
+                  {row.day30Retention === null ? '—' : `${row.day30Retention}%`}
                 </div>
               </td>
             </tr>

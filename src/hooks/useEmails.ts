@@ -53,6 +53,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   welcome: 'Welcome (Free Trial)',
   subscription_purchase: 'Subscription Purchase',
   credits_low: 'Credits Running Low',
+  credit_adjustment: 'Credit Adjustment',
   feedback_received: 'Feedback Thank-You',
   feedback_admin: 'Feedback Admin Alert',
 };

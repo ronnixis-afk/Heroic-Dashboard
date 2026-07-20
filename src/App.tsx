@@ -21,6 +21,11 @@ const UsageReports = lazy(() => import('./pages/admin/UsageReports'));
 const FinancialReports = lazy(() => import('./pages/admin/FinancialReports'));
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const CLERK_IS_SATELLITE = import.meta.env.VITE_CLERK_IS_SATELLITE === 'true';
+const CLERK_PROXY_URL = import.meta.env.VITE_CLERK_PROXY_URL as string | undefined;
+const CLERK_DOMAIN = CLERK_PROXY_URL ? undefined : import.meta.env.VITE_CLERK_DOMAIN;
+const CLERK_SIGN_IN_URL = import.meta.env.VITE_CLERK_SIGN_IN_URL;
+const CLERK_SIGN_UP_URL = import.meta.env.VITE_CLERK_SIGN_UP_URL;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -29,6 +34,34 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const DashboardClerkProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const commonProps = {
+    publishableKey: CLERK_PUBLISHABLE_KEY,
+    signInUrl: CLERK_SIGN_IN_URL,
+    signUpUrl: CLERK_SIGN_UP_URL,
+    routerPush: (to: string) => window.location.assign(to),
+    routerReplace: (to: string) => window.location.replace(to),
+  };
+
+  if (CLERK_IS_SATELLITE && CLERK_PROXY_URL) {
+    return (
+      <ClerkProvider {...commonProps} isSatellite proxyUrl={CLERK_PROXY_URL}>
+        {children}
+      </ClerkProvider>
+    );
+  }
+
+  if (CLERK_IS_SATELLITE) {
+    return (
+      <ClerkProvider {...commonProps} isSatellite domain={CLERK_DOMAIN}>
+        {children}
+      </ClerkProvider>
+    );
+  }
+
+  return <ClerkProvider {...commonProps}>{children}</ClerkProvider>;
+};
 
 const RouteFallback = () => (
   <div className="flex min-h-[40vh] items-center justify-center p-6">
@@ -78,7 +111,7 @@ export default function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+    <DashboardClerkProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
@@ -119,6 +152,6 @@ export default function App() {
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
-    </ClerkProvider>
+    </DashboardClerkProvider>
   );
 }
