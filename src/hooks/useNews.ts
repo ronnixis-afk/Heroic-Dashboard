@@ -177,6 +177,7 @@ export function useNews() {
     const token = await getToken({ template: 'supabase' }).catch(() => null);
     const supabase = getSupabaseClient(token || undefined);
     
+    const now = new Date().toISOString();
     const payload = {
       id: crypto.randomUUID(),
       title: formData.title,
@@ -190,6 +191,8 @@ export function useNews() {
       cta_url: formData.cta_url || null,
       version: formData.version || null,
       is_patch_note: formData.is_patch_note ?? false,
+      createdAt: now,
+      updatedAt: now,
     };
 
     const { data, error } = await supabase
@@ -207,10 +210,12 @@ export function useNews() {
           content: formData.content,
           imageUrl: formData.imageUrl || null,
           published: formData.published,
+          createdAt: now,
+          updatedAt: now,
         };
         const fallback = await supabase.from('News').insert(basicPayload).select();
         if (fallback.error) {
-          throw new Error(`Database Error (${fallback.error.message}). Please execute 00_master_app_update_patch_notes_migration.sql in Supabase SQL editor.`);
+          throw new Error(`Database Error (${fallback.error.message}).`);
         }
         queryClient.invalidateQueries({ queryKey: ['news'] });
         return fallback.data;
@@ -265,7 +270,7 @@ export function useNews() {
         };
         const fallback = await supabase.from('News').update(basicPayload).eq('id', id).select();
         if (fallback.error) {
-          throw new Error(`Database Error (${fallback.error.message}). Please execute 00_master_app_update_patch_notes_migration.sql in Supabase SQL editor.`);
+          throw new Error(`Database Error (${fallback.error.message}).`);
         }
         queryClient.invalidateQueries({ queryKey: ['news'] });
         return fallback.data;
