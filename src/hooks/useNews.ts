@@ -59,7 +59,6 @@ async function fetchNews(getToken: (options?: any) => Promise<string | null>): P
     .limit(NEWS_LIMIT);
   
   if (error) {
-    // If new columns don't exist yet, fall back to basic query
     if (error.code === 'PGRST204' || error.message?.includes('column')) {
       const basicRes = await supabase
         .from('News')
@@ -179,6 +178,7 @@ export function useNews() {
     const supabase = getSupabaseClient(token || undefined);
     
     const payload = {
+      id: crypto.randomUUID(),
       title: formData.title,
       content: formData.content,
       imageUrl: formData.imageUrl || null,
@@ -199,10 +199,10 @@ export function useNews() {
       
     if (error) {
       console.error('[NewsAudit] Create news failed:', error);
-      // Fallback check for missing columns if migration script hasn't been executed
       if (error.code === 'PGRST204' || error.message?.includes('column')) {
         console.warn('[NewsAudit] Missing columns in News table. Attempting fallback basic insert.', error);
         const basicPayload = {
+          id: crypto.randomUUID(),
           title: formData.title,
           content: formData.content,
           imageUrl: formData.imageUrl || null,
