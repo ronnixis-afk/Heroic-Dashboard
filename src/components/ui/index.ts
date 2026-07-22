@@ -5,3 +5,5 @@ export { default as StatusBanner } from './StatusBanner';
 export { default as EmptyState } from './EmptyState';
 export { default as PageLoader } from './PageLoader';
 export { default as StatCard } from './StatCard';
+export { default as RichTextEditor } from './RichTextEditor';
+export { default as RichTextContent } from './RichTextContent';

@@ -3,7 +3,8 @@ import { useNews, NewsHighlight, NewsItem } from '../../hooks/useNews';
 import { cn } from '../../lib/utils';
 import { Newspaper, Send, Clock, Eye, EyeOff, Edit3, Trash2, Image as ImageIcon, Sparkles, Plus, X, Radio, Tag, CheckSquare, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader, EmptyState, StatusBanner, FilterTabs } from '../../components/ui';
+import { PageHeader, EmptyState, StatusBanner, FilterTabs, RichTextEditor, RichTextContent } from '../../components/ui';
+import { richTextToPlain } from '../../lib/richText';
 
 export default function AdminNews() {
   const { news, loading, appVersion, updateAppVersion, createNews, updateNews, activatePopup, deactivatePopup, deleteNews } = useNews();
@@ -290,14 +291,16 @@ export default function AdminNews() {
 
                 <div>
                   <label className="input-label">Overview & Summary</label>
-                  <textarea
+                  <RichTextEditor
                     required
-                    rows={3}
+                    rows={4}
                     value={popupFormData.content}
-                    onChange={(e) => setPopupFormData({ ...popupFormData, content: e.target.value })}
+                    onChange={(content) => setPopupFormData({ ...popupFormData, content })}
                     placeholder="Brief summary of fixes, balance changes, and new features..."
-                    className="input-field resize-none !h-auto py-2"
                   />
+                  <p className="help-text mt-1">
+                    Supports Bold, Italic, Bullet Lists, And Numbered Lists.
+                  </p>
                 </div>
 
                 <div>
@@ -466,9 +469,10 @@ export default function AdminNews() {
                 )}
 
                 {popupFormData.content && (
-                  <p className="text-xs text-brand-text-muted leading-relaxed">
-                    {popupFormData.content}
-                  </p>
+                  <RichTextContent
+                    html={popupFormData.content}
+                    className="text-xs text-brand-text-muted leading-relaxed"
+                  />
                 )}
 
                 {popupFormData.highlights.length > 0 && (
@@ -549,7 +553,7 @@ export default function AdminNews() {
                               )}
                             </div>
                             <p className="text-xs text-brand-text-muted line-clamp-2">
-                              {item.content}
+                              {richTextToPlain(item.content)}
                             </p>
                             {item.highlights && item.highlights.length > 0 && (
                               <div className="text-[11px] text-brand-accent font-medium">
@@ -639,14 +643,16 @@ export default function AdminNews() {
 
                 <div>
                   <label className="input-label">Content</label>
-                  <textarea
+                  <RichTextEditor
                     required
-                    rows={5}
+                    rows={6}
                     value={newsFormData.content}
-                    onChange={(e) => setNewsFormData({ ...newsFormData, content: e.target.value })}
+                    onChange={(content) => setNewsFormData({ ...newsFormData, content })}
                     placeholder="Write the details here..."
-                    className="input-field resize-none !h-auto py-2"
                   />
+                  <p className="help-text mt-1">
+                    Supports Bold, Italic, Bullet Lists, And Numbered Lists.
+                  </p>
                 </div>
 
                 <div>
@@ -718,7 +724,7 @@ export default function AdminNews() {
                               {!item.published && <span className="badge-danger shrink-0">Draft</span>}
                             </div>
                             <p className="text-xs text-brand-text-muted line-clamp-1 sm:line-clamp-2">
-                              {item.content}
+                              {richTextToPlain(item.content)}
                             </p>
                             <div className="flex items-center gap-2 pt-0.5 text-xs text-brand-text-muted">
                               <span className="flex items-center gap-1">
