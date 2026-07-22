@@ -59,6 +59,15 @@ async function fetchNews(getToken: (options?: any) => Promise<string | null>): P
     .limit(NEWS_LIMIT);
   
   if (error) {
+    // If new columns don't exist yet, fall back to basic query
+    if (error.code === 'PGRST204' || error.message?.includes('column')) {
+      const basicRes = await supabase
+        .from('News')
+        .select('id,title,content,imageUrl,published,createdAt,updatedAt')
+        .order('createdAt', { ascending: false })
+        .limit(NEWS_LIMIT);
+      return (basicRes.data || []) as NewsItem[];
+    }
     console.error('[NewsAudit] Supabase news error:', error);
     throw error;
   }
@@ -74,11 +83,15 @@ async function fetchAppVersion(getToken: (options?: any) => Promise<string | nul
   }
 
   const supabase = getSupabaseClient(token || undefined);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('SystemSetting')
     .select('value')
     .eq('key', 'app_version')
     .maybeSingle();
+
+  if (error) {
+    console.warn('[NewsAudit] SystemSetting query error:', error.message);
+  }
 
   return data?.value || 'v0.5';
 }
@@ -154,7 +167,7 @@ export function useNews() {
 
     if (error) {
       console.error('[NewsAudit] Update app_version failed:', error);
-      throw error;
+      throw new Error(`SystemSetting update failed: ${error.message || error.details}`);
     }
 
     queryClient.invalidateQueries({ queryKey: ['app_version'] });
@@ -186,10 +199,25 @@ export function useNews() {
       
     if (error) {
       console.error('[NewsAudit] Create news failed:', error);
-      throw error;
+      // Fallback check for missing columns if migration script hasn't been executed
+      if (error.code === 'PGRST204' || error.message?.includes('column')) {
+        console.warn('[NewsAudit] Missing columns in News table. Attempting fallback basic insert.', error);
+        const basicPayload = {
+          title: formData.title,
+          content: formData.content,
+          imageUrl: formData.imageUrl || null,
+          published: formData.published,
+        };
+        const fallback = await supabase.from('News').insert(basicPayload).select();
+        if (fallback.error) {
+          throw new Error(`Database Error (${fallback.error.message}). Please execute 00_master_app_update_patch_notes_migration.sql in Supabase SQL editor.`);
+        }
+        queryClient.invalidateQueries({ queryKey: ['news'] });
+        return fallback.data;
+      }
+      throw new Error(`Database Error (${error.message || error.details}). ${error.hint || ''}`);
     }
 
-    // Auto-update global app_version if specified
     if (formData.version) {
       await updateAppVersion(formData.version).catch((e) =>
         console.warn('[NewsAudit] Could not auto-update app_version:', e)
@@ -227,7 +255,22 @@ export function useNews() {
       
     if (error) {
       console.error('[NewsAudit] Update news failed:', error);
-      throw error;
+      if (error.code === 'PGRST204' || error.message?.includes('column')) {
+        const basicPayload = {
+          title: formData.title,
+          content: formData.content,
+          imageUrl: formData.imageUrl || null,
+          published: formData.published,
+          updatedAt: new Date().toISOString()
+        };
+        const fallback = await supabase.from('News').update(basicPayload).eq('id', id).select();
+        if (fallback.error) {
+          throw new Error(`Database Error (${fallback.error.message}). Please execute 00_master_app_update_patch_notes_migration.sql in Supabase SQL editor.`);
+        }
+        queryClient.invalidateQueries({ queryKey: ['news'] });
+        return fallback.data;
+      }
+      throw new Error(`Database Error (${error.message || error.details}). ${error.hint || ''}`);
     }
 
     if (formData.version) {
@@ -244,13 +287,11 @@ export function useNews() {
     const token = await getToken({ template: 'supabase' }).catch(() => null);
     const supabase = getSupabaseClient(token || undefined);
 
-    // 1. Deactivate all existing popup entries
     await supabase
       .from('News')
       .update({ active: false })
       .eq('is_popup', true);
 
-    // 2. Activate the targeted update
     const { data, error } = await supabase
       .from('News')
       .update({
@@ -264,7 +305,7 @@ export function useNews() {
 
     if (error) {
       console.error('[NewsAudit] Activate popup failed:', error);
-      throw error;
+      throw new Error(`Database Error (${error.message || error.details}).`);
     }
 
     if (targetVersion) {
@@ -292,7 +333,7 @@ export function useNews() {
 
     if (error) {
       console.error('[NewsAudit] Deactivate popup failed:', error);
-      throw error;
+      throw new Error(`Database Error (${error.message || error.details}).`);
     }
 
     queryClient.invalidateQueries({ queryKey: ['news'] });
@@ -310,7 +351,7 @@ export function useNews() {
       
     if (error) {
       console.error('[NewsAudit] Delete news failed:', error);
-      throw error;
+      throw new Error(`Database Error (${error.message || error.details}).`);
     }
     
     queryClient.invalidateQueries({ queryKey: ['news'] });

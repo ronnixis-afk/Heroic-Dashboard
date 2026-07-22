@@ -46,9 +46,9 @@ export default function AdminNews() {
       const updated = await updateAppVersion(currentVersionInput);
       setStatus({ type: 'success', msg: `Current App Version Updated To ${updated}.` });
       setCurrentVersionInput('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NewsUI] Failed to update app version:', error);
-      setStatus({ type: 'error', msg: 'Failed To Update App Version.' });
+      setStatus({ type: 'error', msg: `Failed To Update App Version: ${error?.message || error?.details || ''}` });
     } finally {
       setIsUpdatingVersion(false);
     }
@@ -83,9 +83,9 @@ export default function AdminNews() {
         setStatus({ type: 'success', msg: 'Announcement Posted.' });
       }
       resetForms();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NewsUI] Error saving news:', error);
-      setStatus({ type: 'error', msg: 'Failed To Save Announcement.' });
+      setStatus({ type: 'error', msg: `Failed To Save Announcement: ${error?.message || error?.details || ''}` });
     }
   };
 
@@ -104,9 +104,9 @@ export default function AdminNews() {
         setStatus({ type: 'success', msg: 'App Update / Patch Notes Created.' });
       }
       resetForms();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NewsUI] Error saving app update popup:', error);
-      setStatus({ type: 'error', msg: 'Failed To Save App Update.' });
+      setStatus({ type: 'error', msg: `Failed To Save App Update: ${error?.message || error?.details || ''}` });
     }
   };
 
@@ -115,9 +115,9 @@ export default function AdminNews() {
     try {
       await activatePopup(item.id, item.version);
       setStatus({ type: 'success', msg: `App Update ${item.version || ''} Activated And Pushed To In-Game Users!` });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NewsUI] Error activating popup:', error);
-      setStatus({ type: 'error', msg: 'Failed To Push App Update.' });
+      setStatus({ type: 'error', msg: `Failed To Push App Update: ${error?.message || error?.details || ''}` });
     }
   };
 
@@ -126,9 +126,9 @@ export default function AdminNews() {
     try {
       await deactivatePopup(id);
       setStatus({ type: 'success', msg: 'App Update Deactivated.' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NewsUI] Error deactivating popup:', error);
-      setStatus({ type: 'error', msg: 'Failed To Deactivate App Update.' });
+      setStatus({ type: 'error', msg: `Failed To Deactivate App Update: ${error?.message || error?.details || ''}` });
     }
   };
 
