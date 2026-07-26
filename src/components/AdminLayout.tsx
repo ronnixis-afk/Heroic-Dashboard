@@ -18,6 +18,7 @@ import {
   ClipboardList,
   Settings,
   Mail,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
@@ -58,6 +59,7 @@ const NAV_GROUPS = [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
       { icon: Images, label: 'Media Library', path: '/admin/media' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
+      { icon: Globe, label: 'Public Realms', path: '/admin/public-realms' },
       { icon: ClipboardList, label: 'User Surveys', path: '/admin/surveys' },
       { icon: Mail, label: 'Email Templates', path: '/admin/emails' },
     ],

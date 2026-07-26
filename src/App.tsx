@@ -17,6 +17,7 @@ const AdminSurveys = lazy(() => import('./pages/admin/AdminSurveys'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const AdminMedia = lazy(() => import('./pages/admin/AdminMedia'));
 const AdminEmails = lazy(() => import('./pages/admin/AdminEmails'));
+const AdminPublicRealms = lazy(() => import('./pages/admin/AdminPublicRealms'));
 const AudienceReports = lazy(() => import('./pages/admin/AudienceReports'));
 const UsageReports = lazy(() => import('./pages/admin/UsageReports'));
 const FinancialReports = lazy(() => import('./pages/admin/FinancialReports'));
@@ -138,6 +139,7 @@ export default function App() {
                   <Route path="feedback" element={<AdminFeedback />} />
                   <Route path="surveys" element={<AdminSurveys />} />
                   <Route path="emails" element={<AdminEmails />} />
+                  <Route path="public-realms" element={<AdminPublicRealms />} />
                   <Route path="settings" element={<AdminSettings />} />
 
                   <Route path="reports">

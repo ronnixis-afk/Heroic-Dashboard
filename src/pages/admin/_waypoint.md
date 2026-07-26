@@ -60,6 +60,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
+| `/admin/public-realms` | Public Realms | Moderation for community-shared realms. Hook: `src/hooks/usePublicRealms.ts` → RPG `/api/admin/public-realms/*`. Open report queue (hide realm / resolve / dismiss), listings table with status filter + hide/restore, and Reconcile Counters (repairs denormalized play/like counts from fact tables). Hiding never deletes player copies. |
 | `/admin/settings` | System Settings | Caps, referrals, analytics admin-testing exclusion toggle (`exclude_admin_from_analytics`), text model routing, NPC image source (`database` default / `nano_banana_2_lite`) |
 
 ## Insights Data Sources
