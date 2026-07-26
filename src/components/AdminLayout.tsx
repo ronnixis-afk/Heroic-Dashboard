@@ -19,6 +19,7 @@ import {
   Settings,
   Mail,
   Globe,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
@@ -57,6 +58,7 @@ const NAV_GROUPS = [
     group: 'Operations',
     items: [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
+      { icon: Compass, label: 'Product Roadmap', path: '/admin/roadmap' },
       { icon: Images, label: 'Media Library', path: '/admin/media' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
       { icon: Globe, label: 'Public Realms', path: '/admin/public-realms' },

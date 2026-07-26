@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminNews = lazy(() => import('./pages/admin/AdminNews'));
+const AdminRoadmap = lazy(() => import('./pages/admin/AdminRoadmap'));
 const AdminCredits = lazy(() => import('./pages/admin/AdminCredits'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
@@ -133,6 +134,7 @@ export default function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="news" element={<AdminNews />} />
+                  <Route path="roadmap" element={<AdminRoadmap />} />
                   <Route path="media" element={<AdminMedia />} />
                   <Route path="credits" element={<AdminCredits />} />
                   <Route path="analytics" element={<AdminAnalytics />} />
