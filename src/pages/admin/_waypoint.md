@@ -57,7 +57,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 - **Dashboard copy:** `src/constants/rideablePortraitCatalog.ts` — auto-generated; do not edit by hand.
 - **Sync command:** `npm run sync:rideable-catalog` (also runs optionally on `predev` / `prebuild`).
 - After changing rideable names/categories in the RPG, run the sync and commit the regenerated catalog.
-- **Upload dropdowns:** Mount / Vehicle / Ship template selects use catalog order for the selected genre only (do not mix orphan types from other genres). Stables in-game = Mount Portrait + Vehicle Portrait lists; Shipyard = Ship Portrait list.
+- **Upload dropdowns:** Mount / Vehicle / Ship template selects use catalog order for the selected genre only (do not mix orphan types from other genres). In-game Stables = Mount Portrait list; Garage = Vehicle Portrait list; Shipyard = Ship Portrait list.
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
