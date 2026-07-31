@@ -9,6 +9,8 @@ import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 export const IMAGE_ASSET_PAGE_SIZE = 60;
+/** PostgREST max_rows is typically 1000; page under that so facet/storage totals cover the full library. */
+const IMAGE_ASSET_FACET_PAGE_SIZE = 1000;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 const LEGACY_NPC_PORTRAIT_TYPES = [...LEGACY_NPC_PORTRAIT_ASSET_TYPES];
 
@@ -212,33 +214,72 @@ async function fetchImageAssetsPage(
   };
 }
 
-async function fetchImageStorageBytes(getToken: (options?: any) => Promise<string | null>) {
+async function fetchAllImageAssetRows<T>(
+  getToken: (options?: any) => Promise<string | null>,
+  columns: string,
+  mapRow: (row: Record<string, unknown>) => T
+): Promise<T[]> {
   const supabase = await getSupabaseForAdmin(getToken);
-  const { data, error } = await supabase.from('ImageAsset').select('sizeBytes');
-  if (error) {
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + IMAGE_ASSET_FACET_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('ImageAsset')
+      .select(columns)
+      .order('createdAt', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw error;
+    }
+
+    const page = (data || []) as Record<string, unknown>[];
+    rows.push(...page.map(mapRow));
+
+    if (page.length < IMAGE_ASSET_FACET_PAGE_SIZE) break;
+    from += IMAGE_ASSET_FACET_PAGE_SIZE;
+  }
+
+  return rows;
+}
+
+async function fetchImageStorageBytes(getToken: (options?: any) => Promise<string | null>) {
+  try {
+    const rows = await fetchAllImageAssetRows(
+      getToken,
+      'sizeBytes',
+      (row) => Number(row.sizeBytes) || 0
+    );
+    return rows.reduce((total, sizeBytes) => total + sizeBytes, 0);
+  } catch (error) {
     console.warn('[MediaLibrary] Storage totals fetch failed:', error);
     return 0;
   }
-  return (data || []).reduce((total, row) => total + (Number(row.sizeBytes) || 0), 0);
 }
 
 async function fetchImageAssetFacets(
   getToken: (options?: any) => Promise<string | null>
 ): Promise<ImageAssetFacetRow[]> {
-  const supabase = await getSupabaseForAdmin(getToken);
-  const { data, error } = await supabase.from('ImageAsset').select('genre,assetType,metadata,tags');
-  if (error) {
+  try {
+    return await fetchAllImageAssetRows(
+      getToken,
+      'genre,assetType,metadata,tags',
+      (row) => ({
+        genre: String(row.genre || ''),
+        assetType: String(row.assetType || ''),
+        metadata: (row.metadata && typeof row.metadata === 'object'
+          ? row.metadata
+          : {}) as Record<string, unknown>,
+        tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
+      })
+    );
+  } catch (error) {
     console.warn('[MediaLibrary] Facet fetch failed:', error);
     return [];
   }
-  return (data || []).map((row) => ({
-    genre: String(row.genre || ''),
-    assetType: String(row.assetType || ''),
-    metadata: (row.metadata && typeof row.metadata === 'object'
-      ? row.metadata
-      : {}) as Record<string, unknown>,
-    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
-  }));
 }
 
 export function useImageAssets(params: ImageAssetsQueryParams = {}) {
