@@ -24,7 +24,6 @@ import { cn } from '../../lib/utils';
 const EMPTY_FORM: RoadmapFormData = {
   title: '',
   summary: '',
-  details: '',
   phase: 'Near Horizon',
   status: 'in_development',
   category: 'Gameplay',
@@ -90,7 +89,6 @@ export default function AdminRoadmap() {
     setFormData({
       title: item.title,
       summary: item.summary,
-      details: item.details || '',
       phase: item.phase,
       status: item.status,
       category: item.category,
@@ -141,7 +139,6 @@ export default function AdminRoadmap() {
       await updateItem(item.id, {
         title: item.title,
         summary: item.summary,
-        details: item.details || '',
         phase: item.phase,
         status: item.status,
         category: item.category,
@@ -227,17 +224,6 @@ export default function AdminRoadmap() {
                 value={formData.summary}
                 onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                 placeholder="Short public summary shown in the ledger and landing teaser."
-                className="input-field"
-              />
-            </div>
-
-            <div>
-              <label className="input-label">Details</label>
-              <textarea
-                rows={3}
-                value={formData.details}
-                onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-                placeholder="Optional expanded detail shown when a row is opened."
                 className="input-field"
               />
             </div>

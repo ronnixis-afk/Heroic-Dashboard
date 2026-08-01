@@ -35,7 +35,6 @@ export interface RoadmapItem {
   id: string;
   title: string;
   summary: string;
-  details?: string | null;
   phase: string;
   status: string;
   category: string;
@@ -49,7 +48,6 @@ export interface RoadmapItem {
 export interface RoadmapFormData {
   title: string;
   summary: string;
-  details?: string;
   phase: string;
   status: string;
   category: string;
@@ -69,7 +67,7 @@ async function fetchRoadmap(getToken: (options?: any) => Promise<string | null>)
   const supabase = getSupabaseClient(token || undefined);
   const { data, error } = await supabase
     .from('RoadmapItem')
-    .select('id,title,summary,details,phase,status,category,featured,published,sortOrder,createdAt,updatedAt')
+    .select('id,title,summary,phase,status,category,featured,published,sortOrder,createdAt,updatedAt')
     .order('sortOrder', { ascending: true })
     .order('createdAt', { ascending: true })
     .limit(ROADMAP_LIMIT);
@@ -141,7 +139,7 @@ export function useRoadmap() {
       id: crypto.randomUUID(),
       title: formData.title.trim(),
       summary: formData.summary.trim(),
-      details: formData.details?.trim() || null,
+      details: null,
       phase: formData.phase,
       status: formData.status,
       category: formData.category,
@@ -172,7 +170,7 @@ export function useRoadmap() {
     const payload = {
       title: formData.title.trim(),
       summary: formData.summary.trim(),
-      details: formData.details?.trim() || null,
+      details: null,
       phase: formData.phase,
       status: formData.status,
       category: formData.category,
