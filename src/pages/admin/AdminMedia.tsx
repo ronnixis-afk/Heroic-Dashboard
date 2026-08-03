@@ -47,10 +47,15 @@ import {
   getMonsterSubtypes,
   getMonsterTypeNames,
 } from '../../constants/monsterPortraitCatalog';
+import {
+  getItemPortraitCategoryNames,
+  getItemPortraitSubtypes,
+} from '../../constants/itemPortraitCatalog';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
 const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
+const ITEM_CATEGORY_OPTIONS = getItemPortraitCategoryNames();
 /** Uploadable types — includes NPC Portrait for Database-sourced nearby NPC art. */
 const UPLOADABLE_IMAGE_ASSET_TYPES = [...IMAGE_ASSET_TYPES] as ImageAssetType[];
 const getAssetTypeOptionsForGenre = (
@@ -292,11 +297,6 @@ const isPortraitAssetType = (assetType: string | undefined) =>
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
-
-const ITEM_METADATA_OPTIONS = {
-  itemCategory: ['Weapon', 'Armor', 'Consumable', 'Relic', 'Material', 'Tool', 'Currency', 'Quest Item'],
-  itemSubtype: ['Sword', 'Bow', 'Firearm', 'Shield', 'Potion', 'Scroll', 'Gem', 'Key', 'Food', 'Device'],
-};
 
 const initialForm = {
   genre: 'Fantasy' as ImageGenre,
@@ -673,9 +673,20 @@ export default function AdminMedia() {
     () => countByMetadataKey(facetRows, 'itemCategory', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
   );
+  const itemSubtypeScope = useMemo(
+    () => ({
+      ...formAssetTypeScope,
+      metadata: { itemCategory: formData.metadata.itemCategory || '' },
+    }),
+    [formAssetTypeScope, formData.metadata.itemCategory]
+  );
   const itemSubtypeCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'itemSubtype', formAssetTypeScope),
-    [facetRows, formAssetTypeScope]
+    () => countByMetadataKey(facetRows, 'itemSubtype', itemSubtypeScope),
+    [facetRows, itemSubtypeScope]
+  );
+  const itemSubtypeTotal = useMemo(
+    () => countScopedTotal(facetRows, itemSubtypeScope),
+    [facetRows, itemSubtypeScope]
   );
   const mountTypeCounts = useMemo(
     () => countByMetadataKey(facetRows, 'mountType', formAssetTypeScope),
@@ -739,6 +750,10 @@ export default function AdminMedia() {
   const monsterSubtypeOptions = useMemo(
     () => getMonsterSubtypes(formData.metadata.monsterType || ''),
     [formData.metadata.monsterType]
+  );
+  const itemSubtypeOptions = useMemo(
+    () => getItemPortraitSubtypes(formData.metadata.itemCategory || ''),
+    [formData.metadata.itemCategory]
   );
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
@@ -1096,6 +1111,10 @@ export default function AdminMedia() {
 
       if (key === 'zoneProperty') {
         delete metadata.zoneQuality;
+      }
+
+      if (key === 'itemCategory') {
+        delete metadata.itemSubtype;
       }
 
       if (key === 'monsterType') {
@@ -1581,16 +1600,16 @@ export default function AdminMedia() {
                 {formData.assetType === 'Item Image' && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="input-label">Item Type</label>
+                      <label className="input-label">Item Category</label>
                       <select
                         value={formData.metadata.itemCategory || ''}
                         onChange={(event) => setMetadataField('itemCategory', event.target.value)}
                         className="input-field"
                       >
                         <option value="">
-                          {formatOptionLabel('Any Type', formAssetTypeTotal)}
+                          {formatOptionLabel('Any Category', formAssetTypeTotal)}
                         </option>
-                        {ITEM_METADATA_OPTIONS.itemCategory.map((option) => (
+                        {ITEM_CATEGORY_OPTIONS.map((option) => (
                           <option key={option} value={option}>
                             {formatOptionLabel(option, getCount(itemCategoryCounts, option))}
                           </option>
@@ -1598,21 +1617,25 @@ export default function AdminMedia() {
                       </select>
                     </div>
                     <div>
-                      <label className="input-label">Item Subtype</label>
+                      <label className="input-label">Item Template</label>
                       <select
                         value={formData.metadata.itemSubtype || ''}
                         onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
                         className="input-field"
+                        disabled={!formData.metadata.itemCategory}
                       >
                         <option value="">
-                          {formatOptionLabel('Any Subtype', formAssetTypeTotal)}
+                          {formatOptionLabel('Any Template', itemSubtypeTotal)}
                         </option>
-                        {ITEM_METADATA_OPTIONS.itemSubtype.map((option) => (
+                        {itemSubtypeOptions.map((option) => (
                           <option key={option} value={option}>
                             {formatOptionLabel(option, getCount(itemSubtypeCounts, option))}
                           </option>
                         ))}
                       </select>
+                      <p className="mt-1 text-xs text-brand-text-muted">
+                        Exact Blueprint Chassis Name From The RPG Catalog (E.g. Dagger, Longsword, Padded Armor).
+                      </p>
                     </div>
                   </div>
                 )}
