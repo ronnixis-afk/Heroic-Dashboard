@@ -3,11 +3,14 @@
  *
  * Sources:
  *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/weaponLootTemplates.ts
+ *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/armorLootTemplates.ts
+ *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/consumableLootTemplates.ts
+ *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/throwableLootTemplates.ts
  *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/itemRegistry.ts
  *   - ../Heroic AI RPG/heroic-ai-rpg/src/utils/item/itemArtFamilies.ts
  *   - ../Heroic AI RPG/heroic-ai-rpg/src/constants/materials.ts
  *
- * Weapons and Protection subtypes are genre-scoped and folded via ITEM_ART_FAMILIES_BY_GENRE.
+ * Weapons, Protection, Consumables, and Throwables are genre-scoped and folded via ITEM_ART_FAMILIES_BY_GENRE.
  *
  * Override with HEROIC_RPG_ROOT if the repos are not siblings.
  *
@@ -27,6 +30,8 @@ const rpgRoot = process.env.HEROIC_RPG_ROOT
 
 const weaponsPath = path.join(rpgRoot, 'src', 'utils', 'item', 'weaponLootTemplates.ts');
 const armorsPath = path.join(rpgRoot, 'src', 'utils', 'item', 'armorLootTemplates.ts');
+const consumablesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'consumableLootTemplates.ts');
+const throwablesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'throwableLootTemplates.ts');
 const registryPath = path.join(rpgRoot, 'src', 'utils', 'item', 'itemRegistry.ts');
 const familiesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'itemArtFamilies.ts');
 const materialsPath = path.join(rpgRoot, 'src', 'constants', 'materials.ts');
@@ -83,8 +88,9 @@ const extractTableNames = (registrySrc, tableKey) => {
 };
 
 /**
- * Extract a single named const array of `w('Name', ...)` weapon templates
- * or `body('Name', ...)` / `shield('Name', ...)` armor templates.
+ * Extract a single named const array of helper chassis templates:
+ * w/body/shield/heal/buff/dmg/status('Name', ...)
+ * also falls back to name: '...' properties inside the array body.
  */
 const extractNamedTemplateArray = (src, constName) => {
   const keyRe = new RegExp(
@@ -108,10 +114,12 @@ const extractNamedTemplateArray = (src, constName) => {
   }
   if (end < 0) return [];
   const body = src.slice(start, end + 1);
-  return extractQuotedNames(
+  const helperNames = extractQuotedNames(
     body,
-    /(?:w|body|shield)\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
+    /(?:w|body|shield|heal|buff|dmg|status)\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
   );
+  if (helperNames.length > 0) return helperNames;
+  return extractQuotedNames(body, /name:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/);
 };
 
 /**
@@ -217,6 +225,8 @@ const foldThroughFamilies = (names, familyMap) => {
 
 const weaponsSrc = fs.readFileSync(weaponsPath, 'utf8');
 const armorsSrc = fs.existsSync(armorsPath) ? fs.readFileSync(armorsPath, 'utf8') : '';
+const consumablesSrc = fs.existsSync(consumablesPath) ? fs.readFileSync(consumablesPath, 'utf8') : '';
+const throwablesSrc = fs.existsSync(throwablesPath) ? fs.readFileSync(throwablesPath, 'utf8') : '';
 const registrySrc = fs.readFileSync(registryPath, 'utf8');
 const materialsSrc = fs.readFileSync(materialsPath, 'utf8');
 const familiesSrc = fs.existsSync(familiesPath) ? fs.readFileSync(familiesPath, 'utf8') : '';
@@ -249,24 +259,35 @@ if (armorsByGenre.Fantasy.length === 0) {
   armorsByGenre['Sci-Fi'] = armorsByGenre.Fantasy;
 }
 
+const consumablesByGenre = {
+  Fantasy: extractNamedTemplateArray(consumablesSrc, 'FANTASY_CONSUMABLE_LOOT_TEMPLATES'),
+  Modern: extractNamedTemplateArray(consumablesSrc, 'MODERN_CONSUMABLE_LOOT_TEMPLATES'),
+  'Sci-Fi': extractNamedTemplateArray(consumablesSrc, 'SCIFI_CONSUMABLE_LOOT_TEMPLATES'),
+};
+if (consumablesByGenre.Fantasy.length === 0) {
+  const legacy = extractTableNames(registrySrc, 'consumables');
+  consumablesByGenre.Fantasy = legacy;
+  consumablesByGenre.Modern = legacy;
+  consumablesByGenre['Sci-Fi'] = legacy;
+}
+
+const throwablesByGenre = {
+  Fantasy: extractNamedTemplateArray(throwablesSrc, 'FANTASY_THROWABLE_LOOT_TEMPLATES'),
+  Modern: extractNamedTemplateArray(throwablesSrc, 'MODERN_THROWABLE_LOOT_TEMPLATES'),
+  'Sci-Fi': extractNamedTemplateArray(throwablesSrc, 'SCIFI_THROWABLE_LOOT_TEMPLATES'),
+};
+if (throwablesByGenre.Fantasy.length === 0) {
+  const legacy = extractTableNames(registrySrc, 'throwables');
+  throwablesByGenre.Fantasy = legacy;
+  throwablesByGenre.Modern = legacy;
+  throwablesByGenre['Sci-Fi'] = legacy;
+}
+
 const accessories = uniqueSorted(extractTableNames(registrySrc, 'accessories'));
 const wondrous = uniqueSorted(extractTableNames(registrySrc, 'wondrous'));
 const utilities = uniqueSorted(extractTableNames(registrySrc, 'utilities'));
-const throwables = uniqueSorted(extractTableNames(registrySrc, 'throwables'));
-const consumables = uniqueSorted(extractTableNames(registrySrc, 'consumables'));
 const quest = uniqueSorted(extractTableNames(registrySrc, 'quest'));
 const materials = uniqueSorted(extractQuotedNames(materialsSrc, /typeTag:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/));
-
-const sharedCategories = [
-  { name: 'Accessories', subtypes: accessories },
-  { name: 'Wondrous', subtypes: wondrous },
-  { name: 'Utilities', subtypes: utilities },
-  { name: 'Throwables', subtypes: throwables },
-  { name: 'Consumables', subtypes: consumables },
-  { name: 'Quest', subtypes: quest },
-  { name: 'Material', subtypes: materials },
-  { name: 'Currency', subtypes: ['Currency'] },
-];
 
 const catalogByGenre = {};
 for (const genre of GENRES) {
@@ -288,10 +309,21 @@ for (const genre of GENRES) {
     process.exit(1);
   }
 
+  const consumableNames = consumablesByGenre[genre] || [];
+  const consumablesFolded = foldThroughFamilies(consumableNames, artFamiliesByGenre[genre]);
+  const throwableNames = uniqueSorted(throwablesByGenre[genre] || []);
+
   catalogByGenre[genre] = [
     { name: 'Weapons', subtypes: weaponsFolded },
     { name: 'Protection', subtypes: armorsFolded },
-    ...sharedCategories,
+    { name: 'Accessories', subtypes: accessories },
+    { name: 'Wondrous', subtypes: wondrous },
+    { name: 'Utilities', subtypes: utilities },
+    { name: 'Throwables', subtypes: throwableNames },
+    { name: 'Consumables', subtypes: consumablesFolded },
+    { name: 'Quest', subtypes: quest },
+    { name: 'Material', subtypes: materials },
+    { name: 'Currency', subtypes: ['Currency'] },
   ];
 }
 
