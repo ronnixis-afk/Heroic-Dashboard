@@ -751,10 +751,20 @@ export default function AdminMedia() {
     () => getMonsterSubtypes(formData.metadata.monsterType || ''),
     [formData.metadata.monsterType]
   );
-  const itemSubtypeOptions = useMemo(
-    () => getItemPortraitSubtypes(formData.metadata.itemCategory || ''),
-    [formData.metadata.itemCategory]
-  );
+  const itemSubtypeOptions = useMemo(() => {
+    const catalogTypes = [...getItemPortraitSubtypes(formData.metadata.itemCategory || '')];
+    const categoryKey = (formData.metadata.itemCategory || '').trim().toLowerCase();
+    const fromAssets = facetRows
+      .filter((row) => {
+        if (row.assetType !== 'Item Image') return false;
+        const meta = getStringMetadata(row.metadata);
+        if (!categoryKey) return true;
+        return (meta.itemCategory || '').trim().toLowerCase() === categoryKey;
+      })
+      .map((row) => getStringMetadata(row.metadata).itemSubtype?.trim())
+      .filter((value): value is string => Boolean(value));
+    return mergeRideableTypeOptions(catalogTypes, fromAssets, formData.metadata.itemSubtype);
+  }, [facetRows, formData.metadata.itemCategory, formData.metadata.itemSubtype]);
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
       .filter(
@@ -1634,7 +1644,8 @@ export default function AdminMedia() {
                         ))}
                       </select>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Exact Blueprint Chassis Name From The RPG Catalog (E.g. Dagger, Longsword, Padded Armor).
+                        Art Family Name From The RPG Catalog (E.g. Dagger, Longbow, Padded Armor).
+                        Visually Identical Chassis Share One Bucket.
                       </p>
                     </div>
                   </div>

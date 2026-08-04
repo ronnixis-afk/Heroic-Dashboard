@@ -77,11 +77,12 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 
 ## Item Image Catalog Sync
 
-- **Source of truth:** RPG loot blueprints — `weaponLootTemplates.ts`, `itemRegistry.ts` (`LOOT_TABLES`), and `materials.ts` typeTags. Runtime helper: `heroic-ai-rpg/src/constants/itemPortraitCatalog.ts`.
+- **Source of truth:** RPG loot blueprints — `weaponLootTemplates.ts`, `itemRegistry.ts` (`LOOT_TABLES`), `itemArtFamilies.ts` (visual fold), and `materials.ts` typeTags. Runtime helper: `heroic-ai-rpg/src/constants/itemPortraitCatalog.ts`.
+- **Art families:** Weapons and Protection upload templates are **family names**, not every mechanical chassis. `ITEM_ART_FAMILIES` maps retired members (e.g. Composite Bow → Longbow) so the dropdown is shorter; generation still uses full blueprint counts. After changing families, run the sync and apply the Supabase remap migration if subtypes were retired.
 - **Dashboard copy:** `src/constants/itemPortraitCatalog.ts` — auto-generated; do not edit by hand.
 - **Sync command:** `npm run sync:item-catalog` (also runs optionally on `predev` / `prebuild`).
-- After adding/renaming item chassis templates in the RPG, run the sync and commit the regenerated catalog.
-- **Upload dropdowns:** Item Image → Item Category (Weapons, Protection, …) then Item Template (exact chassis name). Match keys: `metadata.itemCategory` + `metadata.itemSubtype` → `Item.imageUrl` / `Item.imageAssetId` via stable `templateName`.
+- After adding/renaming item chassis templates or art families in the RPG, run the sync and commit the regenerated catalog.
+- **Upload dropdowns:** Item Image → Item Category (Weapons, Protection, …) then Item Template (art-family name). Orphan subtypes already in DB still appear in the template select (same merge pattern as mount/vehicle/ship types). Match keys: `metadata.itemCategory` + `metadata.itemSubtype` → `Item.imageUrl` / `Item.imageAssetId` via stable `templateName` folded through `resolveItemArtFamily`.
 
 ## Insights Data Sources
 
