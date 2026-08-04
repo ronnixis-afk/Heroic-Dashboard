@@ -687,11 +687,11 @@ export default function AdminMedia() {
     const raw = countByMetadataKey(facetRows, 'itemSubtype', itemSubtypeScope);
     const rolled: Record<string, number> = {};
     for (const [key, count] of Object.entries(raw)) {
-      const family = resolveItemArtFamily(key);
+      const family = resolveItemArtFamily(key, structuredGenre);
       rolled[family] = (rolled[family] || 0) + count;
     }
     return rolled;
-  }, [facetRows, itemSubtypeScope]);
+  }, [facetRows, itemSubtypeScope, structuredGenre]);
   const itemSubtypeTotal = useMemo(
     () => countScopedTotal(facetRows, itemSubtypeScope),
     [facetRows, itemSubtypeScope]
@@ -759,24 +759,26 @@ export default function AdminMedia() {
     () => getMonsterSubtypes(formData.metadata.monsterType || ''),
     [formData.metadata.monsterType]
   );
-  /** Catalog art-family names only — retired chassis are not listed as separate upload targets. */
+  /** Catalog art-family names only — retired chassis are not listed as separate upload targets. Genre-scoped for Weapons. */
   const itemSubtypeOptions = useMemo(() => {
-    const catalogTypes = [...getItemPortraitSubtypes(formData.metadata.itemCategory || '')];
+    const catalogTypes = [
+      ...getItemPortraitSubtypes(formData.metadata.itemCategory || '', structuredGenre),
+    ];
     const currentFamily = formData.metadata.itemSubtype
-      ? resolveItemArtFamily(formData.metadata.itemSubtype)
+      ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
       : undefined;
     return mergeRideableTypeOptions(catalogTypes, [], currentFamily);
-  }, [formData.metadata.itemCategory, formData.metadata.itemSubtype]);
+  }, [formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
 
   const selectedItemArtFamilyMembers = useMemo(() => {
     const family = (formData.metadata.itemSubtype || '').trim();
     if (!family || formData.assetType !== 'Item Image') return [];
     const category = (formData.metadata.itemCategory || '').trim().toLowerCase();
     if (category !== 'weapons' && category !== 'protection') return [];
-    return getItemArtFamilyMembers(family)
+    return getItemArtFamilyMembers(family, structuredGenre)
       .filter((name) => name.toLowerCase() !== family.toLowerCase())
       .sort((a, b) => a.localeCompare(b));
-  }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype]);
+  }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
       .filter(
@@ -1013,9 +1015,10 @@ export default function AdminMedia() {
     setEditingAsset(asset);
     const assetType = normalizeAssetTypeForForm(asset.assetType);
     const metadata = getStringMetadata(asset.metadata);
-    // Show retired chassis under their art family in the upload form.
+    // Show retired chassis under their art family in the upload form (genre-aware).
     if (assetType === 'Item Image' && metadata.itemSubtype) {
-      metadata.itemSubtype = resolveItemArtFamily(metadata.itemSubtype);
+      const editGenre = getStructuredGenre(asset.genre as ImageGenre);
+      metadata.itemSubtype = resolveItemArtFamily(metadata.itemSubtype, editGenre);
     }
     setFormData({
       genre: asset.genre,
@@ -1648,7 +1651,7 @@ export default function AdminMedia() {
                       <select
                         value={
                           formData.metadata.itemSubtype
-                            ? resolveItemArtFamily(formData.metadata.itemSubtype)
+                            ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
                             : ''
                         }
                         onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
@@ -1665,9 +1668,10 @@ export default function AdminMedia() {
                         ))}
                       </select>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Upload To An Art Family (E.g. Longbow, Heavy Crossbow, Padded Armor). Count
-                        Shows How Many Images Are Already In That Family. In-Game Chassis In The
-                        Same Family Share This Pool.
+                        Weapons And Protection Art Families Are Genre-Scoped (Fantasy /
+                        Modern / Sci-Fi). Upload Under The Matching Genre. Counts Show How
+                        Many Images Are Already In That Family. In-Game Chassis In The Same
+                        Family Share This Pool.
                       </p>
                       {selectedItemArtFamilyMembers.length > 0 && (
                         <p className="mt-1 text-xs text-brand-text-muted">
@@ -2114,7 +2118,10 @@ export default function AdminMedia() {
                             const templateName =
                               asset.assetType === 'Item Image'
                                 ? meta.itemSubtype
-                                  ? resolveItemArtFamily(meta.itemSubtype)
+                                  ? resolveItemArtFamily(
+                                      meta.itemSubtype,
+                                      getStructuredGenre(asset.genre as ImageGenre)
+                                    )
                                   : ''
                                 : meta.mountType || meta.vehicleType || meta.shipType;
                             return templateName ? (
