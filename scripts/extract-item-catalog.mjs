@@ -175,6 +175,17 @@ const serializeList = (list) =>
     ? '[]'
     : `[\n${list.map((n) => `    '${n.replace(/'/g, "\\'")}',`).join('\n')}\n  ]`;
 
+const serializeArtFamilies = (map) => {
+  const entries = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  if (entries.length === 0) return '{\n}';
+  return `{\n${entries
+    .map(
+      ([member, family]) =>
+        `  '${member.replace(/'/g, "\\'")}': '${family.replace(/'/g, "\\'")}',`
+    )
+    .join('\n')}\n}`;
+};
+
 const today = new Date().toISOString().slice(0, 10);
 
 const file = `/**
@@ -214,9 +225,42 @@ ${catalog
   .join(',\n')}
 ];
 
+/** Member chassis → shared art family (from RPG itemArtFamilies.ts). */
+export const ITEM_ART_FAMILIES: Readonly<Record<string, string>> = ${serializeArtFamilies(artFamilies)};
+
+const normalizeArtFamilyKey = (value: string | null | undefined): string =>
+  (value || '').trim().toLowerCase();
+
+/** Fold a chassis or family name to the upload / match art-family key. */
+export function resolveItemArtFamily(name: string): string {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return trimmed;
+  const target = normalizeArtFamilyKey(trimmed);
+  for (const [member, family] of Object.entries(ITEM_ART_FAMILIES)) {
+    if (normalizeArtFamilyKey(member) === target) return family;
+  }
+  return trimmed;
+}
+
+/** Family representative plus every chassis that shares its image bucket. */
+export function getItemArtFamilyMembers(familyOrMember: string): string[] {
+  const family = resolveItemArtFamily(familyOrMember);
+  if (!family) return [];
+  const familyKey = normalizeArtFamilyKey(family);
+  const members = new Set<string>([family]);
+  for (const [member, mapped] of Object.entries(ITEM_ART_FAMILIES)) {
+    if (normalizeArtFamilyKey(mapped) === familyKey) {
+      members.add(member);
+      members.add(mapped);
+    }
+  }
+  return [...members];
+}
+
 export const getItemPortraitCategoryNames = (): readonly ItemPortraitCategory[] =>
   ITEM_PORTRAIT_CATALOG.map((entry) => entry.name);
 
+/** Art-family names for Weapons/Protection; exact template names for other categories. */
 export const getItemPortraitSubtypes = (category: string): readonly string[] => {
   const normalized = category.trim().toLowerCase();
   const entry = ITEM_PORTRAIT_CATALOG.find((row) => row.name.toLowerCase() === normalized);

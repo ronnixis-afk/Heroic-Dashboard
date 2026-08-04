@@ -48,8 +48,10 @@ import {
   getMonsterTypeNames,
 } from '../../constants/monsterPortraitCatalog';
 import {
+  getItemArtFamilyMembers,
   getItemPortraitCategoryNames,
   getItemPortraitSubtypes,
+  resolveItemArtFamily,
 } from '../../constants/itemPortraitCatalog';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
@@ -680,10 +682,16 @@ export default function AdminMedia() {
     }),
     [formAssetTypeScope, formData.metadata.itemCategory]
   );
-  const itemSubtypeCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'itemSubtype', itemSubtypeScope),
-    [facetRows, itemSubtypeScope]
-  );
+  /** Roll retired chassis uploads (e.g. Composite Bow) into their art family (Longbow). */
+  const itemSubtypeCounts = useMemo(() => {
+    const raw = countByMetadataKey(facetRows, 'itemSubtype', itemSubtypeScope);
+    const rolled: Record<string, number> = {};
+    for (const [key, count] of Object.entries(raw)) {
+      const family = resolveItemArtFamily(key);
+      rolled[family] = (rolled[family] || 0) + count;
+    }
+    return rolled;
+  }, [facetRows, itemSubtypeScope]);
   const itemSubtypeTotal = useMemo(
     () => countScopedTotal(facetRows, itemSubtypeScope),
     [facetRows, itemSubtypeScope]
@@ -751,20 +759,24 @@ export default function AdminMedia() {
     () => getMonsterSubtypes(formData.metadata.monsterType || ''),
     [formData.metadata.monsterType]
   );
+  /** Catalog art-family names only — retired chassis are not listed as separate upload targets. */
   const itemSubtypeOptions = useMemo(() => {
     const catalogTypes = [...getItemPortraitSubtypes(formData.metadata.itemCategory || '')];
-    const categoryKey = (formData.metadata.itemCategory || '').trim().toLowerCase();
-    const fromAssets = facetRows
-      .filter((row) => {
-        if (row.assetType !== 'Item Image') return false;
-        const meta = getStringMetadata(row.metadata);
-        if (!categoryKey) return true;
-        return (meta.itemCategory || '').trim().toLowerCase() === categoryKey;
-      })
-      .map((row) => getStringMetadata(row.metadata).itemSubtype?.trim())
-      .filter((value): value is string => Boolean(value));
-    return mergeRideableTypeOptions(catalogTypes, fromAssets, formData.metadata.itemSubtype);
-  }, [facetRows, formData.metadata.itemCategory, formData.metadata.itemSubtype]);
+    const currentFamily = formData.metadata.itemSubtype
+      ? resolveItemArtFamily(formData.metadata.itemSubtype)
+      : undefined;
+    return mergeRideableTypeOptions(catalogTypes, [], currentFamily);
+  }, [formData.metadata.itemCategory, formData.metadata.itemSubtype]);
+
+  const selectedItemArtFamilyMembers = useMemo(() => {
+    const family = (formData.metadata.itemSubtype || '').trim();
+    if (!family || formData.assetType !== 'Item Image') return [];
+    const category = (formData.metadata.itemCategory || '').trim().toLowerCase();
+    if (category !== 'weapons' && category !== 'protection') return [];
+    return getItemArtFamilyMembers(family)
+      .filter((name) => name.toLowerCase() !== family.toLowerCase())
+      .sort((a, b) => a.localeCompare(b));
+  }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype]);
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
       .filter(
@@ -1000,12 +1012,17 @@ export default function AdminMedia() {
     optimizedImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setEditingAsset(asset);
     const assetType = normalizeAssetTypeForForm(asset.assetType);
+    const metadata = getStringMetadata(asset.metadata);
+    // Show retired chassis under their art family in the upload form.
+    if (assetType === 'Item Image' && metadata.itemSubtype) {
+      metadata.itemSubtype = resolveItemArtFamily(metadata.itemSubtype);
+    }
     setFormData({
       genre: asset.genre,
       assetType,
       description: asset.description || '',
       tags: asset.tags || [],
-      metadata: getStringMetadata(asset.metadata),
+      metadata,
     });
     setOptimizedImages([]);
     setUploadMode(null);
@@ -1627,15 +1644,19 @@ export default function AdminMedia() {
                       </select>
                     </div>
                     <div>
-                      <label className="input-label">Item Template</label>
+                      <label className="input-label">Art Family</label>
                       <select
-                        value={formData.metadata.itemSubtype || ''}
+                        value={
+                          formData.metadata.itemSubtype
+                            ? resolveItemArtFamily(formData.metadata.itemSubtype)
+                            : ''
+                        }
                         onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
                         className="input-field"
                         disabled={!formData.metadata.itemCategory}
                       >
                         <option value="">
-                          {formatOptionLabel('Any Template', itemSubtypeTotal)}
+                          {formatOptionLabel('Any Art Family', itemSubtypeTotal)}
                         </option>
                         {itemSubtypeOptions.map((option) => (
                           <option key={option} value={option}>
@@ -1644,9 +1665,15 @@ export default function AdminMedia() {
                         ))}
                       </select>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Art Family Name From The RPG Catalog (E.g. Dagger, Longbow, Padded Armor).
-                        Visually Identical Chassis Share One Bucket.
+                        Upload To An Art Family (E.g. Longbow, Heavy Crossbow, Padded Armor). Count
+                        Shows How Many Images Are Already In That Family. In-Game Chassis In The
+                        Same Family Share This Pool.
                       </p>
+                      {selectedItemArtFamilyMembers.length > 0 && (
+                        <p className="mt-1 text-xs text-brand-text-muted">
+                          Also Covers: {selectedItemArtFamilyMembers.join(', ')}.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2080,10 +2107,16 @@ export default function AdminMedia() {
                         />
                         {(asset.assetType === 'Mount Portrait' ||
                           asset.assetType === 'Vehicle Portrait' ||
-                          asset.assetType === 'Ship Portrait') &&
+                          asset.assetType === 'Ship Portrait' ||
+                          asset.assetType === 'Item Image') &&
                           (() => {
                             const meta = getStringMetadata(asset.metadata);
-                            const templateName = meta.mountType || meta.vehicleType || meta.shipType;
+                            const templateName =
+                              asset.assetType === 'Item Image'
+                                ? meta.itemSubtype
+                                  ? resolveItemArtFamily(meta.itemSubtype)
+                                  : ''
+                                : meta.mountType || meta.vehicleType || meta.shipType;
                             return templateName ? (
                               <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-white backdrop-blur">
                                 {templateName}
