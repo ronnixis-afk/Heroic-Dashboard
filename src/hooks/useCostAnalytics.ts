@@ -30,5 +30,7 @@ export function useCostAnalytics(days = 30) {
     degradedMessage: data?.degradedMessage || null,
     modelCostData: data?.modelCostData || [],
     dailyCostData: data?.dailyCostData || [],
+    roleCostData: data?.roleCostData || [],
+    failoverRate: data?.failoverRate ?? 0,
   };
 }

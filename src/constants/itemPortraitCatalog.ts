@@ -3,7 +3,7 @@
  * Source: heroic-ai-rpg item blueprints (weaponLootTemplates, itemRegistry, materials).
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-08-03
+ * Last synced: 2026-08-04
  */
 
 export type ItemPortraitCategory =

@@ -46,7 +46,18 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
 | `/admin/public-realms` | Public Realms | Moderation for community-shared realms. Hook: `src/hooks/usePublicRealms.ts` → RPG `/api/admin/public-realms/*`. Open report queue (hide realm / resolve / dismiss), listings table with status filter + hide/restore, and Reconcile Counters (repairs denormalized play/like counts from fact tables). Hiding never deletes player copies. |
-| `/admin/settings` | System Settings | Caps, referrals, analytics admin-testing exclusion toggle (`exclude_admin_from_analytics`), text model routing, NPC image source (`database` default / `nano_banana_2_lite`) |
+| `/admin/settings` | System Settings | Caps, referrals, analytics admin-testing exclusion toggle (`exclude_admin_from_analytics`), **AI Role Routing** matrix, NPC image source (`database` default / `nano_banana_2_lite`) |
+
+## AI Role Routing
+
+System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrator, World Builder) instead of a single text model picker. Hook: `src/hooks/useAiConfig.ts` → RPG `/api/admin/ai-config`.
+
+- `GET` returns the model catalog (with credit multipliers and USD rates), role metadata + code defaults, model stacks, effective assignments, and stored overrides.
+- Each row edits Primary Model, Fallback Model, and Timeout (ms; empty = no deadline). Dropdowns are populated from the catalog — never hardcode model names in the dashboard.
+- `buildRoleOverridePayload` sends **only values that differ from the server defaults**, so untouched roles keep tracking the RPG's code defaults instead of being frozen at today's values. Saving with no deviations clears the overrides (an effective reset).
+- The RPG validates every payload (unknown role, non-catalog or image-only model, or timeout outside 0–120000 ms returns a 400) and invalidates its resolver cache on write.
+- `setCatalogRatesFromApi` feeds the same catalog rates into `src/lib/costCalculator.ts` so dashboard cost math matches the server.
+- The legacy `default_model` key is intentionally **not** written by this page; roles own text routing.
 
 ## Monster Portrait Catalog Sync
 
@@ -79,9 +90,9 @@ Analytics / PII views are **not** readable via PostgREST (anon grants revoked). 
 | Surface | Primary sources |
 |---------|-----------------|
 | Audience | RPG `active-users`, `retention`, `churn-signals`; dashboard metrics API for tiers & signups |
-| Live Analytics | RPG `view-data` + `session-length`, `messages-per-user`, `feature-usage`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior` |
+| Live Analytics | RPG `view-data` + `session-length`, `messages-per-user`, `feature-usage`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior`. Engine Health also renders a **Model Routing Health** table from `telemetry.byRole` (calls, p50/p95 latency, failover rate, model seen) |
 | Usage Reports | RPG `feature-usage` (unique users / avg duration) + `view-data` cost merge; Product Surfaces from usage views |
-| Financial | RPG `dashboard-metrics` + `cost-analytics` / `view-data` model-usage |
+| Financial | RPG `dashboard-metrics` + `cost-analytics` / `view-data` model-usage. `cost-analytics` also returns `byRole` (cost, tokens, latency, failover per role) and an overall `failoverRate`, surfaced via `useCostAnalytics` / `useAnalyticsMetrics` |
 | Users list | Supabase `User` (+ RLS) for rows; RPG `view-data?resource=save-sizes` for cloud save stats |
 
 Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminMedia is operations-only (no reporting KPIs).

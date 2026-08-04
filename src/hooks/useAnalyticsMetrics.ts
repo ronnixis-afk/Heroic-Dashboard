@@ -97,6 +97,8 @@ async function fetchAnalyticsMetrics(
       modelData: [],
       modelCostData: [],
       dailyCostData: [],
+      roleCostData: [],
+      failoverRate: 0,
       degradedMessage: null,
     }),
     optional('Top Consumers', fetchTopConsumersWithEmails(rpgToken, 5), {

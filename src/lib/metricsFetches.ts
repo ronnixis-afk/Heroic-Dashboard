@@ -49,6 +49,19 @@ export interface CostAnalyticsApiResponse {
     totalCost: number;
     avgLatencyMs: number;
   }[];
+  byRole?: {
+    role: string;
+    calls: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCost: number;
+    avgLatencyMs: number;
+    failoverCalls: number;
+    failoverRate: number;
+  }[];
+  failoverRate?: number;
+  failoverCalls?: number;
+  totalCalls?: number;
 }
 
 export async function fetchCostAnalyticsBundle(tokenOrGetter: RpgAdminTokenSource, days = 30) {
@@ -121,6 +134,8 @@ export async function fetchCostAnalyticsBundle(tokenOrGetter: RpgAdminTokenSourc
   return {
     modelCostData,
     dailyCostData,
+    roleCostData: costAnalytics?.byRole || [],
+    failoverRate: costAnalytics?.failoverRate ?? 0,
     dailyMetrics,
     modelData,
     degradedMessage:

@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
+import {
+  buildRoleOverridePayload,
+  fetchAiConfig,
+  saveAiConfig,
+  type AiConfigResponse,
+  type RoleOverrideDraft,
+} from '../../hooks/useAiConfig';
+import { setCatalogRatesFromApi } from '../../lib/costCalculator';
 import { Settings, ShieldAlert, Users, Gift, BarChart3 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PageHeader, StatusBanner, PageLoader } from '../../components/ui';
@@ -16,6 +24,8 @@ interface SettingsData {
   analyticsExcludeEmails?: string[];
   adminTestingEmails?: string[];
 }
+
+const ROLE_ORDER = ['assessor', 'utility', 'architect', 'narrator', 'world_builder'] as const;
 
 export default function AdminSettings() {
   const { getToken } = useAuth();
@@ -36,7 +46,6 @@ export default function AdminSettings() {
   const [limitValue, setLimitValue] = useState<number>(100);
   const [signupReward, setSignupReward] = useState<number>(200);
   const [premiumReward, setPremiumReward] = useState<number>(1000);
-  const [defaultModel, setDefaultModel] = useState<string>('gemini-3.1-flash-lite');
   const [npcPortraitSource, setNpcPortraitSource] = useState<string>('database');
   const [excludeAdminFromAnalytics, setExcludeAdminFromAnalytics] = useState(false);
   const [analyticsExcludeEmails, setAnalyticsExcludeEmails] = useState<string[]>([
@@ -44,10 +53,19 @@ export default function AdminSettings() {
     'ronnixis@hotmail.com',
   ]);
 
+  const [aiConfig, setAiConfig] = useState<AiConfigResponse | null>(null);
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, RoleOverrideDraft>>({});
+
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await fetchRpgAdmin<SettingsData>('/api/admin/settings', getToken);
+        const [data, ai] = await Promise.all([
+          fetchRpgAdmin<SettingsData>('/api/admin/settings', getToken),
+          fetchAiConfig(getToken).catch((err) => {
+            console.warn('AI config load failed (role matrix unavailable):', err);
+            return null;
+          }),
+        ]);
         setSettings(data);
         if (data.maxFreeUsers !== null) {
           setEnableLimit(true);
@@ -57,13 +75,28 @@ export default function AdminSettings() {
         }
         setSignupReward(data.referralSignupReward);
         setPremiumReward(data.referralPremiumReward);
-        setDefaultModel(data.defaultModel || 'gemini-3.1-flash-lite');
         setNpcPortraitSource(data.npcPortraitSource || 'database');
         setExcludeAdminFromAnalytics(Boolean(data.excludeAdminFromAnalytics));
         if (data.analyticsExcludeEmails?.length) {
           setAnalyticsExcludeEmails(data.analyticsExcludeEmails);
         } else if (data.adminTestingEmails?.length) {
           setAnalyticsExcludeEmails(data.adminTestingEmails);
+        }
+
+        if (ai) {
+          setAiConfig(ai);
+          setCatalogRatesFromApi(ai.catalog);
+          const drafts: Record<string, RoleOverrideDraft> = {};
+          for (const role of ROLE_ORDER) {
+            const cur = ai.current[role];
+            if (!cur) continue;
+            drafts[role] = {
+              primary: cur.primary,
+              fallback: cur.fallback,
+              timeoutMs: cur.timeoutMs,
+            };
+          }
+          setRoleDrafts(drafts);
         }
       } catch (err: any) {
         console.error('Failed to load settings:', err);
@@ -82,6 +115,20 @@ export default function AdminSettings() {
     loadSettings();
   }, [getToken]);
 
+  const updateRoleDraft = (
+    role: string,
+    field: keyof RoleOverrideDraft,
+    value: string | number | null
+  ) => {
+    setRoleDrafts((prev) => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [field]: value,
+      },
+    }));
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
@@ -96,16 +143,49 @@ export default function AdminSettings() {
         getToken,
         {
           method: 'POST',
+          // defaultModel is intentionally omitted: role assignments own text routing now,
+          // and the legacy key only accepts two values.
           body: JSON.stringify({
             maxFreeUsers: targetLimit,
             referralSignupReward: signupReward,
             referralPremiumReward: premiumReward,
-            defaultModel: defaultModel,
             npcPortraitSource: npcPortraitSource,
             excludeAdminFromAnalytics,
           }),
         }
       );
+
+      if (aiConfig) {
+        const aiResult = await saveAiConfig(
+          getToken,
+          buildRoleOverridePayload(aiConfig.roles, roleDrafts)
+        );
+        setAiConfig((prev) =>
+          prev
+            ? {
+                ...prev,
+                current: aiResult.current || prev.current,
+                overrides: aiResult.overrides || prev.overrides,
+              }
+            : prev
+        );
+        if (aiResult.catalog) {
+          setCatalogRatesFromApi(aiResult.catalog);
+        }
+        if (aiResult.current) {
+          const drafts: Record<string, RoleOverrideDraft> = {};
+          for (const role of ROLE_ORDER) {
+            const cur = aiResult.current[role];
+            if (!cur) continue;
+            drafts[role] = {
+              primary: cur.primary,
+              fallback: cur.fallback,
+              timeoutMs: cur.timeoutMs,
+            };
+          }
+          setRoleDrafts(drafts);
+        }
+      }
 
       setSettings({
         maxFreeUsers: result.maxFreeUsers,
@@ -117,7 +197,6 @@ export default function AdminSettings() {
         excludeAdminFromAnalytics: result.excludeAdminFromAnalytics,
         analyticsExcludeEmails: result.analyticsExcludeEmails,
       });
-      setDefaultModel(result.defaultModel || 'gemini-3.1-flash-lite');
       setNpcPortraitSource(result.npcPortraitSource || 'database');
       setExcludeAdminFromAnalytics(Boolean(result.excludeAdminFromAnalytics));
       if (result.analyticsExcludeEmails?.length) {
@@ -314,24 +393,85 @@ export default function AdminSettings() {
               AI Model Routing
             </h2>
             <p className="help-text">
-              Primary model for narration, GM logic, combat, and NPC interactions. Takes effect immediately.
+              Assign Primary And Fallback Models Per Role. Timeout Is Wall-Clock Milliseconds For The Primary Provider (Empty = No Deadline).
             </p>
           </div>
 
-          <div>
-            <label className="input-label">Default Text Model</label>
-            <select
-              value={defaultModel}
-              onChange={(e) => setDefaultModel(e.target.value)}
-              className="input-field cursor-pointer"
-            >
-              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-              <option value="deepseek-v4-flash">DeepSeek V4 Flash (Reasoning)</option>
-            </select>
-            <p className="help-text mt-1">
-              Used for standard game turns, intents, and narrative generation.
+          {!aiConfig ? (
+            <p className="help-text">
+              Role Matrix Unavailable. Confirm The RPG API Exposes /api/admin/ai-config.
             </p>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {ROLE_ORDER.map((roleId) => {
+                const meta = aiConfig.roles.find((r) => r.id === roleId);
+                const draft = roleDrafts[roleId];
+                if (!draft) return null;
+                return (
+                  <div
+                    key={roleId}
+                    className="rounded-md border border-brand-primary/50 bg-brand-bg/40 p-3 space-y-2"
+                  >
+                    <div>
+                      <p className="text-xs font-medium text-brand-text">
+                        {meta?.label || roleId}
+                      </p>
+                      <p className="help-text mt-0.5">{meta?.description}</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="input-label">Primary Model</label>
+                        <select
+                          value={draft.primary}
+                          onChange={(e) => updateRoleDraft(roleId, 'primary', e.target.value)}
+                          className="input-field cursor-pointer"
+                        >
+                          {aiConfig.catalog.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName} ({m.creditMultiplier.toFixed(2)}x Credits)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Fallback Model</label>
+                        <select
+                          value={draft.fallback}
+                          onChange={(e) => updateRoleDraft(roleId, 'fallback', e.target.value)}
+                          className="input-field cursor-pointer"
+                        >
+                          {aiConfig.catalog.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.displayName} · ${m.inputUsdPer1M.toFixed(2)}/${m.outputUsdPer1M.toFixed(2)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Timeout (Ms)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={120000}
+                          placeholder="None"
+                          value={draft.timeoutMs ?? ''}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            updateRoleDraft(
+                              roleId,
+                              'timeoutMs',
+                              raw === '' ? null : Math.min(120000, Math.max(0, Number(raw) || 0))
+                            );
+                          }}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="card p-3.5 space-y-3">

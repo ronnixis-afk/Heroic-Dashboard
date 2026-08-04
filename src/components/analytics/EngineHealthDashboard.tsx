@@ -242,6 +242,64 @@ export default function EngineHealthDashboard() {
                     </div>
                 </motion.div>
             </div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="card p-3.5">
+                <h4 className="card-title mb-3 flex items-center gap-2">
+                    <Zap size={12} className="text-brand-accent" />
+                    Model Routing Health
+                </h4>
+                <p className="help-text mb-3">
+                    Per-Role Latency And Failover (Last 14 Days). Empty Roles Appear After Traffic Uses The New Role Field.
+                </p>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                        <thead>
+                            <tr className="text-brand-text-muted border-b border-brand-primary/40">
+                                <th className="py-2 pr-3 font-medium">Role</th>
+                                <th className="py-2 pr-3 font-medium">Calls</th>
+                                <th className="py-2 pr-3 font-medium">P50</th>
+                                <th className="py-2 pr-3 font-medium">P95</th>
+                                <th className="py-2 pr-3 font-medium">Failover</th>
+                                <th className="py-2 font-medium">Model Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <tr key={i} className="border-b border-brand-primary/20">
+                                        <td className="py-2" colSpan={6}>
+                                            <SkeletonText width={200} className="h-3" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (telemetry?.byRole?.length ? telemetry.byRole : []).length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="py-3 text-brand-text-muted">
+                                        No Role Telemetry Yet.
+                                    </td>
+                                </tr>
+                            ) : (
+                                telemetry!.byRole!.map((row) => (
+                                    <tr key={row.role} className="border-b border-brand-primary/20 text-brand-text">
+                                        <td className="py-2 pr-3 font-medium capitalize">
+                                            {row.role.replace(/_/g, ' ')}
+                                        </td>
+                                        <td className="py-2 pr-3">{row.calls}</td>
+                                        <td className="py-2 pr-3">{row.p50}ms</td>
+                                        <td className="py-2 pr-3">{row.p95}ms</td>
+                                        <td className="py-2 pr-3">
+                                            {(row.failoverRate * 100).toFixed(1)}%
+                                        </td>
+                                        <td className="py-2 font-mono text-[11px] text-brand-text-muted">
+                                            {row.primaryModel || '—'}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
         </div>
     );
 }

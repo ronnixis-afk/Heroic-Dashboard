@@ -1,5 +1,15 @@
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
+export interface TelemetryRoleRow {
+    role: string;
+    calls: number;
+    p50: number;
+    p95: number;
+    avgLatencyMs: number;
+    failoverRate: number;
+    primaryModel: string | null;
+}
+
 export interface TelemetryData {
     avgTokensByPhase: { phase: string; avgTokens: number }[];
     latency: {
@@ -7,6 +17,7 @@ export interface TelemetryData {
         p95: number;
     };
     interventionRate: number;
+    byRole?: TelemetryRoleRow[];
 }
 
 export interface BehaviorData {
