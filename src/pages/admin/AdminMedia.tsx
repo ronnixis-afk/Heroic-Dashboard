@@ -51,6 +51,7 @@ import {
   getItemArtFamilyMembers,
   getItemPortraitCategoryNames,
   getItemPortraitSubtypes,
+  getItemWeightCategory,
   resolveItemArtFamily,
 } from '../../constants/itemPortraitCatalog';
 
@@ -65,17 +66,30 @@ const getAssetTypeOptionsForGenre = (
   _includeLegacyNpcPortrait = false
 ): ImageAssetType[] => [...UPLOADABLE_IMAGE_ASSET_TYPES];
 
-/** Art Family option text with folded chassis visible before selection. */
+const WEIGHT_SORT_ORDER: Record<string, number> = {
+  Light: 0,
+  Medium: 1,
+  Heavy: 2,
+  Shield: 3,
+};
+
+/** Art Family option text with weight category and folded chassis visible before selection. */
 const formatArtFamilyOptionLabel = (
   family: string,
   count: number,
-  genre: string | null | undefined
+  genre: string | null | undefined,
+  category: string | null | undefined
 ): string => {
   const members = getItemArtFamilyMembers(family, genre)
     .filter((name) => name.toLowerCase() !== family.toLowerCase())
     .sort((a, b) => a.localeCompare(b));
-  const label =
+  let label =
     members.length > 0 ? `${family} · Also ${members.join(', ')}` : family;
+  const categoryKey = (category || '').trim().toLowerCase();
+  if (categoryKey === 'weapons' || categoryKey === 'protection') {
+    const weight = getItemWeightCategory(family, genre);
+    if (weight) label = `${weight} - ${label}`;
+  }
   return formatOptionLabel(label, count);
 };
 const TAG_GROUPS = [
@@ -781,7 +795,17 @@ export default function AdminMedia() {
     const currentFamily = formData.metadata.itemSubtype
       ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
       : undefined;
-    return mergeRideableTypeOptions(catalogTypes, [], currentFamily);
+    const merged = mergeRideableTypeOptions(catalogTypes, [], currentFamily);
+    const categoryKey = (formData.metadata.itemCategory || '').trim().toLowerCase();
+    if (categoryKey !== 'weapons' && categoryKey !== 'protection') return merged;
+    return [...merged].sort((a, b) => {
+      const weightA = getItemWeightCategory(a, structuredGenre);
+      const weightB = getItemWeightCategory(b, structuredGenre);
+      const orderA = weightA != null ? (WEIGHT_SORT_ORDER[weightA] ?? 99) : 99;
+      const orderB = weightB != null ? (WEIGHT_SORT_ORDER[weightB] ?? 99) : 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.localeCompare(b);
+    });
   }, [formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
 
   const selectedItemArtFamilyMembers = useMemo(() => {
@@ -1686,18 +1710,12 @@ export default function AdminMedia() {
                             {formatArtFamilyOptionLabel(
                               option,
                               getCount(itemSubtypeCounts, option),
-                              structuredGenre
+                              structuredGenre,
+                              formData.metadata.itemCategory
                             )}
                           </option>
                         ))}
                       </select>
-                      <p className="mt-1 text-xs text-brand-text-muted">
-                        Weapons, Protection, And Consumables Art Families Are Genre-Scoped
-                        (Fantasy / Modern / Sci-Fi). Upload Under The Matching Genre.
-                        Options List Folded Chassis With Also …. Counts Show How Many
-                        Images Are Already In That Family. In-Game Chassis In The Same
-                        Family Share This Pool.
-                      </p>
                       {selectedItemArtFamilyMembers.length > 0 && (
                         <p className="mt-1 text-xs text-brand-text-muted">
                           Also Covers: {selectedItemArtFamilyMembers.join(', ')}.

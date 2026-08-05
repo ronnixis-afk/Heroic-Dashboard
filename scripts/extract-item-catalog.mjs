@@ -87,17 +87,13 @@ const extractTableNames = (registrySrc, tableKey) => {
   return extractQuotedNames(body, /name:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/);
 };
 
-/**
- * Extract a single named const array of helper chassis templates:
- * w/body/shield/heal/buff/dmg/status('Name', ...)
- * also falls back to name: '...' properties inside the array body.
- */
-const extractNamedTemplateArray = (src, constName) => {
+/** Slice the `[...]` body of `export const Name = [...]`. */
+const extractConstArrayBody = (src, constName) => {
   const keyRe = new RegExp(
     `export\\s+const\\s+${constName}(?:\\s*:\\s*[^=]+)?\\s*=\\s*\\[`
   );
   const keyMatch = keyRe.exec(src);
-  if (!keyMatch) return [];
+  if (!keyMatch) return '';
 
   const start = keyMatch.index + keyMatch[0].length - 1;
   let depth = 0;
@@ -112,8 +108,18 @@ const extractNamedTemplateArray = (src, constName) => {
       }
     }
   }
-  if (end < 0) return [];
-  const body = src.slice(start, end + 1);
+  if (end < 0) return '';
+  return src.slice(start, end + 1);
+};
+
+/**
+ * Extract a single named const array of helper chassis templates:
+ * w/body/shield/heal/buff/dmg/status('Name', ...)
+ * also falls back to name: '...' properties inside the array body.
+ */
+const extractNamedTemplateArray = (src, constName) => {
+  const body = extractConstArrayBody(src, constName);
+  if (!body) return [];
   const helperNames = extractQuotedNames(
     body,
     /(?:w|body|shield|heal|buff|dmg|status)\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
@@ -127,6 +133,44 @@ const extractNamedTemplateArray = (src, constName) => {
  */
 const extractNamedWeaponArray = (weaponsSrc, constName) =>
   extractNamedTemplateArray(weaponsSrc, constName);
+
+/** Chassis name → Light | Medium | Heavy from w('Name', 'Light Weapon', ...). */
+const extractWeaponWeightMap = (src, constName) => {
+  const body = extractConstArrayBody(src, constName);
+  const map = new Map();
+  if (!body) return map;
+  const re =
+    /w\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")\s*,\s*(?:'(Light|Medium|Heavy) Weapon'|"(Light|Medium|Heavy) Weapon")/g;
+  let match;
+  while ((match = re.exec(body)) !== null) {
+    const name = (match[1] || match[2] || '').replace(/\\'/g, "'").replace(/\\"/g, '"').trim();
+    const weight = match[3] || match[4];
+    if (name && weight) map.set(name, weight);
+  }
+  return map;
+};
+
+/** Chassis name → Light | Medium | Heavy | Shield from body(...)/shield(...). */
+const extractArmorWeightMap = (src, constName) => {
+  const body = extractConstArrayBody(src, constName);
+  const map = new Map();
+  if (!body) return map;
+  const bodyRe =
+    /body\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")\s*,\s*(?:'(light|medium|heavy)'|"(light|medium|heavy)")/gi;
+  let match;
+  while ((match = bodyRe.exec(body)) !== null) {
+    const name = (match[1] || match[2] || '').replace(/\\'/g, "'").replace(/\\"/g, '"').trim();
+    const raw = (match[3] || match[4] || '').toLowerCase();
+    if (!name || !raw) continue;
+    map.set(name, raw.charAt(0).toUpperCase() + raw.slice(1));
+  }
+  const shieldRe = /shield\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/g;
+  while ((match = shieldRe.exec(body)) !== null) {
+    const name = (match[1] || match[2] || '').replace(/\\'/g, "'").replace(/\\"/g, '"').trim();
+    if (name) map.set(name, 'Shield');
+  }
+  return map;
+};
 
 /**
  * Parse ITEM_ART_FAMILIES_BY_GENRE into genre -> Map(member, family).
@@ -238,6 +282,12 @@ const weaponsByGenre = {
   'Sci-Fi': extractNamedWeaponArray(weaponsSrc, 'SCIFI_WEAPON_LOOT_TEMPLATES'),
 };
 
+const weaponWeightByGenre = {
+  Fantasy: extractWeaponWeightMap(weaponsSrc, 'FANTASY_WEAPON_LOOT_TEMPLATES'),
+  Modern: extractWeaponWeightMap(weaponsSrc, 'MODERN_WEAPON_LOOT_TEMPLATES'),
+  'Sci-Fi': extractWeaponWeightMap(weaponsSrc, 'SCIFI_WEAPON_LOOT_TEMPLATES'),
+};
+
 // Fallback: legacy single WEAPON_LOOT_TEMPLATES export
 if (weaponsByGenre.Fantasy.length === 0) {
   weaponsByGenre.Fantasy = extractQuotedNames(
@@ -250,6 +300,12 @@ const armorsByGenre = {
   Fantasy: extractNamedTemplateArray(armorsSrc, 'FANTASY_ARMOR_LOOT_TEMPLATES'),
   Modern: extractNamedTemplateArray(armorsSrc, 'MODERN_ARMOR_LOOT_TEMPLATES'),
   'Sci-Fi': extractNamedTemplateArray(armorsSrc, 'SCIFI_ARMOR_LOOT_TEMPLATES'),
+};
+
+const armorWeightByGenre = {
+  Fantasy: extractArmorWeightMap(armorsSrc, 'FANTASY_ARMOR_LOOT_TEMPLATES'),
+  Modern: extractArmorWeightMap(armorsSrc, 'MODERN_ARMOR_LOOT_TEMPLATES'),
+  'Sci-Fi': extractArmorWeightMap(armorsSrc, 'SCIFI_ARMOR_LOOT_TEMPLATES'),
 };
 
 // Fallback: registry LOOT_TABLES.armors (Fantasy only, legacy)
@@ -290,6 +346,12 @@ const quest = uniqueSorted(extractTableNames(registrySrc, 'quest'));
 const materials = uniqueSorted(extractQuotedNames(materialsSrc, /typeTag:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/));
 
 const catalogByGenre = {};
+/** Chassis / art-family name → Light | Medium | Heavy | Shield (Weapons + Protection only). */
+const weightCategoryByGenre = {
+  Fantasy: new Map(),
+  Modern: new Map(),
+  'Sci-Fi': new Map(),
+};
 for (const genre of GENRES) {
   const weaponNames = weaponsByGenre[genre] || [];
   const weaponsFolded = foldThroughFamilies(weaponNames, artFamiliesByGenre[genre]);
@@ -312,6 +374,14 @@ for (const genre of GENRES) {
   const consumableNames = consumablesByGenre[genre] || [];
   const consumablesFolded = foldThroughFamilies(consumableNames, artFamiliesByGenre[genre]);
   const throwableNames = uniqueSorted(throwablesByGenre[genre] || []);
+
+  const weightMap = weightCategoryByGenre[genre];
+  for (const [name, weight] of weaponWeightByGenre[genre].entries()) {
+    weightMap.set(name, weight);
+  }
+  for (const [name, weight] of armorWeightByGenre[genre].entries()) {
+    weightMap.set(name, weight);
+  }
 
   catalogByGenre[genre] = [
     { name: 'Weapons', subtypes: weaponsFolded },
@@ -352,6 +422,17 @@ const serializeArtFamilies = (map) => {
     .join('\n')}\n}`;
 };
 
+const serializeWeightCategories = (map) => {
+  const entries = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  if (entries.length === 0) return '{\n}';
+  return `{\n${entries
+    .map(
+      ([name, weight]) =>
+        `  '${name.replace(/'/g, "\\'")}': '${weight.replace(/'/g, "\\'")}',`
+    )
+    .join('\n')}\n}`;
+};
+
 const serializeCatalog = (catalog) =>
   catalog
     .map(
@@ -373,6 +454,12 @@ const serializeArtFamiliesByGenre = () =>
     (genre) => `  '${genre}': ${serializeArtFamilies(artFamiliesByGenre[genre]).replace(/\n/g, '\n  ')}`
   ).join(',\n');
 
+const serializeWeightCategoriesByGenre = () =>
+  GENRES.map(
+    (genre) =>
+      `  '${genre}': ${serializeWeightCategories(weightCategoryByGenre[genre]).replace(/\n/g, '\n  ')}`
+  ).join(',\n');
+
 const today = new Date().toISOString().slice(0, 10);
 const fantasyMapEntries = artFamiliesByGenre.Fantasy.size;
 
@@ -380,6 +467,7 @@ const file = `/**
  * AUTO-GENERATED by scripts/extract-item-catalog.mjs — do not edit by hand.
  * Source: heroic-ai-rpg item blueprints (weaponLootTemplates, armorLootTemplates, itemRegistry, itemArtFamilies, materials).
  * Weapons/Protection subtypes are genre-scoped; fold via ITEM_ART_FAMILIES_BY_GENRE.
+ * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
  * Last synced: ${today}
@@ -398,6 +486,8 @@ export type ItemPortraitCategory =
   | 'Quest'
   | 'Material'
   | 'Currency';
+
+export type ItemWeightCategory = 'Light' | 'Medium' | 'Heavy' | 'Shield';
 
 export interface ItemPortraitCategoryEntry {
   readonly name: ItemPortraitCategory;
@@ -425,6 +515,13 @@ ${serializeArtFamiliesByGenre()},
 /** Fantasy art families — backward-compatible flat export. */
 export const ITEM_ART_FAMILIES: Readonly<Record<string, string>> =
   ITEM_ART_FAMILIES_BY_GENRE.Fantasy;
+
+/** Chassis / art-family name → weight category for Weapons and Protection, per genre. */
+export const ITEM_WEIGHT_CATEGORY_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, ItemWeightCategory>>>
+> = {
+${serializeWeightCategoriesByGenre()},
+};
 
 const normalizeArtFamilyKey = (value: string | null | undefined): string =>
   (value || '').trim().toLowerCase();
@@ -471,6 +568,26 @@ export function getItemArtFamilyMembers(
     }
   }
   return [...members];
+}
+
+/** Light / Medium / Heavy / Shield for a weapon or protection chassis (or art family). */
+export function getItemWeightCategory(
+  name: string,
+  genre: string | null | undefined = 'Fantasy'
+): ItemWeightCategory | undefined {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return undefined;
+  const resolvedGenre = resolveItemPortraitGenre(genre);
+  const map = ITEM_WEIGHT_CATEGORY_BY_GENRE[resolvedGenre];
+  const direct = map[trimmed];
+  if (direct) return direct;
+  const family = resolveItemArtFamily(trimmed, resolvedGenre);
+  if (family !== trimmed && map[family]) return map[family];
+  const target = normalizeArtFamilyKey(trimmed);
+  for (const [key, weight] of Object.entries(map)) {
+    if (normalizeArtFamilyKey(key) === target) return weight;
+  }
+  return undefined;
 }
 
 export const getItemPortraitCategoryNames = (
