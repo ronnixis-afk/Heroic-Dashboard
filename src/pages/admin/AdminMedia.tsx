@@ -64,6 +64,20 @@ const getAssetTypeOptionsForGenre = (
   _genre: ImageGenre,
   _includeLegacyNpcPortrait = false
 ): ImageAssetType[] => [...UPLOADABLE_IMAGE_ASSET_TYPES];
+
+/** Art Family option text with folded chassis visible before selection. */
+const formatArtFamilyOptionLabel = (
+  family: string,
+  count: number,
+  genre: string | null | undefined
+): string => {
+  const members = getItemArtFamilyMembers(family, genre)
+    .filter((name) => name.toLowerCase() !== family.toLowerCase())
+    .sort((a, b) => a.localeCompare(b));
+  const label =
+    members.length > 0 ? `${family} · Also ${members.join(', ')}` : family;
+  return formatOptionLabel(label, count);
+};
 const TAG_GROUPS = [
   {
     label: 'Warrior',
@@ -774,7 +788,13 @@ export default function AdminMedia() {
     const family = (formData.metadata.itemSubtype || '').trim();
     if (!family || formData.assetType !== 'Item Image') return [];
     const category = (formData.metadata.itemCategory || '').trim().toLowerCase();
-    if (category !== 'weapons' && category !== 'protection') return [];
+    if (
+      category !== 'weapons' &&
+      category !== 'protection' &&
+      category !== 'consumables'
+    ) {
+      return [];
+    }
     return getItemArtFamilyMembers(family, structuredGenre)
       .filter((name) => name.toLowerCase() !== family.toLowerCase())
       .sort((a, b) => a.localeCompare(b));
@@ -1663,14 +1683,19 @@ export default function AdminMedia() {
                         </option>
                         {itemSubtypeOptions.map((option) => (
                           <option key={option} value={option}>
-                            {formatOptionLabel(option, getCount(itemSubtypeCounts, option))}
+                            {formatArtFamilyOptionLabel(
+                              option,
+                              getCount(itemSubtypeCounts, option),
+                              structuredGenre
+                            )}
                           </option>
                         ))}
                       </select>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Weapons And Protection Art Families Are Genre-Scoped (Fantasy /
-                        Modern / Sci-Fi). Upload Under The Matching Genre. Counts Show How
-                        Many Images Are Already In That Family. In-Game Chassis In The Same
+                        Weapons, Protection, And Consumables Art Families Are Genre-Scoped
+                        (Fantasy / Modern / Sci-Fi). Upload Under The Matching Genre.
+                        Options List Folded Chassis With Also …. Counts Show How Many
+                        Images Are Already In That Family. In-Game Chassis In The Same
                         Family Share This Pool.
                       </p>
                       {selectedItemArtFamilyMembers.length > 0 && (
