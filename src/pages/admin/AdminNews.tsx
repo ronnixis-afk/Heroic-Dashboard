@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNews, NewsHighlight, NewsItem } from '../../hooks/useNews';
 import { cn } from '../../lib/utils';
+import { isSafeHttpUrl } from '../../lib/safeHttpUrl';
 import { Newspaper, Send, Clock, Eye, EyeOff, Edit3, Trash2, Image as ImageIcon, Sparkles, Plus, X, Radio, Tag, CheckSquare, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, EmptyState, StatusBanner, FilterTabs, RichTextEditor, RichTextContent } from '../../components/ui';
@@ -462,7 +463,7 @@ export default function AdminNews() {
                   </h3>
                 </div>
 
-                {popupFormData.imageUrl && (
+                {isSafeHttpUrl(popupFormData.imageUrl) && (
                   <div className="relative w-full aspect-[16/9] overflow-hidden rounded-xl border border-brand-primary/20">
                     <img src={popupFormData.imageUrl} alt="Banner" className="w-full h-full object-cover" />
                   </div>
@@ -528,9 +529,9 @@ export default function AdminNews() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-1 gap-3 overflow-hidden">
-                          {item.imageUrl && (
+                          {isSafeHttpUrl(item.imageUrl) && (
                             <img
-                              src={item.imageUrl}
+                              src={item.imageUrl!}
                               className="h-14 w-20 rounded-md object-cover shrink-0 border border-brand-primary/20"
                               alt=""
                             />
@@ -711,9 +712,9 @@ export default function AdminNews() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-1 gap-2 overflow-hidden">
-                          {item.imageUrl && (
+                          {isSafeHttpUrl(item.imageUrl) && (
                             <img
-                              src={item.imageUrl}
+                              src={item.imageUrl!}
                               className="h-10 w-10 sm:h-12 sm:w-12 rounded-md object-cover shrink-0"
                               alt=""
                             />

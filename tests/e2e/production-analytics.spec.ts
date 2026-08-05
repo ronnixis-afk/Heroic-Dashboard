@@ -2,9 +2,11 @@ import { clerk } from '@clerk/testing/playwright';
 import { expect, test, type Page, type Response } from '@playwright/test';
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'ronnixis@gmail.com';
-const DASHBOARD_ORIGIN = 'https://heroic-dashboard-three.vercel.app';
-const RPG_API_ORIGIN = 'https://heroicairpg.com';
-const SUPABASE_REST_ORIGIN = 'https://xfqyrpgfgjcypnfibkkf.supabase.co/rest/v1';
+const DASHBOARD_ORIGIN = process.env.E2E_DASHBOARD_ORIGIN || 'https://heroic-dashboard-three.vercel.app';
+const RPG_API_ORIGIN = process.env.E2E_RPG_API_ORIGIN || 'https://heroicairpg.com';
+const SUPABASE_REST_ORIGIN =
+  process.env.E2E_SUPABASE_REST_ORIGIN ||
+  'https://xfqyrpgfgjcypnfibkkf.supabase.co/rest/v1';
 
 type CapturedResponse = {
   method: string;

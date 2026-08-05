@@ -32,7 +32,10 @@ export default function UserDetailModal({
       setLoadingTelemetry(true);
       try {
         const token = await getToken();
-        const data = await telemetryService.getTelemetry(token || undefined, selectedUser.id);
+        if (!token) {
+          throw new Error('Admin Session Expired. Please Sign In Again.');
+        }
+        const data = await telemetryService.getTelemetry(token, selectedUser.id);
         if (!cancelled) setTelemetry(data);
       } catch (err) {
         console.error('[UserDetailModal] Telemetry fetch failed:', err);

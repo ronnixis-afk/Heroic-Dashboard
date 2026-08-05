@@ -1,3 +1,5 @@
+# LEGACY — unused. This project no longer uses Firebase / Firestore.
+# Kept only for historical reference; do not treat as active security policy.
 rules_version = '2';
 
 service cloud.firestore {

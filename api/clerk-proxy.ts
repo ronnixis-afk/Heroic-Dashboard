@@ -2,6 +2,47 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const CLERK_FRONTEND_API = 'https://frontend-api.clerk.dev';
 const PROXY_PATH = '/api/clerk-proxy';
+const RATE_LIMIT_MAX = 60;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'transfer-encoding',
+  'upgrade',
+  'host',
+  'content-length',
+]);
+
+type RateEntry = { count: number; resetAt: number };
+const rateLimitByIp = new Map<string, RateEntry>();
+
+function clientIp(request: VercelRequest): string {
+  const forwarded = request.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded[0]) {
+    return forwarded[0].split(',')[0].trim();
+  }
+  return request.socket.remoteAddress || 'unknown';
+}
+
+function allowRequest(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitByIp.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    rateLimitByIp.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count += 1;
+  return true;
+}
 
 function proxyUrl(request: VercelRequest): string {
   const protocol = request.headers['x-forwarded-proto'] || 'https';
@@ -9,9 +50,16 @@ function proxyUrl(request: VercelRequest): string {
   return `${protocol}://${host}${PROXY_PATH}`;
 }
 
-function upstreamUrl(request: VercelRequest): URL {
+function resolveProxyPath(request: VercelRequest): string | null {
   const rawPath = request.query.path;
   const path = Array.isArray(rawPath) ? rawPath.join('/') : rawPath || '';
+  const normalized = path.replace(/^\/+/, '');
+  // Only Clerk Frontend API v1 paths are allowed through the proxy.
+  if (!normalized.startsWith('v1/')) return null;
+  return normalized;
+}
+
+function upstreamUrl(request: VercelRequest, path: string): URL {
   const target = new URL(`/${path}`, CLERK_FRONTEND_API);
 
   for (const [name, value] of Object.entries(request.query)) {
@@ -43,21 +91,30 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(500).json({ error: 'Clerk Proxy Is Not Configured.' });
   }
 
+  const ip = clientIp(request);
+  if (!allowRequest(ip)) {
+    return response.status(429).json({ error: 'Too Many Requests. Please Try Again Shortly.' });
+  }
+
+  const path = resolveProxyPath(request);
+  if (!path) {
+    return response.status(400).json({ error: 'Invalid Proxy Path. Only /v1/ Paths Are Allowed.' });
+  }
+
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
-    if (!value || name.toLowerCase() === 'content-length') continue;
+    if (!value) continue;
+    const lower = name.toLowerCase();
+    if (HOP_BY_HOP_HEADERS.has(lower)) continue;
     headers.set(name, Array.isArray(value) ? value.join(', ') : value);
   }
 
   headers.set('Clerk-Proxy-Url', proxyUrl(request));
   headers.set('Clerk-Secret-Key', secretKey);
-  headers.set(
-    'X-Forwarded-For',
-    String(request.headers['x-forwarded-for'] || request.socket.remoteAddress || '')
-  );
+  headers.set('X-Forwarded-For', ip);
 
   try {
-    const upstream = await fetch(upstreamUrl(request), {
+    const upstream = await fetch(upstreamUrl(request, path), {
       method: request.method,
       headers,
       body: await requestBody(request),

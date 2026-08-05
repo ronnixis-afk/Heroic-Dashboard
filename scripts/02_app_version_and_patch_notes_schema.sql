@@ -8,5 +8,6 @@ INSERT INTO public."SystemSetting" ("key", "value", "updatedAt")
 VALUES ('app_version', 'v0.5', NOW())
 ON CONFLICT ("key") DO NOTHING;
 
--- Grant SELECT access on SystemSetting table to anon and authenticated roles
-GRANT SELECT ON TABLE public."SystemSetting" TO anon, authenticated, service_role;
+-- SystemSetting is admin/server-only (RPG Prisma + /api/admin/*). Never grant to anon.
+-- Authenticated PostgREST DML/SELECT was revoked in 20260805070000_revoke_authenticated_cms_dml.sql.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."SystemSetting" TO service_role;

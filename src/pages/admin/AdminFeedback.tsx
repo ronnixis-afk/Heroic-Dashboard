@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { getSupabaseClient } from '../../lib/supabase';
+import { getAdminSupabase } from '../../lib/getAdminSupabase';
 import { ShieldAlert, Sparkles, HelpCircle, Search, Calendar, Monitor, Globe, Compass, Cpu, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, StatusBanner, EmptyState } from '../../components/ui';
@@ -36,8 +36,7 @@ export default function AdminFeedback() {
     setLoading(true);
     setError(null);
     try {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const { data: rows, error: dbError } = await supabase
         .from('Feedback')
@@ -72,7 +71,7 @@ export default function AdminFeedback() {
       );
     } catch (err: any) {
       console.error('[AdminFeedback] Fetch error:', err);
-      setError(err.message || 'Failed to retrieve feedback data.');
+      setError(err.message || 'Failed To Retrieve Feedback Data.');
     } finally {
       setLoading(false);
     }
@@ -83,8 +82,7 @@ export default function AdminFeedback() {
     
     const setupSubscription = async () => {
       try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
+        const supabase = await getAdminSupabase(getToken);
         let refreshTimer: ReturnType<typeof setTimeout> | null = null;
         const subscription = supabase
           .channel('public:Feedback')
@@ -124,8 +122,7 @@ export default function AdminFeedback() {
     if (!window.confirm('Are You Sure You Want To Delete This Feedback Entry?')) return;
     
     try {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
       
       const { error: deleteError } = await supabase
         .from('Feedback')

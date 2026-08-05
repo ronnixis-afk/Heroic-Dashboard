@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { getAdminSupabase } from '../lib/getAdminSupabase';
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
 export const USERS_PAGE_SIZE = 50;
@@ -28,22 +28,6 @@ export interface UserListItem {
   createdAt: string;
   UserSession?: { lastPing: string; endTime: string | null; startTime: string }[];
   saveStats: { save_count: number; total_bytes: number };
-}
-
-/**
- * PostgREST client with Clerk's Supabase JWT template (for RLS).
- * Callers that also hit RPG admin APIs must pass the raw Clerk getToken —
- * do not wrap with `{ template: 'supabase' }` at the call site, or RPG routes
- * will receive a Supabase-audience JWT and return 401.
- */
-async function getAdminSupabase(getToken: (options?: any) => Promise<string | null>) {
-  let token: string | null = null;
-  try {
-    token = await getToken({ template: 'supabase' });
-  } catch (e) {
-    console.error('[UsersAudit] getToken failed, falling back to anonymous:', e);
-  }
-  return getSupabaseClient(token || undefined);
 }
 
 function applyUserFilters(
@@ -267,8 +251,7 @@ export function useUsers(params: UsersQueryParams = {}) {
 
     const setupSubscription = async () => {
       try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
+        const supabase = await getAdminSupabase(getToken);
         const subscription = supabase
           .channel('public:User')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'User' }, () => {
@@ -307,15 +290,11 @@ export function useUsers(params: UsersQueryParams = {}) {
     setIsSyncing(true);
     setSyncMessage('');
     try {
-      const token = await getToken().catch(() => null);
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch(`${import.meta.env.VITE_RPG_API_URL}/api/admin/sync-users`, {
-        method: 'POST',
-        headers,
-      });
-      const result = await response.json();
+      const result = await fetchRpgAdmin<{ success?: boolean; error?: string }>(
+        '/api/admin/sync-users',
+        getToken,
+        { method: 'POST' }
+      );
       if (result.success) {
         setSyncMessage('Sync Successful');
         queryClient.invalidateQueries({ queryKey: ['users'] });

@@ -1,27 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { getAdminSupabase } from '../lib/getAdminSupabase';
 
 const CREDIT_HISTORY_LIMIT = 100;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 
 async function fetchCreditHistory(getToken: (options?: any) => Promise<string | null>) {
-  let token: string | null = null;
-  try {
-    token = await getToken({ template: 'supabase' });
-  } catch (e) {
-    console.error('[CreditsAudit] getToken failed, falling back to anonymous:', e);
-  }
-  
-  const supabase = getSupabaseClient(token || undefined);
-  
+  const supabase = await getAdminSupabase(getToken);
+
   const { data, error } = await supabase
     .from('CreditAdjustment')
     .select('id,userId,amount,reason,adminId,createdAt')
     .order('createdAt', { ascending: false })
     .limit(CREDIT_HISTORY_LIMIT);
-  
+
   if (error) {
     console.error('[CreditsAudit] Supabase credits history error:', error);
     throw error;
@@ -37,7 +30,7 @@ export function useCredits() {
 
   const { data: history = [], isLoading: loading } = useQuery({
     queryKey: ['credit-history'],
-    queryFn: () => fetchCreditHistory(() => getToken({ template: 'supabase' })),
+    queryFn: () => fetchCreditHistory(getToken),
   });
 
   useEffect(() => {
@@ -46,10 +39,7 @@ export function useCredits() {
     let isMounted = true;
 
     const setupSubscription = async () => {
-      // getSupabaseClient creates a fresh client (and realtime socket) per call,
-      // so capture this exact instance and remove the channel from it on cleanup.
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const subscription = supabase
         .channel('public:CreditAdjustment')
@@ -88,41 +78,44 @@ export function useCredits() {
     setIsProcessing(true);
     try {
       const apiUrl = import.meta.env.VITE_RPG_API_URL;
-      const token = await getToken(); // Get standard Clerk token for the Next.js API
+      const token = await getToken();
 
       if (!apiUrl) {
-        throw new Error('Admin API configuration missing in Dashboard.');
+        throw new Error('Admin Api Configuration Missing In Dashboard.');
+      }
+      if (!token) {
+        throw new Error('Admin Session Expired. Please Sign In Again.');
       }
 
       const response = await fetch(`${apiUrl}/api/admin/adjust-credits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           email: email.trim(),
           amount,
           reason,
-          adminEmail: user?.primaryEmailAddress?.emailAddress || 'Unknown Admin'
-        })
+          adminEmail: user?.primaryEmailAddress?.emailAddress || 'Unknown Admin',
+        }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to Adjust Credits.');
+        throw new Error(result.error || 'Failed To Adjust Credits.');
       }
 
-      setStatus({ 
-        type: 'success', 
-        msg: `Successfully Adjusted Credits for ${email.trim()}. New Balance: ${result.newBalance}` 
+      setStatus({
+        type: 'success',
+        msg: `Successfully Adjusted Credits for ${email.trim()}. New Balance: ${result.newBalance}`,
       });
       queryClient.invalidateQueries({ queryKey: ['credit-history'] });
       return result;
     } catch (error: any) {
       console.error('[CreditsAudit] Adjustment error:', error);
-      setStatus({ type: 'error', msg: error.message || 'Failed to Adjust Credits.' });
+      setStatus({ type: 'error', msg: error.message || 'Failed To Adjust Credits.' });
       throw error;
     } finally {
       setIsProcessing(false);
@@ -135,6 +128,6 @@ export function useCredits() {
     status,
     setStatus,
     isProcessing,
-    adjustCredits
+    adjustCredits,
   };
 }

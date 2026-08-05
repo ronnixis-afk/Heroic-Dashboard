@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { getSupabaseClient } from '../../lib/supabase';
+import { getAdminSupabase } from '../../lib/getAdminSupabase';
 import {
   Calendar,
   ChevronDown,
@@ -72,8 +72,7 @@ export default function AdminSurveys() {
     setLoading(true);
     setError(null);
     try {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const { data: surveyRows, error: dbError } = await supabase
         .from('SurveyResponse')
@@ -128,8 +127,7 @@ export default function AdminSurveys() {
 
     const setupSubscription = async () => {
       try {
-        const token = await getToken({ template: 'supabase' }).catch(() => null);
-        const supabase = getSupabaseClient(token || undefined);
+        const supabase = await getAdminSupabase(getToken);
         let refreshTimer: ReturnType<typeof setTimeout> | null = null;
         const subscription = supabase
           .channel('public:SurveyResponse')
@@ -173,8 +171,7 @@ export default function AdminSurveys() {
     if (!window.confirm('Are You Sure You Want To Delete This Survey Response?')) return;
 
     try {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const { error: deleteError } = await supabase
         .from('SurveyResponse')

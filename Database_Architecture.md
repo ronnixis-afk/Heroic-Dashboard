@@ -72,63 +72,13 @@ FROM "GameSave";
 ```
 
 > [!IMPORTANT]
-> **Data API Schema Exposure Update (Supabase May/October 2026)**
-> In new Supabase projects created after May 30, 2026 (and existing projects starting October 30, 2026), tables and views are not exposed to the Data API (PostgREST) by default. You must explicitly run `GRANT` statements for all tables and views that the client queries via `supabase-js`.
-> 
-> Execute the following SQL script in the Supabase SQL Editor. This script uses a PL/pgSQL block to verify whether each table or view exists in your database before executing the `GRANT` statement, ensuring it runs without any errors even if some views or tables are not yet created:
-> 
-> ```sql
-> DO $$
-> DECLARE
->   relation_name text;
->   relations text[] := ARRAY[
->     'active_users_by_tier',
->     'user_tier_distribution',
->     'daily_usage_summary',
->     'monthly_usage_summary',
->     'top_consumers_summary',
->     'model_usage_distribution',
->     'feature_usage_distribution',
->     'session_metrics_summary',
->     'real_time_hourly_stats',
->     'page_visit_summary',
->     'global_usage_stats',
->     'user_daily_usage_summary',
->     'user_save_sizes_summary',
->     'game_save_metadata'
->   ];
->   tables text[] := ARRAY[
->     'News',
->     'User',
->     'UsageLog',
->     'UserSession',
->     'CreditAdjustment',
->     'EngineTelemetry',
->     'PageVisit',
->     'GameSave'
->   ];
-> BEGIN
->   -- 1. Grant SELECT Access to Views for the Analytical Dashboard
->   FOREACH relation_name IN ARRAY relations
->   LOOP
->     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = relation_name AND (relkind = 'v' OR relkind = 'm')) THEN
->       EXECUTE format('GRANT SELECT ON public.%I TO anon, authenticated, service_role', relation_name);
->     END IF;
->   END LOOP;
-> 
->   -- 2. Grant CRUD Access to Underlying Tables
->   FOREACH relation_name IN ARRAY tables
->   LOOP
->     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = relation_name AND relkind = 'r') THEN
->       IF relation_name = 'News' THEN
->         -- News needs SELECT granted to anon for public feed access
->         EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO anon, authenticated, service_role', relation_name);
->       ELSE
->         EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO authenticated, service_role', relation_name);
->       END IF;
->     END IF;
->   END LOOP;
-> END $$;
-> ```
-
+> **Analytics Access (PostgREST Grants Revoked)**
+> Anon (and broad authenticated) `GRANT SELECT` on analytics views was revoked. Do **not** grant `anon` SELECT on analytics views or PII-bearing tables for the dashboard.
+>
+> The Heroic Dashboard must read analytics exclusively through Clerk-gated RPG admin APIs:
+> `fetchRpgAdmin` → `/api/admin/analytics/*` (and related `/api/admin/*` routes), using the standard Clerk session token.
+>
+> Remaining PostgREST usage in the dashboard (e.g. Feedback, SurveyResponse, CreditAdjustment, User list, realtime channels) requires an authenticated Supabase JWT via `getAdminSupabase` — never an anonymous client.
+>
+> Historical note: older scripts used `GRANT SELECT … TO anon, authenticated, service_role` on analytics views. Those grants are obsolete and must not be re-applied.
 

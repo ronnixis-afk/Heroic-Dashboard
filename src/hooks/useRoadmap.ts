@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { getAdminSupabase } from '../lib/getAdminSupabase';
+import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 
 const ROADMAP_LIMIT = 100;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
@@ -56,28 +57,14 @@ export interface RoadmapFormData {
   sortOrder: number;
 }
 
-async function fetchRoadmap(getToken: (options?: any) => Promise<string | null>): Promise<RoadmapItem[]> {
-  let token: string | null = null;
-  try {
-    token = await getToken({ template: 'supabase' });
-  } catch (e) {
-    console.error('[RoadmapAudit] getToken failed, falling back to anonymous:', e);
-  }
-
-  const supabase = getSupabaseClient(token || undefined);
-  const { data, error } = await supabase
-    .from('RoadmapItem')
-    .select('id,title,summary,phase,status,category,featured,published,sortOrder,createdAt,updatedAt')
-    .order('sortOrder', { ascending: true })
-    .order('createdAt', { ascending: true })
-    .limit(ROADMAP_LIMIT);
-
-  if (error) {
-    console.error('[RoadmapAudit] Supabase roadmap error:', error);
-    throw error;
-  }
-
-  return (data || []) as RoadmapItem[];
+async function fetchRoadmap(
+  getToken: (options?: any) => Promise<string | null>
+): Promise<RoadmapItem[]> {
+  const result = await fetchRpgAdmin<{ items?: RoadmapItem[]; roadmap?: RoadmapItem[] }>(
+    `/api/admin/roadmap?limit=${ROADMAP_LIMIT}`,
+    getToken
+  );
+  return result.items || result.roadmap || [];
 }
 
 export function useRoadmap() {
@@ -86,7 +73,7 @@ export function useRoadmap() {
 
   const { data: items = [], isLoading: loading, error } = useQuery({
     queryKey: ['roadmap'],
-    queryFn: () => fetchRoadmap(() => getToken({ template: 'supabase' })),
+    queryFn: () => fetchRoadmap(getToken),
   });
 
   useEffect(() => {
@@ -95,8 +82,7 @@ export function useRoadmap() {
     let isMounted = true;
 
     const setupSubscription = async () => {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const subscription = supabase
         .channel('public:RoadmapItem')
@@ -131,81 +117,51 @@ export function useRoadmap() {
   }, [queryClient, getToken]);
 
   const createItem = async (formData: RoadmapFormData) => {
-    const token = await getToken({ template: 'supabase' }).catch(() => null);
-    const supabase = getSupabaseClient(token || undefined);
-    const now = new Date().toISOString();
-
     const payload = {
-      id: crypto.randomUUID(),
       title: formData.title.trim(),
       summary: formData.summary.trim(),
-      details: null,
       phase: formData.phase,
       status: formData.status,
       category: formData.category,
       featured: formData.featured,
       published: formData.published,
       sortOrder: Number.isFinite(formData.sortOrder) ? formData.sortOrder : 0,
-      createdAt: now,
-      updatedAt: now,
     };
 
-    const { data, error } = await supabase.from('RoadmapItem').insert(payload).select();
-    if (error) {
-      console.error('[RoadmapAudit] Create failed:', error);
-      throw new Error(`Database Error (${error.message || error.details}). ${error.hint || ''}`);
-    }
-    if (!data?.length) {
-      throw new Error('Create Failed: No Row Returned. Check Admin Access.');
-    }
+    const data = await fetchRpgAdmin('/api/admin/roadmap', getToken, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
 
     queryClient.invalidateQueries({ queryKey: ['roadmap'] });
     return data;
   };
 
   const updateItem = async (id: string, formData: RoadmapFormData) => {
-    const token = await getToken({ template: 'supabase' }).catch(() => null);
-    const supabase = getSupabaseClient(token || undefined);
-
     const payload = {
       title: formData.title.trim(),
       summary: formData.summary.trim(),
-      details: null,
       phase: formData.phase,
       status: formData.status,
       category: formData.category,
       featured: formData.featured,
       published: formData.published,
       sortOrder: Number.isFinite(formData.sortOrder) ? formData.sortOrder : 0,
-      updatedAt: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase.from('RoadmapItem').update(payload).eq('id', id).select();
-    if (error) {
-      console.error('[RoadmapAudit] Update failed:', error);
-      throw new Error(`Database Error (${error.message || error.details}). ${error.hint || ''}`);
-    }
-    if (!data?.length) {
-      throw new Error('Update Failed: No Row Returned. Check Admin Access Or Item Id.');
-    }
+    const data = await fetchRpgAdmin(`/api/admin/roadmap/${id}`, getToken, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
 
     queryClient.invalidateQueries({ queryKey: ['roadmap'] });
     return data;
   };
 
   const deleteItem = async (id: string) => {
-    const token = await getToken({ template: 'supabase' }).catch(() => null);
-    const supabase = getSupabaseClient(token || undefined);
-
-    const { data, error } = await supabase.from('RoadmapItem').delete().eq('id', id).select('id');
-    if (error) {
-      console.error('[RoadmapAudit] Delete failed:', error);
-      throw new Error(`Database Error (${error.message || error.details}).`);
-    }
-    if (!data?.length) {
-      throw new Error('Delete Failed: No Row Deleted. Check Admin Access Or Item Id.');
-    }
-
+    await fetchRpgAdmin(`/api/admin/roadmap/${id}`, getToken, {
+      method: 'DELETE',
+    });
     queryClient.invalidateQueries({ queryKey: ['roadmap'] });
   };
 

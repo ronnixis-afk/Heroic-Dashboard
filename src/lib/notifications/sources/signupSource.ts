@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '../../supabase';
+import { getAdminSupabase } from '../../getAdminSupabase';
 import { useAuth } from '../../AuthContext';
 import type { AdminNotification, NotificationSourceResult } from '../types';
 
@@ -32,14 +32,7 @@ function formatTierLabel(tier: string): string {
 async function fetchSignupNotifications(
   getToken: (options?: { template?: string }) => Promise<string | null>
 ): Promise<AdminNotification[]> {
-  let token: string | null = null;
-  try {
-    token = await getToken({ template: 'supabase' });
-  } catch (error) {
-    console.error('[Notifications:signup] getToken failed:', error);
-  }
-
-  const supabase = getSupabaseClient(token || undefined);
+  const supabase = await getAdminSupabase(getToken);
   const { data, error } = await supabase
     .from('User')
     .select('id, email, tier, createdAt')
@@ -88,8 +81,7 @@ export function useSignupNotificationSource(): NotificationSourceResult {
     let isMounted = true;
 
     const setupSubscription = async () => {
-      const token = await getToken({ template: 'supabase' }).catch(() => null);
-      const supabase = getSupabaseClient(token || undefined);
+      const supabase = await getAdminSupabase(getToken);
 
       const subscription = supabase
         .channel('public:User:notifications-signup')

@@ -2,17 +2,16 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ImageAssetFacetRow,
-  LEGACY_NPC_PORTRAIT_ASSET_TYPES,
 } from '../lib/imageAssetFacetCounts';
-import { getSupabaseClient } from '../lib/supabase';
+import { getAdminSupabase } from '../lib/getAdminSupabase';
+import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 export const IMAGE_ASSET_PAGE_SIZE = 60;
-/** PostgREST max_rows is typically 1000; page under that so facet/storage totals cover the full library. */
+/** Page size for facet/storage totals so the full library is covered. */
 const IMAGE_ASSET_FACET_PAGE_SIZE = 1000;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
-const LEGACY_NPC_PORTRAIT_TYPES = [...LEGACY_NPC_PORTRAIT_ASSET_TYPES];
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
 export const IMAGE_ASSET_TYPES = [
@@ -83,9 +82,6 @@ export interface CreateImageAssetInput extends ImageAssetInput {
 
 export type UpdateImageAssetInput = ImageAssetInput;
 
-const SELECT_COLUMNS =
-  'id,title,description,genre,assetType,tags,metadata,bucketId,objectPath,publicUrl,mimeType,sizeBytes,width,height,uploadedByUserId,createdAt,updatedAt';
-
 const normalizeFolderName = (value: string) =>
   value
     .toLowerCase()
@@ -141,106 +137,61 @@ const getAssetId = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
-const getSupabaseForAdmin = async (getToken: (options?: any) => Promise<string | null>) => {
-  const token = await getToken({ template: 'supabase' });
-  if (!token) {
-    throw new Error('Admin Supabase Session Is Required.');
-  }
-  return getSupabaseClient(token);
-};
+function buildImageAssetsQuery(params: ImageAssetsQueryParams): string {
+  const searchParams = new URLSearchParams();
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? IMAGE_ASSET_PAGE_SIZE;
+  searchParams.set('page', String(page));
+  searchParams.set('pageSize', String(pageSize));
 
-function escapeIlikeTerm(term: string) {
-  return term.replace(/[%_,]/g, '').trim();
+  if (params.search?.trim()) searchParams.set('search', params.search.trim());
+  if (params.genre && params.genre !== 'All' && params.genre !== 'Any Genre') {
+    searchParams.set('genre', params.genre);
+  }
+  if (params.assetType && params.assetType !== 'All') {
+    searchParams.set('assetType', params.assetType);
+  }
+  if (params.tag?.trim() && params.tag !== 'All') {
+    searchParams.set('tag', params.tag.trim());
+  }
+
+  return searchParams.toString();
 }
 
 async function fetchImageAssetsPage(
   getToken: (options?: any) => Promise<string | null>,
   params: ImageAssetsQueryParams
 ): Promise<ImageAssetsResult> {
-  const supabase = await getSupabaseForAdmin(getToken);
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = params.pageSize ?? IMAGE_ASSET_PAGE_SIZE;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const query = buildImageAssetsQuery(params);
+  const result = await fetchRpgAdmin<{ assets?: ImageAsset[]; totalCount?: number }>(
+    `/api/admin/image-assets?${query}`,
+    getToken
+  );
 
-  let query = supabase
-    .from('ImageAsset')
-    .select(SELECT_COLUMNS, { count: 'exact' })
-    .order('createdAt', { ascending: false })
-    .order('id', { ascending: false })
-    .range(from, to);
-
-  const genre = params.genre;
-  if (genre && genre !== 'All' && genre !== 'Any Genre') {
-    query = query.eq('genre', genre);
-  }
-
-  const assetType = params.assetType;
-  if (assetType && assetType !== 'All') {
-    if (assetType === 'NPC Portrait') {
-      query = query.in('assetType', LEGACY_NPC_PORTRAIT_TYPES);
-    } else {
-      query = query.eq('assetType', assetType);
-    }
-  }
-
-  const tag = params.tag?.trim();
-  if (tag && tag !== 'All') {
-    query = query.contains('tags', [tag]);
-  }
-
-  const searchTerms = (params.search || '')
-    .split(/[,\s]+/)
-    .map(escapeIlikeTerm)
-    .filter(Boolean);
-
-  for (const term of searchTerms) {
-    const pattern = `%${term}%`;
-    query = query.or(`title.ilike."${pattern}",description.ilike."${pattern}"`);
-  }
-
-  const [{ data, error, count }] = await Promise.all([query]);
-
-  if (error) {
-    console.error('[MediaLibrary] Fetch image assets failed:', error);
-    throw error;
-  }
-
-  const assets = (data || []) as ImageAsset[];
-
+  const assets = result.assets || [];
   return {
     assets,
-    totalCount: count ?? assets.length,
+    totalCount: result.totalCount ?? assets.length,
   };
 }
 
 async function fetchAllImageAssetRows<T>(
   getToken: (options?: any) => Promise<string | null>,
-  columns: string,
-  mapRow: (row: Record<string, unknown>) => T
+  mapRow: (asset: ImageAsset) => T
 ): Promise<T[]> {
-  const supabase = await getSupabaseForAdmin(getToken);
   const rows: T[] = [];
-  let from = 0;
+  let page = 1;
 
   while (true) {
-    const to = from + IMAGE_ASSET_FACET_PAGE_SIZE - 1;
-    const { data, error } = await supabase
-      .from('ImageAsset')
-      .select(columns)
-      .order('createdAt', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, to);
+    const result = await fetchImageAssetsPage(getToken, {
+      page,
+      pageSize: IMAGE_ASSET_FACET_PAGE_SIZE,
+    });
+    rows.push(...result.assets.map(mapRow));
 
-    if (error) {
-      throw error;
-    }
-
-    const page = (data || []) as Record<string, unknown>[];
-    rows.push(...page.map(mapRow));
-
-    if (page.length < IMAGE_ASSET_FACET_PAGE_SIZE) break;
-    from += IMAGE_ASSET_FACET_PAGE_SIZE;
+    if (result.assets.length < IMAGE_ASSET_FACET_PAGE_SIZE) break;
+    if (rows.length >= (result.totalCount || 0) && result.totalCount > 0) break;
+    page += 1;
   }
 
   return rows;
@@ -248,11 +199,7 @@ async function fetchAllImageAssetRows<T>(
 
 async function fetchImageStorageBytes(getToken: (options?: any) => Promise<string | null>) {
   try {
-    const rows = await fetchAllImageAssetRows(
-      getToken,
-      'sizeBytes',
-      (row) => Number(row.sizeBytes) || 0
-    );
+    const rows = await fetchAllImageAssetRows(getToken, (asset) => Number(asset.sizeBytes) || 0);
     return rows.reduce((total, sizeBytes) => total + sizeBytes, 0);
   } catch (error) {
     console.warn('[MediaLibrary] Storage totals fetch failed:', error);
@@ -264,18 +211,14 @@ async function fetchImageAssetFacets(
   getToken: (options?: any) => Promise<string | null>
 ): Promise<ImageAssetFacetRow[]> {
   try {
-    return await fetchAllImageAssetRows(
-      getToken,
-      'genre,assetType,metadata,tags',
-      (row) => ({
-        genre: String(row.genre || ''),
-        assetType: String(row.assetType || ''),
-        metadata: (row.metadata && typeof row.metadata === 'object'
-          ? row.metadata
-          : {}) as Record<string, unknown>,
-        tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
-      })
-    );
+    return await fetchAllImageAssetRows(getToken, (asset) => ({
+      genre: String(asset.genre || ''),
+      assetType: String(asset.assetType || ''),
+      metadata: (asset.metadata && typeof asset.metadata === 'object'
+        ? asset.metadata
+        : {}) as Record<string, unknown>,
+      tags: Array.isArray(asset.tags) ? asset.tags.map(String) : [],
+    }));
   } catch (error) {
     console.warn('[MediaLibrary] Facet fetch failed:', error);
     return [];
@@ -324,7 +267,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
     let isMounted = true;
 
     const setupSubscription = async () => {
-      const supabase = await getSupabaseForAdmin(getToken);
+      const supabase = await getAdminSupabase(getToken);
       const subscription = supabase
         .channel('public:ImageAsset')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ImageAsset' }, () => {
@@ -358,7 +301,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   }, [queryClient, getToken]);
 
   const createImageAsset = async (input: CreateImageAssetInput) => {
-    const supabase = await getSupabaseForAdmin(getToken);
+    const supabase = await getAdminSupabase(getToken);
     const id = getAssetId();
     const objectPath = getImageObjectPath(input, id);
 
@@ -397,65 +340,56 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       uploadedByUserId: user?.id || null,
     };
 
-    const { data, error } = await supabase.from('ImageAsset').insert(record).select().single();
-
-    if (error) {
+    try {
+      const data = await fetchRpgAdmin<{ asset?: ImageAsset } | ImageAsset>(
+        '/api/admin/image-assets',
+        getToken,
+        {
+          method: 'POST',
+          body: JSON.stringify(record),
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: ['image-assets'] });
+      return (('asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data) as ImageAsset);
+    } catch (error) {
       await supabase.storage.from(IMAGE_ASSET_BUCKET).remove([objectPath]);
       console.error('[MediaLibrary] Create image asset metadata failed:', error);
       throw error;
     }
-
-    queryClient.invalidateQueries({ queryKey: ['image-assets'] });
-    return data as ImageAsset;
   };
 
   const updateImageAsset = async (id: string, input: UpdateImageAssetInput) => {
-    const supabase = await getSupabaseForAdmin(getToken);
-    const { data, error } = await supabase
-      .from('ImageAsset')
-      .update({
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
-        genre: input.genre,
-        assetType: input.assetType,
-        tags: input.tags,
-        metadata: input.metadata,
-        updatedAt: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[MediaLibrary] Update image asset failed:', error);
-      throw error;
-    }
+    const data = await fetchRpgAdmin<{ asset?: ImageAsset } | ImageAsset>(
+      `/api/admin/image-assets/${id}`,
+      getToken,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: input.title.trim(),
+          description: input.description?.trim() || null,
+          genre: input.genre,
+          assetType: input.assetType,
+          tags: input.tags,
+          metadata: input.metadata,
+        }),
+      }
+    );
 
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
-    return data as ImageAsset;
+    return (('asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data) as ImageAsset);
   };
 
   const addTagsToImageAssets = async (selectedAssets: ImageAsset[], tags: string[]) => {
     const normalizedTags = Array.from(new Set(tags.map((tagValue) => tagValue.trim()).filter(Boolean)));
     if (selectedAssets.length === 0 || normalizedTags.length === 0) return;
 
-    const supabase = await getSupabaseForAdmin(getToken);
-
     await Promise.all(
       selectedAssets.map(async (asset) => {
         const nextTags = Array.from(new Set([...(asset.tags || []), ...normalizedTags]));
-        const { error } = await supabase
-          .from('ImageAsset')
-          .update({
-            tags: nextTags,
-            updatedAt: new Date().toISOString(),
-          })
-          .eq('id', asset.id);
-
-        if (error) {
-          console.error('[MediaLibrary] Batch tag image asset failed:', error);
-          throw error;
-        }
+        await fetchRpgAdmin(`/api/admin/image-assets/${asset.id}`, getToken, {
+          method: 'PATCH',
+          body: JSON.stringify({ tags: nextTags }),
+        });
       })
     );
 
@@ -463,7 +397,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   };
 
   const deleteImageAsset = async (asset: ImageAsset) => {
-    const supabase = await getSupabaseForAdmin(getToken);
+    const supabase = await getAdminSupabase(getToken);
     const { error: removeError } = await supabase.storage
       .from(asset.bucketId || IMAGE_ASSET_BUCKET)
       .remove([asset.objectPath]);
@@ -473,12 +407,9 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       throw removeError;
     }
 
-    const { error } = await supabase.from('ImageAsset').delete().eq('id', asset.id);
-
-    if (error) {
-      console.error('[MediaLibrary] Delete image asset metadata failed:', error);
-      throw error;
-    }
+    await fetchRpgAdmin(`/api/admin/image-assets/${asset.id}`, getToken, {
+      method: 'DELETE',
+    });
 
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };
@@ -486,7 +417,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   const deleteImageAssets = async (selectedAssets: ImageAsset[]) => {
     if (selectedAssets.length === 0) return;
 
-    const supabase = await getSupabaseForAdmin(getToken);
+    const supabase = await getAdminSupabase(getToken);
     const assetsByBucket = selectedAssets.reduce<Record<string, string[]>>((groups, asset) => {
       const bucketId = asset.bucketId || IMAGE_ASSET_BUCKET;
       groups[bucketId] = [...(groups[bucketId] || []), asset.objectPath];
@@ -503,18 +434,13 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       })
     );
 
-    const { error } = await supabase
-      .from('ImageAsset')
-      .delete()
-      .in(
-        'id',
-        selectedAssets.map((asset) => asset.id)
-      );
-
-    if (error) {
-      console.error('[MediaLibrary] Batch delete image metadata failed:', error);
-      throw error;
-    }
+    await Promise.all(
+      selectedAssets.map((asset) =>
+        fetchRpgAdmin(`/api/admin/image-assets/${asset.id}`, getToken, {
+          method: 'DELETE',
+        })
+      )
+    );
 
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };

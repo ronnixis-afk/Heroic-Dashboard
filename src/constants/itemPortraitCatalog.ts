@@ -4,7 +4,7 @@
  * Weapons/Protection subtypes are genre-scoped; fold via ITEM_ART_FAMILIES_BY_GENRE.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-08-04
+ * Last synced: 2026-08-05
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';

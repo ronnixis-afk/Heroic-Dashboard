@@ -1,6 +1,6 @@
-const BLOCK_TAGS = new Set(['P', 'UL', 'OL', 'LI', 'BR', 'DIV']);
-const INLINE_TAGS = new Set(['STRONG', 'B', 'EM', 'I']);
-const ALLOWED_TAGS = new Set([...BLOCK_TAGS, ...INLINE_TAGS]);
+import DOMPurify from 'isomorphic-dompurify';
+
+const ALLOWED_TAGS = ['p', 'ul', 'ol', 'li', 'br', 'div', 'strong', 'em', 'b', 'i'];
 
 export function escapeHtml(text: string): string {
   return text
@@ -13,32 +13,6 @@ export function escapeHtml(text: string): string {
 
 function looksLikeHtml(value: string): boolean {
   return /<\/?(?:p|br|strong|b|em|i|ul|ol|li|div)\b/i.test(value);
-}
-
-function serializeAllowed(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) {
-    return escapeHtml(node.textContent ?? '');
-  }
-
-  if (node.nodeType !== Node.ELEMENT_NODE) return '';
-
-  const el = node as HTMLElement;
-  const tag = el.tagName.toUpperCase();
-
-  if (tag === 'BR') return '<br>';
-
-  if (!ALLOWED_TAGS.has(tag)) {
-    return Array.from(el.childNodes).map(serializeAllowed).join('');
-  }
-
-  // Normalize presentation tags
-  const outTag =
-    tag === 'B' ? 'strong' : tag === 'I' ? 'em' : tag === 'DIV' ? 'p' : tag.toLowerCase();
-
-  const children = Array.from(el.childNodes).map(serializeAllowed).join('');
-
-  if (outTag === 'br') return '<br>';
-  return `<${outTag}>${children}</${outTag}>`;
 }
 
 /** Collapse empty editor shells to '' so required checks work. */
@@ -55,7 +29,7 @@ export function normalizeRichHtml(html: string): string {
 }
 
 /**
- * Allowlist-sanitize rich text for safe display.
+ * Allowlist-sanitize rich text for safe display via DOMPurify.
  * Plain text (legacy) is escaped and keeps newlines.
  */
 export function sanitizeRichHtml(html: string): string {
@@ -66,12 +40,16 @@ export function sanitizeRichHtml(html: string): string {
     return escapeHtml(value).replace(/\r\n|\r|\n/g, '<br>');
   }
 
-  if (typeof DOMParser === 'undefined') {
-    return escapeHtml(value.replace(/<[^>]+>/g, ' '));
-  }
+  const cleaned = DOMPurify.sanitize(value, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR: [],
+    ALLOW_DATA_ATTR: false,
+  });
 
-  const doc = new DOMParser().parseFromString(value, 'text/html');
-  return Array.from(doc.body.childNodes).map(serializeAllowed).join('');
+  return cleaned
+    .replace(/<\/?b>/gi, (m) => (m.startsWith('</') ? '</strong>' : '<strong>'))
+    .replace(/<\/?i>/gi, (m) => (m.startsWith('</') ? '</em>' : '<em>'))
+    .replace(/<\/?div>/gi, (m) => (m.startsWith('</') ? '</p>' : '<p>'));
 }
 
 export function richTextToPlain(html: string): string {
