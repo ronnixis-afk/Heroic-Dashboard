@@ -129,6 +129,63 @@ const extractNamedTemplateArray = (src, constName) => {
 };
 
 /**
+ * Extract chassis display names from Record maps:
+ * - flat: Fire: 'Resistance Potion'
+ * - nested: Fire: { name: 'Damage Vial', role: 'fire_single' }  (name only)
+ */
+const extractNameMapValues = (src, constName) => {
+  const re = new RegExp(
+    `(?:export\\s+)?const\\s+${constName}\\s*(?::[^=]+)?=\\s*\\{`,
+    'm'
+  );
+  const match = re.exec(src);
+  if (!match) return [];
+  const start = match.index + match[0].length - 1;
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return [];
+  const body = src.slice(start, end + 1);
+  // Nested { name: 'Damage Vial', role: '...' } — only the name field
+  const nestedNames = extractQuotedNames(
+    body,
+    /name:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^'])*)")/
+  );
+  if (nestedNames.length > 0) return nestedNames;
+  // Flat string maps: Fire: 'Resistance Potion' (skip role-like tokens)
+  const stringValues = extractQuotedNames(
+    body,
+    /:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^'])*)")\s*[,}]/
+  ).filter((name) => !/_(?:single|aoe|spread)$/i.test(name) && !/^[a-z]+(?:_[a-z]+)+$/.test(name));
+  return uniqueSorted(stringValues);
+};
+
+/** Merge array helper names with companion name-map consts used via spreads. */
+const extractConsumableChassisNames = (src, arrayConstName) =>
+  uniqueSorted([
+    ...extractNamedTemplateArray(src, arrayConstName),
+    ...extractNameMapValues(src, 'RESIST_NAMES'),
+    ...extractNameMapValues(src, 'IMMUNE_NAMES'),
+    ...extractNameMapValues(src, 'WARD_NAMES'),
+  ]);
+
+const extractThrowableChassisNames = (src, arrayConstName) =>
+  uniqueSorted([
+    ...extractNamedTemplateArray(src, arrayConstName),
+    ...extractNameMapValues(src, 'DAMAGE_VIAL_NAMES'),
+    ...extractNameMapValues(src, 'BOMB_NAMES'),
+  ]);
+
+/**
  * Extract a single named const array of w('Name', ...) weapon templates.
  */
 const extractNamedWeaponArray = (weaponsSrc, constName) =>
@@ -316,7 +373,7 @@ if (armorsByGenre.Fantasy.length === 0) {
 }
 
 const consumablesByGenre = {
-  Fantasy: extractNamedTemplateArray(consumablesSrc, 'FANTASY_CONSUMABLE_LOOT_TEMPLATES'),
+  Fantasy: extractConsumableChassisNames(consumablesSrc, 'FANTASY_CONSUMABLE_LOOT_TEMPLATES'),
   Modern: extractNamedTemplateArray(consumablesSrc, 'MODERN_CONSUMABLE_LOOT_TEMPLATES'),
   'Sci-Fi': extractNamedTemplateArray(consumablesSrc, 'SCIFI_CONSUMABLE_LOOT_TEMPLATES'),
 };
@@ -328,7 +385,7 @@ if (consumablesByGenre.Fantasy.length === 0) {
 }
 
 const throwablesByGenre = {
-  Fantasy: extractNamedTemplateArray(throwablesSrc, 'FANTASY_THROWABLE_LOOT_TEMPLATES'),
+  Fantasy: extractThrowableChassisNames(throwablesSrc, 'FANTASY_THROWABLE_LOOT_TEMPLATES'),
   Modern: extractNamedTemplateArray(throwablesSrc, 'MODERN_THROWABLE_LOOT_TEMPLATES'),
   'Sci-Fi': extractNamedTemplateArray(throwablesSrc, 'SCIFI_THROWABLE_LOOT_TEMPLATES'),
 };
@@ -373,7 +430,7 @@ for (const genre of GENRES) {
 
   const consumableNames = consumablesByGenre[genre] || [];
   const consumablesFolded = foldThroughFamilies(consumableNames, artFamiliesByGenre[genre]);
-  const throwableNames = uniqueSorted(throwablesByGenre[genre] || []);
+  const throwableNames = foldThroughFamilies(throwablesByGenre[genre] || [], artFamiliesByGenre[genre]);
 
   const weightMap = weightCategoryByGenre[genre];
   for (const [name, weight] of weaponWeightByGenre[genre].entries()) {
