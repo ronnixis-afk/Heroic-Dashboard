@@ -170,19 +170,19 @@ const extractNameMapValues = (src, constName) => {
 };
 
 /** Merge array helper names with companion name-map consts used via spreads. */
-const extractConsumableChassisNames = (src, arrayConstName) =>
+const extractConsumableChassisNames = (src, arrayConstName, mapPrefix = '') =>
   uniqueSorted([
     ...extractNamedTemplateArray(src, arrayConstName),
-    ...extractNameMapValues(src, 'RESIST_NAMES'),
-    ...extractNameMapValues(src, 'IMMUNE_NAMES'),
-    ...extractNameMapValues(src, 'WARD_NAMES'),
+    ...extractNameMapValues(src, `${mapPrefix}RESIST_NAMES`),
+    ...extractNameMapValues(src, `${mapPrefix}IMMUNE_NAMES`),
+    ...extractNameMapValues(src, `${mapPrefix}WARD_NAMES`),
   ]);
 
-const extractThrowableChassisNames = (src, arrayConstName) =>
+const extractThrowableChassisNames = (src, arrayConstName, mapPrefix = '') =>
   uniqueSorted([
     ...extractNamedTemplateArray(src, arrayConstName),
-    ...extractNameMapValues(src, 'DAMAGE_VIAL_NAMES'),
-    ...extractNameMapValues(src, 'BOMB_NAMES'),
+    ...extractNameMapValues(src, `${mapPrefix}DAMAGE_VIAL_NAMES`),
+    ...extractNameMapValues(src, `${mapPrefix}BOMB_NAMES`),
   ]);
 
 /**
@@ -374,8 +374,8 @@ if (armorsByGenre.Fantasy.length === 0) {
 
 const consumablesByGenre = {
   Fantasy: extractConsumableChassisNames(consumablesSrc, 'FANTASY_CONSUMABLE_LOOT_TEMPLATES'),
-  Modern: extractNamedTemplateArray(consumablesSrc, 'MODERN_CONSUMABLE_LOOT_TEMPLATES'),
-  'Sci-Fi': extractNamedTemplateArray(consumablesSrc, 'SCIFI_CONSUMABLE_LOOT_TEMPLATES'),
+  Modern: extractConsumableChassisNames(consumablesSrc, 'MODERN_CONSUMABLE_LOOT_TEMPLATES', 'MODERN_'),
+  'Sci-Fi': extractConsumableChassisNames(consumablesSrc, 'SCIFI_CONSUMABLE_LOOT_TEMPLATES', 'SCIFI_'),
 };
 if (consumablesByGenre.Fantasy.length === 0) {
   const legacy = extractTableNames(registrySrc, 'consumables');
@@ -386,8 +386,8 @@ if (consumablesByGenre.Fantasy.length === 0) {
 
 const throwablesByGenre = {
   Fantasy: extractThrowableChassisNames(throwablesSrc, 'FANTASY_THROWABLE_LOOT_TEMPLATES'),
-  Modern: extractNamedTemplateArray(throwablesSrc, 'MODERN_THROWABLE_LOOT_TEMPLATES'),
-  'Sci-Fi': extractNamedTemplateArray(throwablesSrc, 'SCIFI_THROWABLE_LOOT_TEMPLATES'),
+  Modern: extractThrowableChassisNames(throwablesSrc, 'MODERN_THROWABLE_LOOT_TEMPLATES', 'MODERN_'),
+  'Sci-Fi': extractThrowableChassisNames(throwablesSrc, 'SCIFI_THROWABLE_LOOT_TEMPLATES', 'SCIFI_'),
 };
 if (throwablesByGenre.Fantasy.length === 0) {
   const legacy = extractTableNames(registrySrc, 'throwables');
