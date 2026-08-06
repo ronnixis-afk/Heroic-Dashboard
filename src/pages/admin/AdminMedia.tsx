@@ -73,18 +73,14 @@ const WEIGHT_SORT_ORDER: Record<string, number> = {
   Shield: 3,
 };
 
-/** Art Family option text with weight category and folded chassis visible before selection. */
+/** Art Family option text: family name only (plus weight for Weapons / Protection). */
 const formatArtFamilyOptionLabel = (
   family: string,
   count: number,
   genre: string | null | undefined,
   category: string | null | undefined
 ): string => {
-  const members = getItemArtFamilyMembers(family, genre)
-    .filter((name) => name.toLowerCase() !== family.toLowerCase())
-    .sort((a, b) => a.localeCompare(b));
-  let label =
-    members.length > 0 ? `${family} · Also ${members.join(', ')}` : family;
+  let label = family;
   const categoryKey = (category || '').trim().toLowerCase();
   if (categoryKey === 'weapons' || categoryKey === 'protection') {
     const weight = getItemWeightCategory(family, genre);
@@ -808,6 +804,7 @@ export default function AdminMedia() {
     });
   }, [formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
 
+  /** Chassis / aliases that share the selected art family (image applies to all of these). */
   const selectedItemArtFamilyMembers = useMemo(() => {
     const family = (formData.metadata.itemSubtype || '').trim();
     if (!family || formData.assetType !== 'Item Image') return [];
@@ -819,9 +816,9 @@ export default function AdminMedia() {
     ) {
       return [];
     }
-    return getItemArtFamilyMembers(family, structuredGenre)
-      .filter((name) => name.toLowerCase() !== family.toLowerCase())
-      .sort((a, b) => a.localeCompare(b));
+    const members = getItemArtFamilyMembers(family, structuredGenre);
+    if (members.length === 0) return [family];
+    return [...members].sort((a, b) => a.localeCompare(b));
   }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
@@ -1672,56 +1669,58 @@ export default function AdminMedia() {
                 )}
 
                 {formData.assetType === 'Item Image' && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="input-label">Item Category</label>
-                      <select
-                        value={formData.metadata.itemCategory || ''}
-                        onChange={(event) => setMetadataField('itemCategory', event.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">
-                          {formatOptionLabel('Any Category', formAssetTypeTotal)}
-                        </option>
-                        {ITEM_CATEGORY_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {formatOptionLabel(option, getCount(itemCategoryCounts, option))}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="input-label">Item Category</label>
+                        <select
+                          value={formData.metadata.itemCategory || ''}
+                          onChange={(event) => setMetadataField('itemCategory', event.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">
+                            {formatOptionLabel('Any Category', formAssetTypeTotal)}
                           </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="input-label">Art Family</label>
-                      <select
-                        value={
-                          formData.metadata.itemSubtype
-                            ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
-                            : ''
-                        }
-                        onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
-                        className="input-field"
-                        disabled={!formData.metadata.itemCategory}
-                      >
-                        <option value="">
-                          {formatOptionLabel('Any Art Family', itemSubtypeTotal)}
-                        </option>
-                        {itemSubtypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {formatArtFamilyOptionLabel(
-                              option,
-                              getCount(itemSubtypeCounts, option),
-                              structuredGenre,
-                              formData.metadata.itemCategory
-                            )}
+                          {ITEM_CATEGORY_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {formatOptionLabel(option, getCount(itemCategoryCounts, option))}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Art Family</label>
+                        <select
+                          value={
+                            formData.metadata.itemSubtype
+                              ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
+                              : ''
+                          }
+                          onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
+                          className="input-field"
+                          disabled={!formData.metadata.itemCategory}
+                        >
+                          <option value="">
+                            {formatOptionLabel('Any Art Family', itemSubtypeTotal)}
                           </option>
-                        ))}
-                      </select>
-                      {selectedItemArtFamilyMembers.length > 0 && (
-                        <p className="mt-1 text-xs text-brand-text-muted">
-                          Also Covers: {selectedItemArtFamilyMembers.join(', ')}.
-                        </p>
-                      )}
+                          {itemSubtypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {formatArtFamilyOptionLabel(
+                                option,
+                                getCount(itemSubtypeCounts, option),
+                                structuredGenre,
+                                formData.metadata.itemCategory
+                              )}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
+                    {selectedItemArtFamilyMembers.length > 0 && (
+                      <p className="text-xs text-brand-text-muted">
+                        Applies To: {selectedItemArtFamilyMembers.join(', ')}.
+                      </p>
+                    )}
                   </div>
                 )}
 

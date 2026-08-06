@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3002 --host=0.0.0.0",
+    "dev": "vite --port=3001 --host=0.0.0.0",
     "predev": "node scripts/extract-monster-catalog.mjs --optional && node scripts/extract-rideable-catalog.mjs --optional && node scripts/extract-item-catalog.mjs --optional",
     "build": "vite build",
     "prebuild": "node scripts/extract-monster-catalog.mjs --optional && node scripts/extract-rideable-catalog.mjs --optional && node scripts/extract-item-catalog.mjs --optional",
