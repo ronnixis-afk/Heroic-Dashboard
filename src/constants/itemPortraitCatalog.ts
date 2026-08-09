@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-08-06
+ * Last synced: 2026-08-09
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
@@ -68,7 +68,6 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       'Pike',
       'Punch Dagger',
       'Rapier',
-      'Repeating Crossbow',
       'Scimitar',
       'Scythe',
       'Shortbow',
@@ -130,18 +129,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     },
     {
       name: 'Utilities',
-      subtypes: [
-      'Energy Projector',
-      'Grappling Hook',
-      'Healer\'s Kit',
-      'Heavy Ordnance',
-      'Occult Mask',
-      'Silk Rope (50ft)',
-      'Spyglass',
-      'Tech Gauntlet',
-      'Thieves\' Tools',
-      'Wand',
-    ],
+      subtypes: [],
     },
     {
       name: 'Throwables',
@@ -310,18 +298,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     },
     {
       name: 'Utilities',
-      subtypes: [
-      'Energy Projector',
-      'Grappling Hook',
-      'Healer\'s Kit',
-      'Heavy Ordnance',
-      'Occult Mask',
-      'Silk Rope (50ft)',
-      'Spyglass',
-      'Tech Gauntlet',
-      'Thieves\' Tools',
-      'Wand',
-    ],
+      subtypes: [],
     },
     {
       name: 'Throwables',
@@ -496,18 +473,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     },
     {
       name: 'Utilities',
-      subtypes: [
-      'Energy Projector',
-      'Grappling Hook',
-      'Healer\'s Kit',
-      'Heavy Ordnance',
-      'Occult Mask',
-      'Silk Rope (50ft)',
-      'Spyglass',
-      'Tech Gauntlet',
-      'Thieves\' Tools',
-      'Wand',
-    ],
+      subtypes: [],
     },
     {
       name: 'Throwables',
@@ -662,6 +628,7 @@ export const ITEM_ART_FAMILIES_BY_GENRE: Readonly<
     'Razor Bomb': 'Bomb',
     'Razor Dust': 'Damage Vial',
     'Recurve Bow': 'Longbow',
+    'Repeating Crossbow': 'Crossbow',
     'Ring Mail': 'Chain Mail',
     'Scroll of Protection': 'Combat Potion',
     'Shadow Oil': 'Damage Vial',
