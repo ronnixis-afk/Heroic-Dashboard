@@ -32,6 +32,7 @@ const weaponsPath = path.join(rpgRoot, 'src', 'utils', 'item', 'weaponLootTempla
 const armorsPath = path.join(rpgRoot, 'src', 'utils', 'item', 'armorLootTemplates.ts');
 const consumablesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'consumableLootTemplates.ts');
 const throwablesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'throwableLootTemplates.ts');
+const utilitiesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'utilityLootTemplates.ts');
 const registryPath = path.join(rpgRoot, 'src', 'utils', 'item', 'itemRegistry.ts');
 const familiesPath = path.join(rpgRoot, 'src', 'utils', 'item', 'itemArtFamilies.ts');
 const materialsPath = path.join(rpgRoot, 'src', 'constants', 'materials.ts');
@@ -122,7 +123,7 @@ const extractNamedTemplateArray = (src, constName) => {
   if (!body) return [];
   const helperNames = extractQuotedNames(
     body,
-    /(?:w|body|shield|heal|buff|dmg|status)\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
+    /(?:w|body|shield|heal|buff|dmg|status|util)\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
   );
   if (helperNames.length > 0) return helperNames;
   return extractQuotedNames(body, /name:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/);
@@ -328,6 +329,7 @@ const weaponsSrc = fs.readFileSync(weaponsPath, 'utf8');
 const armorsSrc = fs.existsSync(armorsPath) ? fs.readFileSync(armorsPath, 'utf8') : '';
 const consumablesSrc = fs.existsSync(consumablesPath) ? fs.readFileSync(consumablesPath, 'utf8') : '';
 const throwablesSrc = fs.existsSync(throwablesPath) ? fs.readFileSync(throwablesPath, 'utf8') : '';
+const utilitiesSrc = fs.existsSync(utilitiesPath) ? fs.readFileSync(utilitiesPath, 'utf8') : '';
 const registrySrc = fs.readFileSync(registryPath, 'utf8');
 const materialsSrc = fs.readFileSync(materialsPath, 'utf8');
 const familiesSrc = fs.existsSync(familiesPath) ? fs.readFileSync(familiesPath, 'utf8') : '';
@@ -396,9 +398,20 @@ if (throwablesByGenre.Fantasy.length === 0) {
   throwablesByGenre['Sci-Fi'] = legacy;
 }
 
+const utilitiesByGenre = {
+  Fantasy: extractNamedTemplateArray(utilitiesSrc, 'FANTASY_UTILITY_LOOT_TEMPLATES'),
+  Modern: extractNamedTemplateArray(utilitiesSrc, 'MODERN_UTILITY_LOOT_TEMPLATES'),
+  'Sci-Fi': extractNamedTemplateArray(utilitiesSrc, 'SCIFI_UTILITY_LOOT_TEMPLATES'),
+};
+if (utilitiesByGenre.Fantasy.length === 0) {
+  const legacy = extractTableNames(registrySrc, 'utilities');
+  utilitiesByGenre.Fantasy = legacy;
+  utilitiesByGenre.Modern = legacy;
+  utilitiesByGenre['Sci-Fi'] = legacy;
+}
+
 const accessories = uniqueSorted(extractTableNames(registrySrc, 'accessories'));
 const wondrous = uniqueSorted(extractTableNames(registrySrc, 'wondrous'));
-const utilities = uniqueSorted(extractTableNames(registrySrc, 'utilities'));
 const quest = uniqueSorted(extractTableNames(registrySrc, 'quest'));
 const materials = uniqueSorted(extractQuotedNames(materialsSrc, /typeTag:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/));
 
@@ -431,6 +444,7 @@ for (const genre of GENRES) {
   const consumableNames = consumablesByGenre[genre] || [];
   const consumablesFolded = foldThroughFamilies(consumableNames, artFamiliesByGenre[genre]);
   const throwableNames = foldThroughFamilies(throwablesByGenre[genre] || [], artFamiliesByGenre[genre]);
+  const utilityNames = foldThroughFamilies(utilitiesByGenre[genre] || [], artFamiliesByGenre[genre]);
 
   const weightMap = weightCategoryByGenre[genre];
   for (const [name, weight] of weaponWeightByGenre[genre].entries()) {
@@ -445,7 +459,7 @@ for (const genre of GENRES) {
     { name: 'Protection', subtypes: armorsFolded },
     { name: 'Accessories', subtypes: accessories },
     { name: 'Wondrous', subtypes: wondrous },
-    { name: 'Utilities', subtypes: utilities },
+    { name: 'Utilities', subtypes: utilityNames },
     { name: 'Throwables', subtypes: throwableNames },
     { name: 'Consumables', subtypes: consumablesFolded },
     { name: 'Quest', subtypes: quest },
