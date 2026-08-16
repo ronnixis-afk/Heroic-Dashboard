@@ -86,6 +86,14 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 - After adding/renaming item chassis templates or art families in the RPG, run the sync and commit the regenerated catalog.
 - **Upload dropdowns:** Item Image → Genre → Item Category (Weapons, Protection, …) then **Art Family** (family name only for that genre, with rolled-up image counts; Weapons/Protection labels include weight category and sort Light → Medium → Heavy → Shield — no chassis aliases in the option text). Selecting a Weapons/Protection/Consumables family shows a full-width “Applies To: …” list (comma-separated chassis / aliases that share the image). Match keys: `genre` + `metadata.itemCategory` + `metadata.itemSubtype` (family) → RPG `Item.imageUrl` via `templateName` folded through `resolveItemArtFamily(name, genre)`.
 
+## Power Image Catalog Sync
+
+- **Source of truth:** RPG `src/constants/powerImageCatalog.ts` (folder categories, including `POWER_IMAGE_DAMAGE_CATEGORIES`) and `src/types/Core.ts` (`DAMAGE_TYPES`; status subtypes = `DEBUFF_STATUS_EFFECTS` minus Unconscious / Surprised, matching `POWER_DEBUFF_STATUS_EFFECTS`).
+- **Dashboard copy:** `src/constants/powerImageCatalog.ts` — auto-generated; do not edit by hand.
+- **Sync command:** `npm run sync:power-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
+- After adding/renaming damage types or power status debuffs in the RPG, run the sync and commit the regenerated catalog.
+- **Upload dropdowns:** Any Genre (or Fantasy / Modern / Sci-Fi) → Power Image → Power Category (`Single Damage`, `Multi Damage`, `Single Status`, `Multi Status`) then Power Subtype (damage types for Damage categories; combat status debuffs for Status categories). Match keys: `genre` + `metadata.powerCategory` + `metadata.powerSubtype` → RPG `Ability.imageUrl`.
+
 ## Insights Data Sources
 
 Analytics / PII views are **not** readable via PostgREST (anon grants revoked). All metric reads go through Clerk-gated RPG admin APIs (`fetchRpgAdmin` → `/api/admin/analytics/*`) using the **standard Clerk session token**. Admin gate is server-verified via `/api/admin/whoami` (`AuthContext.isAdmin`). Use `getAdminSupabase` (Supabase JWT template, **no anon fallback**) only for remaining PostgREST tables / realtime (`User`, `Feedback`, `SurveyResponse`, `CreditAdjustment`). News, Roadmap, ImageAsset metadata, and app version go through RPG `/api/admin/*`.

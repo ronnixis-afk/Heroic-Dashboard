@@ -54,11 +54,19 @@ import {
   getItemWeightCategory,
   resolveItemArtFamily,
 } from '../../constants/itemPortraitCatalog';
+import {
+  getPowerImageCategoryNames,
+  getPowerImageSubtypes,
+  POWER_IMAGE_CATEGORIES,
+  POWER_IMAGE_DAMAGE_SUBTYPES,
+  POWER_IMAGE_STATUS_SUBTYPES,
+} from '../../constants/powerImageCatalog';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
 const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
 const ITEM_CATEGORY_OPTIONS = getItemPortraitCategoryNames();
+const POWER_IMAGE_CATEGORY_OPTIONS = getPowerImageCategoryNames();
 /** Uploadable types — includes NPC Portrait for Database-sourced nearby NPC art. */
 const UPLOADABLE_IMAGE_ASSET_TYPES = [...IMAGE_ASSET_TYPES] as ImageAssetType[];
 const getAssetTypeOptionsForGenre = (
@@ -390,6 +398,7 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
   'Zone Image': ['zoneProperty', 'zoneQuality'],
   'Item Image': ['itemCategory', 'itemSubtype'],
+  'Power Image': ['powerCategory', 'powerSubtype'],
   'App Assets': [],
 };
 
@@ -397,6 +406,7 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
   assetType === 'Point Of Interest Image' ||
   assetType === 'Zone Image' ||
   assetType === 'Item Image' ||
+  assetType === 'Power Image' ||
   assetType === 'Monster Portrait' ||
   assetType === 'Mount Portrait' ||
   assetType === 'Vehicle Portrait' ||
@@ -413,6 +423,7 @@ const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'Point Of Interest Image': 'poiBaseType',
   'Zone Image': 'zoneProperty',
   'Item Image': 'itemCategory',
+  'Power Image': 'powerCategory',
 };
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -497,6 +508,13 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
       ...getCatalogRideableSuggestions('Fantasy', 'ship'),
       ...getCatalogRideableSuggestions('Modern', 'ship'),
       ...getCatalogRideableSuggestions('Sci-Fi', 'ship'),
+    ]);
+  }
+  if (assetType === 'Power Image') {
+    return new Set([
+      ...POWER_IMAGE_CATEGORIES,
+      ...POWER_IMAGE_DAMAGE_SUBTYPES,
+      ...POWER_IMAGE_STATUS_SUBTYPES,
     ]);
   }
   return new Set();
@@ -720,6 +738,25 @@ export default function AdminMedia() {
     () => countScopedTotal(facetRows, itemSubtypeScope),
     [facetRows, itemSubtypeScope]
   );
+  const powerCategoryCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'powerCategory', formAssetTypeScope),
+    [facetRows, formAssetTypeScope]
+  );
+  const powerSubtypeScope = useMemo(
+    () => ({
+      ...formAssetTypeScope,
+      metadata: { powerCategory: formData.metadata.powerCategory || '' },
+    }),
+    [formAssetTypeScope, formData.metadata.powerCategory]
+  );
+  const powerSubtypeCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'powerSubtype', powerSubtypeScope),
+    [facetRows, powerSubtypeScope]
+  );
+  const powerSubtypeTotal = useMemo(
+    () => countScopedTotal(facetRows, powerSubtypeScope),
+    [facetRows, powerSubtypeScope]
+  );
   const mountTypeCounts = useMemo(
     () => countByMetadataKey(facetRows, 'mountType', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
@@ -820,6 +857,12 @@ export default function AdminMedia() {
     if (members.length === 0) return [family];
     return [...members].sort((a, b) => a.localeCompare(b));
   }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
+  const powerSubtypeOptions = useMemo(() => {
+    const catalogTypes = [...getPowerImageSubtypes(formData.metadata.powerCategory || '')];
+    const current = formData.metadata.powerSubtype?.trim();
+    if (current && !catalogTypes.includes(current)) return [...catalogTypes, current];
+    return catalogTypes;
+  }, [formData.metadata.powerCategory, formData.metadata.powerSubtype]);
   const mountTypeOptions = useMemo(() => {
     const fromAssets = assets
       .filter(
@@ -1188,6 +1231,10 @@ export default function AdminMedia() {
         delete metadata.itemSubtype;
       }
 
+      if (key === 'powerCategory') {
+        delete metadata.powerSubtype;
+      }
+
       if (key === 'monsterType') {
         const previousDescription = getMonsterSubtypeDescription(
           current.metadata.monsterType || '',
@@ -1448,12 +1495,19 @@ export default function AdminMedia() {
                       const nextAssetType = allowedTypes.includes(formData.assetType)
                         ? formData.assetType
                         : 'Character Portrait';
-                      setFormData({
-                        ...formData,
-                        genre: nextGenre,
-                        assetType: nextAssetType,
-                        metadata: {},
-                        description: nextAssetType === 'Monster Portrait' ? formData.description : '',
+                      setFormData((current) => {
+                        const nextForm = {
+                          ...current,
+                          genre: nextGenre,
+                          assetType: nextAssetType,
+                          metadata: {},
+                          description: nextAssetType === 'Monster Portrait' ? current.description : '',
+                          tags: [] as string[],
+                        };
+                        return {
+                          ...nextForm,
+                          tags: getTagsWithStructuredMetadata(nextForm),
+                        };
                       });
                     }}
                     className="input-field"
@@ -1472,11 +1526,18 @@ export default function AdminMedia() {
                     value={formData.assetType}
                     onChange={(event) => {
                       const nextAssetType = event.target.value as ImageAssetType;
-                      setFormData({
-                        ...formData,
-                        assetType: nextAssetType,
-                        metadata: {},
-                        description: '',
+                      setFormData((current) => {
+                        const nextForm = {
+                          ...current,
+                          assetType: nextAssetType,
+                          metadata: {},
+                          description: '',
+                          tags: [] as string[],
+                        };
+                        return {
+                          ...nextForm,
+                          tags: getTagsWithStructuredMetadata(nextForm),
+                        };
                       });
                     }}
                     className="input-field"
@@ -1721,6 +1782,46 @@ export default function AdminMedia() {
                         Applies To: {selectedItemArtFamilyMembers.join(', ')}.
                       </p>
                     )}
+                  </div>
+                )}
+
+                {formData.assetType === 'Power Image' && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="input-label">Power Category</label>
+                      <select
+                        value={formData.metadata.powerCategory || ''}
+                        onChange={(event) => setMetadataField('powerCategory', event.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">
+                          {formatOptionLabel('Any Category', formAssetTypeTotal)}
+                        </option>
+                        {POWER_IMAGE_CATEGORY_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {formatOptionLabel(option, getCount(powerCategoryCounts, option))}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="input-label">Power Subtype</label>
+                      <select
+                        value={formData.metadata.powerSubtype || ''}
+                        onChange={(event) => setMetadataField('powerSubtype', event.target.value)}
+                        className="input-field"
+                        disabled={!formData.metadata.powerCategory}
+                      >
+                        <option value="">
+                          {formatOptionLabel('Any Subtype', powerSubtypeTotal)}
+                        </option>
+                        {powerSubtypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {formatOptionLabel(option, getCount(powerSubtypeCounts, option))}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -2154,7 +2255,8 @@ export default function AdminMedia() {
                         {(asset.assetType === 'Mount Portrait' ||
                           asset.assetType === 'Vehicle Portrait' ||
                           asset.assetType === 'Ship Portrait' ||
-                          asset.assetType === 'Item Image') &&
+                          asset.assetType === 'Item Image' ||
+                          asset.assetType === 'Power Image') &&
                           (() => {
                             const meta = getStringMetadata(asset.metadata);
                             const templateName =
@@ -2165,7 +2267,9 @@ export default function AdminMedia() {
                                       getStructuredGenre(asset.genre as ImageGenre)
                                     )
                                   : ''
-                                : meta.mountType || meta.vehicleType || meta.shipType;
+                                : asset.assetType === 'Power Image'
+                                  ? [meta.powerCategory, meta.powerSubtype].filter(Boolean).join(' · ')
+                                  : meta.mountType || meta.vehicleType || meta.shipType;
                             return templateName ? (
                               <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-white backdrop-blur">
                                 {templateName}
