@@ -39,6 +39,7 @@ export interface MonsterType {
   poiTags: string[];
   enabled: boolean;
   isProtected: boolean;
+  _count?: { subtypes: number };
 }
 
 export interface MonsterSubtype {
@@ -70,6 +71,8 @@ export function useMonsterCatalog() {
     queryFn: () => fetchMonsterTypes(getToken),
   });
 
+  const { data: types = [], isLoading: loading, error } = typesQuery;
+
   // Convenience: invalidate the list when the tab regains focus.
   useEffect(() => {
     const onFocus = () => {
@@ -84,12 +87,12 @@ export function useMonsterCatalog() {
   };
 
   const createType = async (payload: MonsterTypePayload) => {
-    const data = await fetchRpgAdmin('/api/admin/monster-types', getToken, {
+    const data = await fetchRpgAdmin<{ type: MonsterType }>('/api/admin/monster-types', getToken, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
     await refresh();
-    return data;
+    return data.type;
   };
 
   const updateType = async (id: string, payload: Partial<MonsterTypePayload> & { name?: string }) => {
@@ -147,7 +150,9 @@ export function useMonsterCatalog() {
 
   return {
     ...typesQuery,
-    types: typesQuery.data || [],
+    loading,
+    error,
+    types,
     createType,
     updateType,
     deleteType,
