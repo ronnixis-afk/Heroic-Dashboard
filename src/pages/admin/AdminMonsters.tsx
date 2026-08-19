@@ -22,13 +22,12 @@ import {
 import { cn } from '../../lib/utils';
 import {
   useMonsterCatalog,
+  useMonsterTypeDetails,
   type MonsterGenre,
   type MonsterSubtype,
-  type MonsterType,
   type MonsterTypePayload,
 } from '../../hooks/useMonsterCatalog';
 
-type TypeDetails = MonsterType & { subtypes: MonsterSubtype[] };
 type CatalogFilter = 'All' | 'Enabled' | 'Disabled';
 type SubtypeDraft = {
   visualDescription: string;
@@ -185,15 +184,12 @@ export default function AdminMonsters() {
     createType,
     updateType,
     deleteType,
-    fetchTypeDetails,
     createSubtype,
     updateSubtype,
     deleteSubtype,
   } = useMonsterCatalog();
 
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<TypeDetails | null>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [addingSubtype, setAddingSubtype] = useState(false);
   const [expandedSubtypeId, setExpandedSubtypeId] = useState<string | null>(null);
@@ -209,6 +205,10 @@ export default function AdminMonsters() {
   const [typeForm, setTypeForm] = useState(EMPTY_TYPE_FORM);
   const [newTypeForm, setNewTypeForm] = useState(EMPTY_NEW_TYPE);
   const [subForm, setSubForm] = useState(EMPTY_SUB_FORM);
+
+  const { data: selectedType = null, isLoading: detailsLoading } = useMonsterTypeDetails(
+    isCreating ? null : selectedTypeId
+  );
 
   const templateType = useMemo(
     () => types.find((type) => type.id === selectedTypeId) || types[0] || null,
@@ -271,45 +271,23 @@ export default function AdminMonsters() {
   }, [types, selectedTypeId]);
 
   useEffect(() => {
-    if (!selectedTypeId || isCreating) return;
-    let cancelled = false;
-    void (async () => {
-      setDetailsLoading(true);
-      const details = await fetchTypeDetails(selectedTypeId);
-      if (cancelled) return;
-      setSelectedType(details);
-      if (details) {
-        setTypeForm({
-          description: details.description || '',
-          enabled: details.enabled,
-          minEncounterLevel: details.minEncounterLevel ?? 1,
-          genres: (details.genres?.length ? details.genres : ['Fantasy']) as MonsterGenre[],
-        });
-      }
-      setExpandedSubtypeId(null);
-      setSubtypeDrafts({});
-      setAddingSubtype(false);
-      setSubtypeQuery('');
-      setDetailsLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTypeId, fetchTypeDetails, isCreating]);
+    setExpandedSubtypeId(null);
+    setSubtypeDrafts({});
+    setAddingSubtype(false);
+    setSubtypeQuery('');
+  }, [selectedTypeId]);
 
-  const refreshSelected = async (id: string) => {
-    const next = await fetchTypeDetails(id);
-    setSelectedType(next);
-    if (next) {
-      setTypeForm({
-        description: next.description || '',
-        enabled: next.enabled,
-        minEncounterLevel: next.minEncounterLevel ?? 1,
-        genres: (next.genres?.length ? next.genres : ['Fantasy']) as MonsterGenre[],
-      });
-    }
-    return next;
-  };
+  useEffect(() => {
+    if (!selectedType || selectedType.id !== selectedTypeId) return;
+    setTypeForm({
+      description: selectedType.description || '',
+      enabled: selectedType.enabled,
+      minEncounterLevel: selectedType.minEncounterLevel ?? 1,
+      genres: (selectedType.genres?.length ? selectedType.genres : ['Fantasy']) as MonsterGenre[],
+    });
+    // Hydrate when the selected type changes, not on background refetches of the same type.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedType.id is the load signal
+  }, [selectedTypeId, selectedType?.id]);
 
   const selectType = (id: string) => {
     setIsCreating(false);
@@ -334,7 +312,6 @@ export default function AdminMonsters() {
         minEncounterLevel: Number(typeForm.minEncounterLevel),
         genres: typeForm.genres,
       });
-      await refreshSelected(selectedTypeId);
       setStatus({ type: 'success', msg: 'Monster Type Updated.' });
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Update Monster Type.' });
@@ -394,7 +371,6 @@ export default function AdminMonsters() {
     setSaving(true);
     try {
       await deleteType(selectedTypeId);
-      await refreshSelected(selectedTypeId);
       setStatus({ type: 'success', msg: 'Monster Type Disabled.' });
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Disable Monster Type.' });
@@ -426,10 +402,9 @@ export default function AdminMonsters() {
         encounterExcluded: false,
         rideable: false,
       });
-      setStatus({ type: 'success', msg: 'Monster Subtype Created.' });
       setSubForm(EMPTY_SUB_FORM);
       setAddingSubtype(false);
-      await refreshSelected(selectedTypeId);
+      setStatus({ type: 'success', msg: 'Monster Subtype Created.' });
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Create Monster Subtype.' });
     } finally {
@@ -481,7 +456,6 @@ export default function AdminMonsters() {
         allowedTerrains: draft.allowedTerrains,
         enabled: draft.enabled,
       });
-      await refreshSelected(selectedTypeId);
       setStatus({ type: 'success', msg: 'Monster Subtype Updated.' });
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Update Subtype.' });
@@ -499,7 +473,6 @@ export default function AdminMonsters() {
       setSubtypeDrafts((prev) =>
         prev[subtype.id] ? { ...prev, [subtype.id]: { ...prev[subtype.id], enabled } } : prev
       );
-      await refreshSelected(selectedTypeId);
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Update Subtype.' });
     } finally {
@@ -514,7 +487,6 @@ export default function AdminMonsters() {
     setSaving(true);
     try {
       await deleteSubtype(selectedTypeId, subtypeId);
-      await refreshSelected(selectedTypeId);
       setExpandedSubtypeId((current) => (current === subtypeId ? null : current));
       setStatus({ type: 'success', msg: 'Monster Subtype Disabled.' });
     } catch (e: unknown) {
@@ -781,10 +753,6 @@ export default function AdminMonsters() {
                   <div className="callout-accent text-xs text-brand-text-muted">
                     This type is protected. Identity fields are locked so core encounter templates stay intact.
                   </div>
-                )}
-
-                {detailsLoading && (
-                  <p className="help-text">Refreshing type details...</p>
                 )}
 
                 <div>
