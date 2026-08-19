@@ -109,7 +109,7 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
     case 'Point Of Interest Image':
       return compactSegments([metadata.poiBaseType, metadata.poiModifier]);
     case 'Zone Image':
-      return compactSegments([metadata.zoneProperty, metadata.zoneQuality]);
+      return compactSegments([metadata.terrainType]);
     case 'Item Image':
       return compactSegments([metadata.itemCategory, metadata.itemSubtype]);
     case 'Power Image':

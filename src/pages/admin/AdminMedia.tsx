@@ -194,44 +194,29 @@ const POI_TAG_SUGGESTIONS: Record<SpecificImageGenre, { baseTypes: string[]; mod
 
 };
 
-const ZONE_TAG_SUGGESTIONS: Record<SpecificImageGenre, Record<string, string[]>> = {
-  Fantasy: {
-    'Mana Density': ['Dead Zone', 'Normal', 'Highly Saturated', 'Wild / Unstable'],
-    'Mythic Threat Level': ['Mundane Beasts', 'Goblinoid Hordes', 'Undead Infestation', 'Apex / Dragon Territory'],
-    'Leyline Connectivity': ['Isolated', 'Nexus Point', 'Corrupted Leyline', 'Ancient Conduit'],
-    'Divine Alignment': ['Blessed By Light', 'Forsaken', 'Cursed', 'Ancient Pagan'],
-    'Dominant Terrain / Biome': ['Whispering Woods', 'Scorched Wasteland', 'Floating Archipelagos', 'Crystal Caverns'],
-    'Socio-Political State': ['Feudal Kingdom', 'Theocracy', 'Lawless Frontier', 'Elven Isolationists'],
-    'Weather Anomaly': ['Eternal Twilight', 'Blood Rain', 'Chrono-Storms', 'Ash-Fall'],
-    'Ruins And Relics': ['Untouched First-Age Ruins', 'Looted Tombs', 'Awakened Colossi', 'Sunken Temple'],
-    'Resource Abundance': ['Rare Herbs', 'Rich Mythril Ore', 'Barren / Starving', 'Abundant Game'],
-    'Local Superstition / Law': ['Magic Is Outlawed', 'Strangers Are Sacrificed', 'Always Leave An Offering', 'Silence Is Mandatory'],
-  },
-  Modern: {
-    'Urban Density': ['Sprawling Metropolis', 'Claustrophobic Slums', 'Abandoned Industrial', 'High-Rise Elite'],
-    'Corporate Control': ['Company Town', 'Contested Turf', 'Independent / Mom-And-Pop', 'Corporate Black Site'],
-    'Underworld Activity': ['Heavily Policed / Safe', 'Yakuza Territory', 'Petty Gang War', 'Hacker Haven'],
-    'Technological Integration': ['Smart City', 'Decaying / Analog', 'Heavy Surveillance', 'Underground / Retro-Tech'],
-    'Socioeconomic Status': ['One-Percenter Enclave', 'Working Class', 'Destitute / Homeless', 'Gentrified Heights'],
-    'Environmental Hazard': ['Heavy Smog / Pollution', 'Biohazard Quarantine', 'Pristine / Gated Parkland', 'Toxic Landfill'],
-    'Law Enforcement Presence': ['Militarized Riot Police', 'Private Pmc Security', 'Corrupt Cops', 'Lawless Vigilantes'],
-    'Media Influence': ['Heavy Propaganda', 'Pirate Radio Broadcasts', 'Complete Info-Blackout', 'Viral Social Media'],
-    'Hidden Subculture': ['Underground Fight Clubs', 'Doomsday Prepper Cult', 'Vigilante Network', 'Secret Rave Scene'],
-    'Infrastructure State': ['Gentrified', 'Under Construction', 'Crumbling / Condemned', 'Reclaimed By Nature'],
-  },
-  'Sci-Fi': {
-    'Stellar Proximity': ['Deep Space / Rogue Planet', 'Binary Star Orbit', 'Black Hole Event Horizon', 'Nebula Core'],
-    'Atmospheric And Biosphere State': ['Toxic / Acidic', 'Fully Terraformed', 'Vacuum / Airless', 'Nanite-Infested Biosphere'],
-    'Dominant Species / Authority': ['Human Colony Alliance', 'Alien Hive Mind', 'Synthetic / AI Overlords', 'Multi-Species Hub'],
-    'Tech Level Rating': ['Pre-Ftl Primitives', 'Post-Scarcity Utopia', 'Scavenger / Junker Fleet', 'Type-Ii Civilization'],
-    'Gravity And Physics Modifier': ['Zero-G Station', 'Crushing High Gravity', 'Variable / Flickering Gravity', 'Flickering Space-Time'],
-    'Interstellar Trade Status': ['Major Galactic Hub', 'Blockaded / Embargoed', 'Uncharted / Wild Space', 'Abandoned Trade Route'],
-    'Cosmic Hazard': ['Lethal Solar Flares', 'Dense Asteroid Field', 'Subspace Rifts', 'Ionized Radiation Belt'],
-    'Political Allegiance': ['Galactic Federation Core', 'Rebel Outpost', 'Pirate Warlord Territory', 'Neutral Research Zone'],
-    'Primary Output': ['Rare Isotope Mining', 'Agrarian / Food Production', 'Antimatter Refineries', 'Starship Drydocks'],
-    'Anomalous Phenomenon': ['Time Dilation Field', 'Psionic Echo Chamber', 'Derelict Dyson Sphere', 'Synthetic Virus Outbreak'],
-  },
+/** Genre-scoped zone terrains from RPG `src/constants/terrainConfig.ts` (`GENRE_TERRAIN_MAP`). */
+const ZONE_TERRAIN_OPTIONS: Record<SpecificImageGenre, string[]> = {
+  Fantasy: ['Plains', 'Forest', 'Swamp', 'Desert', 'Mountain', 'Coastal', 'Underwater', 'Airborne'],
+  Modern: ['Plains', 'Forest', 'Swamp', 'Desert', 'Mountain', 'Coastal', 'Underwater', 'Airborne'],
+  'Sci-Fi': ['Orbital', 'Asteroid Field', 'Deep Space', 'Nebula Core', 'Warp Rift', 'Planetary Surface'],
+};
 
+const ALL_ZONE_TERRAIN_OPTIONS = new Set(
+  Object.values(ZONE_TERRAIN_OPTIONS).flat()
+);
+
+const getZoneTerrainOptions = (genre: ImageGenre): string[] => {
+  if (genre !== 'Any Genre') return ZONE_TERRAIN_OPTIONS[genre];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const list of Object.values(ZONE_TERRAIN_OPTIONS)) {
+    for (const terrain of list) {
+      if (seen.has(terrain)) continue;
+      seen.add(terrain);
+      out.push(terrain);
+    }
+  }
+  return out;
 };
 
 const PORTRAIT_METADATA_OPTIONS = {
@@ -397,7 +382,7 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Vehicle Portrait': ['vehicleType'],
   'Ship Portrait': ['shipType'],
   'Point Of Interest Image': ['poiBaseType', 'poiModifier'],
-  'Zone Image': ['zoneProperty', 'zoneQuality'],
+  'Zone Image': ['terrainType'],
   'Item Image': ['itemCategory', 'itemSubtype'],
   'Power Image': ['powerCategory', 'powerSubtype'],
   'App Assets': [],
@@ -422,7 +407,7 @@ const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'Vehicle Portrait': 'vehicleType',
   'Ship Portrait': 'shipType',
   'Point Of Interest Image': 'poiBaseType',
-  'Zone Image': 'zoneProperty',
+  'Zone Image': 'terrainType',
   'Item Image': 'itemCategory',
   'Power Image': 'powerCategory',
 };
@@ -517,6 +502,9 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
       ...POWER_IMAGE_DAMAGE_SUBTYPES,
       ...POWER_IMAGE_STATUS_SUBTYPES,
     ]);
+  }
+  if (assetType === 'Zone Image') {
+    return ALL_ZONE_TERRAIN_OPTIONS;
   }
   return new Set();
 };
@@ -719,24 +707,9 @@ export default function AdminMedia() {
     () => countByMetadataKey(facetRows, 'poiModifier', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
   );
-  const zonePropertyCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'zoneProperty', formAssetTypeScope),
+  const zoneTerrainCounts = useMemo(
+    () => countByMetadataKey(facetRows, 'terrainType', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
-  );
-  const zoneQualityScope = useMemo(
-    () => ({
-      ...formAssetTypeScope,
-      metadata: { zoneProperty: formData.metadata.zoneProperty || '' },
-    }),
-    [formAssetTypeScope, formData.metadata.zoneProperty]
-  );
-  const zoneQualityCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'zoneQuality', zoneQualityScope),
-    [facetRows, zoneQualityScope]
-  );
-  const zoneQualityTotal = useMemo(
-    () => countScopedTotal(facetRows, zoneQualityScope),
-    [facetRows, zoneQualityScope]
   );
   const itemCategoryCounts = useMemo(
     () => countByMetadataKey(facetRows, 'itemCategory', formAssetTypeScope),
@@ -836,11 +809,12 @@ export default function AdminMedia() {
     () => countScopedTotal(facetRows, libraryTagScope),
     [facetRows, libraryTagScope]
   );
-  const zonePropertyOptions = useMemo(() => Object.keys(ZONE_TAG_SUGGESTIONS[structuredGenre]), [structuredGenre]);
-  const zoneQualityOptions = useMemo(
-    () => ZONE_TAG_SUGGESTIONS[structuredGenre][formData.metadata.zoneProperty] || [],
-    [structuredGenre, formData.metadata.zoneProperty]
-  );
+  const zoneTerrainOptions = useMemo(() => {
+    const catalog = getZoneTerrainOptions(formData.genre);
+    const current = formData.metadata.terrainType?.trim();
+    if (current && !catalog.includes(current)) return [...catalog, current];
+    return catalog;
+  }, [formData.genre, formData.metadata.terrainType]);
   const monsterSubtypeOptions = useMemo(
     () => {
       const typeName = formData.metadata.monsterType || '';
@@ -1265,10 +1239,6 @@ export default function AdminMedia() {
         metadata[key] = value;
       } else {
         delete metadata[key];
-      }
-
-      if (key === 'zoneProperty') {
-        delete metadata.zoneQuality;
       }
 
       if (key === 'itemCategory') {
@@ -1767,42 +1737,25 @@ export default function AdminMedia() {
                 )}
 
                 {formData.assetType === 'Zone Image' && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="input-label">Zone Property</label>
-                      <select
-                        value={formData.metadata.zoneProperty || ''}
-                        onChange={(event) => setMetadataField('zoneProperty', event.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">
-                          {formatOptionLabel('Any Property', formAssetTypeTotal)}
+                  <div>
+                    <label className="input-label">Terrain Type</label>
+                    <select
+                      value={formData.metadata.terrainType || ''}
+                      onChange={(event) => setMetadataField('terrainType', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">
+                        {formatOptionLabel('Any Terrain', formAssetTypeTotal)}
+                      </option>
+                      {zoneTerrainOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {formatOptionLabel(option, getCount(zoneTerrainCounts, option))}
                         </option>
-                        {zonePropertyOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {formatOptionLabel(option, getCount(zonePropertyCounts, option))}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="input-label">Zone Quality</label>
-                      <select
-                        value={formData.metadata.zoneQuality || ''}
-                        onChange={(event) => setMetadataField('zoneQuality', event.target.value)}
-                        className="input-field"
-                        disabled={!formData.metadata.zoneProperty}
-                      >
-                        <option value="">
-                          {formatOptionLabel('Any Quality', zoneQualityTotal)}
-                        </option>
-                        {zoneQualityOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {formatOptionLabel(option, getCount(zoneQualityCounts, option))}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      Open-World Zone Art For This Genre. Must Match The RPG Terrain Type (E.g. Forest, Orbital).
+                    </p>
                   </div>
                 )}
 

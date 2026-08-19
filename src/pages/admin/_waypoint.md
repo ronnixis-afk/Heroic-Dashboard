@@ -41,7 +41,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/credits` | Credits | Grants + adjustment history |
 | `/admin/news` | Global News & Patch Notes | Hook: `useNews` → RPG `/api/admin/news*` + `/api/admin/app-version` (Clerk session). Realtime invalidate via `getAdminSupabase`. URL fields validated with `isSafeHttpUrl`. |
 | `/admin/roadmap` | Product Roadmap | Hook: `useRoadmap` → RPG `/api/admin/roadmap*` CRUD (Clerk session). Realtime via `getAdminSupabase`. Fields: title, summary, phase, status, category, featured, published, sortOrder. RPG public `GET /api/roadmap-items` for marketing site. |
-| `/admin/media` | Media Library | Storage upload via Supabase (`getAdminSupabase` + RLS); `ImageAsset` metadata CRUD/list via RPG `/api/admin/image-assets*`. |
+| `/admin/media` | Media Library | Storage upload via Supabase (`getAdminSupabase` + RLS); `ImageAsset` metadata CRUD/list via RPG `/api/admin/image-assets*`. Zone Image uploads use **Terrain Type** (`metadata.terrainType`), not narrative zone properties. |
 | `/admin/monsters` | Monsters | Hook: `useMonsterCatalog` → RPG `/api/admin/monster-types*`. Desktop master-detail: sticky catalog (search, status, genre) + type identity form + expandable subtype table. Edits type/subtype identity and enabled flags; combat templates stay unchanged. |
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
@@ -99,6 +99,12 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 - **Sync command:** `npm run sync:power-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
 - After adding/renaming damage types or power status debuffs in the RPG, run the sync and commit the regenerated catalog.
 - **Upload dropdowns:** Any Genre (or Fantasy / Modern / Sci-Fi) → Power Image → Power Category (`Single Damage`, `Multi Damage`, `Single Status`, `Multi Status`) then Power Subtype (damage types for Damage categories; combat status debuffs for Status categories). Match keys: `genre` + `metadata.powerCategory` + `metadata.powerSubtype` → RPG `Ability.imageUrl`.
+
+## Zone Image Catalog
+
+- **Source of truth:** RPG `src/constants/terrainConfig.ts` (`GENRE_TERRAIN_MAP`).
+- **Upload dropdowns:** Zone Image → Genre → **Terrain Type** (Fantasy/Modern: Plains, Forest, Swamp, Desert, Mountain, Coastal, Underwater, Airborne; Sci-Fi: Orbital, Asteroid Field, Deep Space, Nebula Core, Warp Rift, Planetary Surface). Any Genre lists all unique terrains.
+- Match keys: `genre` + `metadata.terrainType` → RPG `MapZone.imageUrl` via `zone.terrainType`. Do not tag zone images with narrative zone properties (Mana Density, etc.).
 
 ## Insights Data Sources
 
