@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-08-15
+ * Last synced: 2026-08-19
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
@@ -112,7 +112,6 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Wondrous',
       subtypes: [
-      'Amulet Wear',
       'Belt',
       'Boots',
       'Bracers',
@@ -287,7 +286,6 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Wondrous',
       subtypes: [
-      'Amulet Wear',
       'Belt',
       'Boots',
       'Bracers',
@@ -476,7 +474,6 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Wondrous',
       subtypes: [
-      'Amulet Wear',
       'Belt',
       'Boots',
       'Bracers',

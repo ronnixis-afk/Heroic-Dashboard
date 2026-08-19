@@ -60,6 +60,7 @@ const NAV_GROUPS = [
       { icon: Newspaper, label: 'Global News', path: '/admin/news' },
       { icon: Compass, label: 'Product Roadmap', path: '/admin/roadmap' },
       { icon: Images, label: 'Media Library', path: '/admin/media' },
+      { icon: Images, label: 'Monsters', path: '/admin/monsters' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
       { icon: Globe, label: 'Public Realms', path: '/admin/public-realms' },
       { icon: ClipboardList, label: 'User Surveys', path: '/admin/surveys' },

@@ -38,6 +38,8 @@ import {
   optimizeImageToSquareGrid,
   OptimizedImageResult,
 } from '../../lib/imageOptimizer';
+import { useAuth } from '../../lib/AuthContext';
+import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 import {
   getRideableTypeSuggestions,
   RideablePortraitGenre,
@@ -558,6 +560,39 @@ export default function AdminMedia() {
     setPage(1);
   }, [debouncedSearch, filters.genre, filters.assetType, filters.tag]);
 
+  const { getToken } = useAuth();
+  const [liveMonsterTypeIdByName, setLiveMonsterTypeIdByName] = useState<Record<string, string>>({});
+  const [liveMonsterSubtypesByTypeId, setLiveMonsterSubtypesByTypeId] = useState<Record<string, string[]>>({});
+
+  // Load enabled monster types (id + name) once so we can request live subtype dropdown options.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTypes = async () => {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+
+        const result = await fetchRpgAdmin<{ types?: Array<{ id: string; name: string }> }>(
+          '/api/admin/monster-types',
+          token
+        );
+
+        if (cancelled) return;
+        const next: Record<string, string> = {};
+        for (const t of result.types || []) next[t.name] = t.id;
+        setLiveMonsterTypeIdByName(next);
+      } catch (e) {
+        console.warn('[AdminMedia] Live monster types load failed:', e);
+      }
+    };
+
+    void loadTypes();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
+
   const {
     assets,
     facetRows,
@@ -580,6 +615,45 @@ export default function AdminMedia() {
     tag: filters.tag,
   });
   const [formData, setFormData] = useState(initialForm);
+
+  // Live monster catalog (types + subtypes) for dropdowns; generated catalog is used as fallback.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSubtypesForSelectedType = async () => {
+      const selectedTypeName = (formData.metadata.monsterType || '').trim();
+      if (!selectedTypeName) return;
+
+      const typeId = liveMonsterTypeIdByName[selectedTypeName];
+      if (!typeId) return;
+
+      const alreadyLoaded = Object.prototype.hasOwnProperty.call(liveMonsterSubtypesByTypeId, typeId);
+      if (alreadyLoaded) return;
+
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+
+        const result = await fetchRpgAdmin<{ type?: { subtypes?: Array<{ id: string; name: string }> } }>(
+          `/api/admin/monster-types/${typeId}`,
+          token
+        );
+        if (cancelled) return;
+
+        const names = result.type?.subtypes?.map((s) => s.name) || [];
+        setLiveMonsterSubtypesByTypeId((prev) => ({ ...prev, [typeId]: names }));
+      } catch (e) {
+        console.warn('[AdminMedia] Live monster subtypes load failed:', e);
+        if (!cancelled) setLiveMonsterSubtypesByTypeId((prev) => ({ ...prev, [typeId]: [] }));
+      }
+    };
+
+    void loadSubtypesForSelectedType();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.metadata.monsterType, getToken, liveMonsterTypeIdByName, liveMonsterSubtypesByTypeId]);
+
   const [editingAsset, setEditingAsset] = useState<ImageAsset | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<ImageAsset | null>(null);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
@@ -817,8 +891,19 @@ export default function AdminMedia() {
     [structuredGenre, formData.metadata.zoneProperty]
   );
   const monsterSubtypeOptions = useMemo(
-    () => getMonsterSubtypes(formData.metadata.monsterType || ''),
-    [formData.metadata.monsterType]
+    () => {
+      const typeName = formData.metadata.monsterType || '';
+      const typeId = liveMonsterTypeIdByName[typeName];
+      if (
+        typeId &&
+        Object.prototype.hasOwnProperty.call(liveMonsterSubtypesByTypeId, typeId)
+      ) {
+        return liveMonsterSubtypesByTypeId[typeId] || [];
+      }
+      // Fallback: generated catalog (stale but keeps the page usable before live load).
+      return getMonsterSubtypes(typeName);
+    },
+    [formData.metadata.monsterType, liveMonsterTypeIdByName, liveMonsterSubtypesByTypeId]
   );
   /** Catalog art-family names only — retired chassis are not listed as separate upload targets. Genre-scoped for Weapons. */
   const itemSubtypeOptions = useMemo(() => {

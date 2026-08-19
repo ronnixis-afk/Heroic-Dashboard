@@ -42,6 +42,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/news` | Global News & Patch Notes | Hook: `useNews` → RPG `/api/admin/news*` + `/api/admin/app-version` (Clerk session). Realtime invalidate via `getAdminSupabase`. URL fields validated with `isSafeHttpUrl`. |
 | `/admin/roadmap` | Product Roadmap | Hook: `useRoadmap` → RPG `/api/admin/roadmap*` CRUD (Clerk session). Realtime via `getAdminSupabase`. Fields: title, summary, phase, status, category, featured, published, sortOrder. RPG public `GET /api/roadmap-items` for marketing site. |
 | `/admin/media` | Media Library | Storage upload via Supabase (`getAdminSupabase` + RLS); `ImageAsset` metadata CRUD/list via RPG `/api/admin/image-assets*`. |
+| `/admin/monsters` | Monsters | Hook: `useMonsterCatalog` → RPG `/api/admin/monster-types*`; edits monster type/subtype identity + enabled flags. |
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
@@ -62,10 +63,11 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 ## Monster Portrait Catalog Sync
 
 - **Source of truth:** `heroic-ai-rpg/src/constants/monsterTypes.ts` (names, descriptions, subtypes).
-- **Dashboard copy:** `src/constants/monsterPortraitCatalog.ts` — auto-generated; do not edit by hand.
+- **Dashboard copy:** `src/constants/monsterPortraitCatalog.ts` — auto-generated; do not edit by hand (used as an offline/stale fallback).
 - **Sync command:** `npm run sync:monster-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
 - **Override path:** set `HEROIC_RPG_ROOT` if the RPG repo is not at `../Heroic AI RPG/heroic-ai-rpg`.
 - After changing monster types/subtypes/descriptions in the RPG (or adding new ones), run the sync and commit the regenerated catalog so deploys stay current.
+- Monsters and some portrait dropdowns prefer RPG `/api/admin/monster-types*` live data; the generated catalog remains the non-ideal fallback.
 
 ## Rideable Portrait Catalog Sync
 
