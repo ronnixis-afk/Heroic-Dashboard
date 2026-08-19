@@ -68,6 +68,10 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 - **Override path:** set `HEROIC_RPG_ROOT` if the RPG repo is not at `../Heroic AI RPG/heroic-ai-rpg`.
 - After changing monster types/subtypes/descriptions in the RPG (or adding new ones), run the sync and commit the regenerated catalog so deploys stay current.
 - Monsters and some portrait dropdowns prefer RPG `/api/admin/monster-types*` live data; the generated catalog remains the non-ideal fallback.
+- Media uploads store stable portrait identity on the ImageAsset:
+  - `metadata.monsterTypeId` + `metadata.monsterSubtypeId` (stable DB ids)
+  - `metadata.monsterType` + `metadata.monsterSubtype` (denormalized names for UI/search/tagging)
+  - Matching prefers the ids and falls back to names for legacy assets.
 
 ## Rideable Portrait Catalog Sync
 

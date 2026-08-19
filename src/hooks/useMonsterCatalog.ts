@@ -59,9 +59,52 @@ export interface MonsterSubtype {
 
 export type MonsterTypeDetails = MonsterType & { subtypes: MonsterSubtype[] };
 
+export interface MonsterSubtypePortraitLite {
+  id: string;
+  name: string;
+  visualDescription: string;
+  enabled: boolean;
+  isProtected: boolean;
+}
+
+export interface MonsterTypePortraitLite {
+  id: string;
+  name: string;
+  description: string;
+  genres: MonsterGenre[];
+  minEncounterLevel: number;
+  enabled: boolean;
+  isProtected: boolean;
+  subtypes: MonsterSubtypePortraitLite[];
+}
+
 async function fetchMonsterTypes(getToken: (options?: any) => Promise<string | null>) {
   const data = await fetchRpgAdmin<{ types?: MonsterType[] }>('/api/admin/monster-types', getToken);
   return data.types || [];
+}
+
+async function fetchMonsterTypesWithSubtypes(getToken: (options?: any) => Promise<string | null>) {
+  const data = await fetchRpgAdmin<{ types?: Array<any> }>('/api/admin/monster-types?includeSubtypes=1', getToken);
+  const types = data.types || [];
+
+  return types.map((t: any): MonsterTypePortraitLite => ({
+    id: String(t.id),
+    name: String(t.name),
+    description: String(t.description ?? ''),
+    genres: Array.isArray(t.genres) ? (t.genres as MonsterGenre[]) : (['Fantasy'] as MonsterGenre[]),
+    minEncounterLevel: Number.isFinite(Number(t.minEncounterLevel)) ? Number(t.minEncounterLevel) : 1,
+    enabled: Boolean(t.enabled),
+    isProtected: Boolean(t.isProtected),
+    subtypes: Array.isArray(t.subtypes)
+      ? t.subtypes.map((s: any): MonsterSubtypePortraitLite => ({
+          id: String(s.id),
+          name: String(s.name),
+          visualDescription: String(s.visualDescription ?? ''),
+          enabled: Boolean(s.enabled),
+          isProtected: Boolean(s.isProtected),
+        }))
+      : [],
+  }));
 }
 
 async function fetchMonsterTypeDetails(
@@ -183,6 +226,21 @@ export function useMonsterCatalog() {
     updateSubtype,
     deleteSubtype,
     refresh,
+  };
+}
+
+export function useMonsterCatalogWithSubtypes() {
+  const { getToken } = useAuth();
+
+  const { data: types = [], isLoading: loading, error } = useQuery({
+    queryKey: ['monster-types', 'with-subtypes'],
+    queryFn: () => fetchMonsterTypesWithSubtypes(getToken),
+  });
+
+  return {
+    types,
+    loading,
+    error,
   };
 }
 

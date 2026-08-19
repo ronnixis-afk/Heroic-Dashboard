@@ -21,6 +21,7 @@ import {
   ImageGenre,
   useImageAssets,
 } from '../../hooks/useImageAssets';
+import { useMonsterCatalogWithSubtypes } from '../../hooks/useMonsterCatalog';
 import {
   countByAssetType,
   countByGenre,
@@ -38,8 +39,6 @@ import {
   optimizeImageToSquareGrid,
   OptimizedImageResult,
 } from '../../lib/imageOptimizer';
-import { useAuth } from '../../lib/AuthContext';
-import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 import {
   getRideableTypeSuggestions,
   RideablePortraitGenre,
@@ -66,7 +65,7 @@ import {
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
-const MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
+const GENERATED_MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
 const ITEM_CATEGORY_OPTIONS = getItemPortraitCategoryNames();
 const POWER_IMAGE_CATEGORY_OPTIONS = getPowerImageCategoryNames();
 /** Uploadable types — includes NPC Portrait for Database-sourced nearby NPC art. */
@@ -474,7 +473,7 @@ const getNextUploadOrder = (assets: ImageAsset[], input: NamingInput) => {
 
 const ALL_MONSTER_PORTRAIT_TAG_OPTIONS = (() => {
   const options = new Set<string>();
-  MONSTER_TYPE_OPTIONS.forEach((typeName) => {
+  GENERATED_MONSTER_TYPE_OPTIONS.forEach((typeName) => {
     options.add(typeName);
     getMonsterSubtypes(typeName).forEach((subtype) => options.add(subtype.name));
   });
@@ -560,38 +559,28 @@ export default function AdminMedia() {
     setPage(1);
   }, [debouncedSearch, filters.genre, filters.assetType, filters.tag]);
 
-  const { getToken } = useAuth();
-  const [liveMonsterTypeIdByName, setLiveMonsterTypeIdByName] = useState<Record<string, string>>({});
-  const [liveMonsterSubtypesByTypeId, setLiveMonsterSubtypesByTypeId] = useState<Record<string, string[]>>({});
+  const {
+    types: liveMonsterTypesWithSubtypes,
+    loading: liveMonsterCatalogLoading,
+    error: liveMonsterCatalogError,
+  } = useMonsterCatalogWithSubtypes();
 
-  // Load enabled monster types (id + name) once so we can request live subtype dropdown options.
-  useEffect(() => {
-    let cancelled = false;
+  const liveMonsterTypesByName = useMemo(() => {
+    const map: Record<string, { id: string; subtypes: Array<{ id: string; name: string; visualDescription: string }> }> =
+      {};
+    for (const t of liveMonsterTypesWithSubtypes) {
+      map[t.name] = t;
+    }
+    return map;
+  }, [liveMonsterTypesWithSubtypes]);
 
-    const loadTypes = async () => {
-      try {
-        const token = await getToken();
-        if (!token || cancelled) return;
-
-        const result = await fetchRpgAdmin<{ types?: Array<{ id: string; name: string }> }>(
-          '/api/admin/monster-types',
-          token
-        );
-
-        if (cancelled) return;
-        const next: Record<string, string> = {};
-        for (const t of result.types || []) next[t.name] = t.id;
-        setLiveMonsterTypeIdByName(next);
-      } catch (e) {
-        console.warn('[AdminMedia] Live monster types load failed:', e);
-      }
-    };
-
-    void loadTypes();
-    return () => {
-      cancelled = true;
-    };
-  }, [getToken]);
+  const monsterTypeOptions = useMemo(() => {
+    const generatedSet = new Set(GENERATED_MONSTER_TYPE_OPTIONS);
+    const appended = liveMonsterTypesWithSubtypes
+      .map((t) => t.name)
+      .filter((name) => !generatedSet.has(name));
+    return [...GENERATED_MONSTER_TYPE_OPTIONS, ...appended];
+  }, [liveMonsterTypesWithSubtypes]);
 
   const {
     assets,
@@ -615,44 +604,6 @@ export default function AdminMedia() {
     tag: filters.tag,
   });
   const [formData, setFormData] = useState(initialForm);
-
-  // Live monster catalog (types + subtypes) for dropdowns; generated catalog is used as fallback.
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSubtypesForSelectedType = async () => {
-      const selectedTypeName = (formData.metadata.monsterType || '').trim();
-      if (!selectedTypeName) return;
-
-      const typeId = liveMonsterTypeIdByName[selectedTypeName];
-      if (!typeId) return;
-
-      const alreadyLoaded = Object.prototype.hasOwnProperty.call(liveMonsterSubtypesByTypeId, typeId);
-      if (alreadyLoaded) return;
-
-      try {
-        const token = await getToken();
-        if (!token || cancelled) return;
-
-        const result = await fetchRpgAdmin<{ type?: { subtypes?: Array<{ id: string; name: string }> } }>(
-          `/api/admin/monster-types/${typeId}`,
-          token
-        );
-        if (cancelled) return;
-
-        const names = result.type?.subtypes?.map((s) => s.name) || [];
-        setLiveMonsterSubtypesByTypeId((prev) => ({ ...prev, [typeId]: names }));
-      } catch (e) {
-        console.warn('[AdminMedia] Live monster subtypes load failed:', e);
-        if (!cancelled) setLiveMonsterSubtypesByTypeId((prev) => ({ ...prev, [typeId]: [] }));
-      }
-    };
-
-    void loadSubtypesForSelectedType();
-    return () => {
-      cancelled = true;
-    };
-  }, [formData.metadata.monsterType, getToken, liveMonsterTypeIdByName, liveMonsterSubtypesByTypeId]);
 
   const [editingAsset, setEditingAsset] = useState<ImageAsset | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<ImageAsset | null>(null);
@@ -893,18 +844,26 @@ export default function AdminMedia() {
   const monsterSubtypeOptions = useMemo(
     () => {
       const typeName = formData.metadata.monsterType || '';
-      const typeId = liveMonsterTypeIdByName[typeName];
-      if (
-        typeId &&
-        Object.prototype.hasOwnProperty.call(liveMonsterSubtypesByTypeId, typeId)
-      ) {
-        return liveMonsterSubtypesByTypeId[typeId] || [];
-      }
+      const liveType = liveMonsterTypesByName[typeName];
+      if (liveType && Array.isArray(liveType.subtypes)) return liveType.subtypes;
+
       // Fallback: generated catalog (stale but keeps the page usable before live load).
       return getMonsterSubtypes(typeName);
     },
-    [formData.metadata.monsterType, liveMonsterTypeIdByName, liveMonsterSubtypesByTypeId]
+    [formData.metadata.monsterType, liveMonsterTypesByName]
   );
+
+  const selectedMonsterSubtypeVisualDescription = useMemo(() => {
+    const typeName = formData.metadata.monsterType || '';
+    const subtypeName = formData.metadata.monsterSubtype || '';
+    if (!typeName || !subtypeName) return '';
+
+    const liveType = liveMonsterTypesByName[typeName];
+    const liveSubtype = liveType?.subtypes?.find((s) => s.name === subtypeName);
+    if (liveSubtype?.visualDescription) return liveSubtype.visualDescription;
+
+    return getMonsterSubtypeDescription(typeName, subtypeName);
+  }, [formData.metadata.monsterType, formData.metadata.monsterSubtype, liveMonsterTypesByName]);
   /** Catalog art-family names only — retired chassis are not listed as separate upload targets. Genre-scoped for Weapons. */
   const itemSubtypeOptions = useMemo(() => {
     const catalogTypes = [
@@ -1321,11 +1280,27 @@ export default function AdminMedia() {
       }
 
       if (key === 'monsterType') {
-        const previousDescription = getMonsterSubtypeDescription(
-          current.metadata.monsterType || '',
-          current.metadata.monsterSubtype || ''
+        const previousTypeName = current.metadata.monsterType || '';
+        const previousSubtypeName = current.metadata.monsterSubtype || '';
+        const previousLiveType = liveMonsterTypesByName[previousTypeName];
+        const previousLiveSubtype = previousLiveType?.subtypes?.find(
+          (s) => s.name === previousSubtypeName
         );
+
+        const previousDescription =
+          previousLiveSubtype?.visualDescription ??
+          getMonsterSubtypeDescription(previousTypeName, previousSubtypeName);
+
         delete metadata.monsterSubtype;
+        delete metadata.monsterSubtypeId;
+
+        const nextTypeName = value;
+        const nextLiveType = nextTypeName ? liveMonsterTypesByName[nextTypeName] : undefined;
+        if (nextTypeName && nextLiveType?.id) {
+          metadata.monsterTypeId = nextLiveType.id;
+        } else {
+          delete metadata.monsterTypeId;
+        }
         const shouldClearDescription =
           !current.description.trim() || current.description.trim() === previousDescription.trim();
         const nextForm = {
@@ -1354,19 +1329,36 @@ export default function AdminMedia() {
   const setMonsterSubtype = (subtypeName: string) => {
     setFormData((current) => {
       const metadata = { ...current.metadata };
-      const previousDescription = getMonsterSubtypeDescription(
-        current.metadata.monsterType || '',
-        current.metadata.monsterSubtype || ''
+      const typeName = current.metadata.monsterType || '';
+      const previousSubtypeName = current.metadata.monsterSubtype || '';
+
+      const previousLiveType = liveMonsterTypesByName[previousTypeName];
+      const previousLiveSubtype = previousLiveType?.subtypes?.find(
+        (s) => s.name === previousSubtypeName
       );
+
+      const previousDescription =
+        previousLiveSubtype?.visualDescription ??
+        getMonsterSubtypeDescription(previousTypeName, previousSubtypeName);
 
       if (subtypeName) {
         metadata.monsterSubtype = subtypeName;
+
+        const liveType = liveMonsterTypesByName[typeName];
+        const liveSubtype = liveType?.subtypes?.find((s) => s.name === subtypeName);
+        if (liveSubtype?.id) {
+          metadata.monsterSubtypeId = liveSubtype.id;
+        } else {
+          delete metadata.monsterSubtypeId;
+        }
       } else {
         delete metadata.monsterSubtype;
+        delete metadata.monsterSubtypeId;
       }
 
       const nextDescription = subtypeName
-        ? getMonsterSubtypeDescription(current.metadata.monsterType || '', subtypeName)
+        ? liveMonsterTypesByName[typeName]?.subtypes?.find((s) => s.name === subtypeName)
+            ?.visualDescription ?? getMonsterSubtypeDescription(typeName, subtypeName)
         : '';
       const shouldSeedDescription =
         !current.description.trim() || current.description.trim() === previousDescription.trim();
@@ -1992,7 +1984,7 @@ export default function AdminMedia() {
                           <option value="">
                             {formatOptionLabel('Any Type', formAssetTypeTotal)}
                           </option>
-                          {MONSTER_TYPE_OPTIONS.map((option) => (
+                          {monsterTypeOptions.map((option) => (
                             <option key={option} value={option}>
                               {formatOptionLabel(option, getCount(monsterTypeCounts, option))}
                             </option>
@@ -2023,10 +2015,7 @@ export default function AdminMedia() {
                     </div>
                     {formData.metadata.monsterSubtype && (
                       <p className="help-text">
-                        {getMonsterSubtypeDescription(
-                          formData.metadata.monsterType || '',
-                          formData.metadata.monsterSubtype
-                        )}
+                        {selectedMonsterSubtypeVisualDescription}
                       </p>
                     )}
                     <div>
