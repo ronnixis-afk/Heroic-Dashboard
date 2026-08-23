@@ -1468,7 +1468,7 @@ export default function AdminMedia() {
                       </div>
                       <span className="text-xs font-medium text-brand-text">2x2 Grid Extraction</span>
                       <span className="mt-1 text-xs text-brand-text-muted">
-                        Upload Grids To Extract 4 Images Each
+                        Upload Grids To Extract 4 Images Each. Center Grid Line Is Skipped.
                       </span>
                       <input
                         type="file"

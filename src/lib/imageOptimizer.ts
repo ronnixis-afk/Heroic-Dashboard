@@ -13,6 +13,7 @@ const INITIAL_QUALITY = 0.82;
 const MIN_QUALITY = 0.68;
 const QUALITY_STEP = 0.06;
 const TARGET_BYTES = 300 * 1024;
+const GRID_GUTTER_RATIO = 0.02;
 
 interface SourceRegion {
   x: number;
@@ -208,16 +209,17 @@ export async function optimizeImageToSquareGrid(file: File): Promise<OptimizedIm
   }
 
   const sourceSize = Math.min(sourceWidth, sourceHeight);
-  const cellSize = sourceSize / 2;
+  const gutter = sourceSize * GRID_GUTTER_RATIO;
+  const cellSize = (sourceSize - gutter) / 2;
   const startX = Math.max(0, (sourceWidth - sourceSize) / 2);
   const startY = Math.max(0, (sourceHeight - sourceSize) / 2);
   const quadrantSourceSize = Math.round(file.size / 4);
 
   const regions: SourceRegion[] = [
     { x: startX, y: startY, size: cellSize },
-    { x: startX + cellSize, y: startY, size: cellSize },
-    { x: startX, y: startY + cellSize, size: cellSize },
-    { x: startX + cellSize, y: startY + cellSize, size: cellSize },
+    { x: startX + cellSize + gutter, y: startY, size: cellSize },
+    { x: startX, y: startY + cellSize + gutter, size: cellSize },
+    { x: startX + cellSize + gutter, y: startY + cellSize + gutter, size: cellSize },
   ];
 
   try {
