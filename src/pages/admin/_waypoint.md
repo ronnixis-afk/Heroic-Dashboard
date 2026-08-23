@@ -24,7 +24,7 @@ Shared conventions for all routes under `/admin`.
 Use primitives from `src/components/ui/`:
 
 - `PageHeader`, `Card`, `FilterTabs`
-- `StatusBanner`, `EmptyState`, `PageLoader`, `StatCard`
+- `StatusBanner`, `EmptyState`, `PageLoader`, `StatCard`, `ErrorBoundary`
 
 Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `text-title`, `text-header`). Prefer `.help-text`, `.stat-label`, `.status-banner-*`, and badge classes over ad-hoc sizes or colors.
 

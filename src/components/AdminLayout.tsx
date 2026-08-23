@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import NotificationPanel from './notifications/NotificationPanel';
 import { useNotifications } from '../hooks/useNotifications';
 import type { AdminNotificationItem } from '../lib/notifications/types';
+import ErrorBoundary from './ErrorBoundary';
 
 const NAV_GROUPS = [
   {
@@ -346,7 +347,9 @@ export default function AdminLayout() {
         </header>
 
         <div className="p-3 sm:p-4 max-w-[1400px] mx-auto w-full flex-1">
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </div>

@@ -1299,7 +1299,8 @@ export default function AdminMedia() {
   const setMonsterSubtype = (subtypeName: string) => {
     setFormData((current) => {
       const metadata = { ...current.metadata };
-      const typeName = current.metadata.monsterType || '';
+      const previousTypeName = current.metadata.monsterType || '';
+      const typeName = previousTypeName;
       const previousSubtypeName = current.metadata.monsterSubtype || '';
 
       const previousLiveType = liveMonsterTypesByName[previousTypeName];

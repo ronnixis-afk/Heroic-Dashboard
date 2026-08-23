@@ -25,6 +25,7 @@ import {
   useMonsterTypeDetails,
   type MonsterGenre,
   type MonsterSubtype,
+  type MonsterType,
   type MonsterTypePayload,
 } from '../../hooks/useMonsterCatalog';
 

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import AdminLayout from './components/AdminLayout';
 import PageLoader from './components/ui/PageLoader';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -119,44 +120,46 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/admin" replace />} />
-                <Route path="/login" element={<LoginPage />} />
+            <ErrorBoundary>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/admin" replace />} />
+                  <Route path="/login" element={<LoginPage />} />
 
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute adminOnly>
-                      <AdminLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="news" element={<AdminNews />} />
-                  <Route path="roadmap" element={<AdminRoadmap />} />
-                  <Route path="media" element={<AdminMedia />} />
-                  <Route path="monsters" element={<AdminMonsters />} />
-                  <Route path="credits" element={<AdminCredits />} />
-                  <Route path="analytics" element={<AdminAnalytics />} />
-                  <Route path="feedback" element={<AdminFeedback />} />
-                  <Route path="surveys" element={<AdminSurveys />} />
-                  <Route path="emails" element={<AdminEmails />} />
-                  <Route path="public-realms" element={<AdminPublicRealms />} />
-                  <Route path="settings" element={<AdminSettings />} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute adminOnly>
+                        <AdminLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="news" element={<AdminNews />} />
+                    <Route path="roadmap" element={<AdminRoadmap />} />
+                    <Route path="media" element={<AdminMedia />} />
+                    <Route path="monsters" element={<AdminMonsters />} />
+                    <Route path="credits" element={<AdminCredits />} />
+                    <Route path="analytics" element={<AdminAnalytics />} />
+                    <Route path="feedback" element={<AdminFeedback />} />
+                    <Route path="surveys" element={<AdminSurveys />} />
+                    <Route path="emails" element={<AdminEmails />} />
+                    <Route path="public-realms" element={<AdminPublicRealms />} />
+                    <Route path="settings" element={<AdminSettings />} />
 
-                  <Route path="reports">
-                    <Route index element={<Navigate to="/admin" replace />} />
-                    <Route path="audience" element={<AudienceReports />} />
-                    <Route path="usage" element={<UsageReports />} />
-                    <Route path="financial" element={<FinancialReports />} />
+                    <Route path="reports">
+                      <Route index element={<Navigate to="/admin" replace />} />
+                      <Route path="audience" element={<AudienceReports />} />
+                      <Route path="usage" element={<UsageReports />} />
+                      <Route path="financial" element={<FinancialReports />} />
+                    </Route>
                   </Route>
-                </Route>
 
-                <Route path="*" element={<Navigate to="/admin" replace />} />
-              </Routes>
-            </Suspense>
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
