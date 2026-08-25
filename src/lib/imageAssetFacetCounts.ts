@@ -1,10 +1,3 @@
-/** Legacy NPC rows still stored under older assetType values. */
-export const LEGACY_NPC_PORTRAIT_ASSET_TYPES = [
-  'NPC Portrait',
-  'Humanoid NPC Portrait',
-  'Creature NPC Portrait',
-] as const;
-
 export interface ImageAssetFacetRow {
   genre: string;
   assetType: string;
@@ -15,7 +8,7 @@ export interface ImageAssetFacetRow {
 export interface FacetScope {
   /** When `All` / `Any Genre` / empty, genre is not filtered. */
   genre?: string;
-  /** Exact assetType values to include (use expandAssetTypeFilter for NPC). */
+  /** Exact assetType values to include. */
   assetTypes?: string[];
   /** Exact metadata string matches (empty values ignored). */
   metadata?: Record<string, string>;
@@ -23,16 +16,10 @@ export interface FacetScope {
 
 export function expandAssetTypeFilter(assetType: string | undefined): string[] | undefined {
   if (!assetType || assetType === 'All') return undefined;
-  if (assetType === 'NPC Portrait') {
-    return [...LEGACY_NPC_PORTRAIT_ASSET_TYPES];
-  }
   return [assetType];
 }
 
 export function normalizeAssetTypeCountKey(assetType: string): string {
-  if ((LEGACY_NPC_PORTRAIT_ASSET_TYPES as readonly string[]).includes(assetType)) {
-    return 'NPC Portrait';
-  }
   return assetType;
 }
 

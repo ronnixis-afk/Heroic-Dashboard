@@ -16,7 +16,6 @@ const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
 export const IMAGE_ASSET_TYPES = [
   'Character Portrait',
-  'NPC Portrait',
   'Monster Portrait',
   'Mount Portrait',
   'Vehicle Portrait',
@@ -97,8 +96,6 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
 
   switch (input.assetType) {
     case 'Character Portrait':
-      return compactSegments([metadata.race, metadata.gender]);
-    case 'NPC Portrait':
       return compactSegments([metadata.race, metadata.gender]);
     case 'Mount Portrait':
       return compactSegments([metadata.mountType]);

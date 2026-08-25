@@ -68,11 +68,10 @@ type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 const GENERATED_MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
 const ITEM_CATEGORY_OPTIONS = getItemPortraitCategoryNames();
 const POWER_IMAGE_CATEGORY_OPTIONS = getPowerImageCategoryNames();
-/** Uploadable types — includes NPC Portrait for Database-sourced nearby NPC art. */
+/** Uploadable types. */
 const UPLOADABLE_IMAGE_ASSET_TYPES = [...IMAGE_ASSET_TYPES] as ImageAssetType[];
 const getAssetTypeOptionsForGenre = (
-  _genre: ImageGenre,
-  _includeLegacyNpcPortrait = false
+  _genre: ImageGenre
 ): ImageAssetType[] => [...UPLOADABLE_IMAGE_ASSET_TYPES];
 
 const WEIGHT_SORT_ORDER: Record<string, number> = {
@@ -231,11 +230,10 @@ const getCatalogRideableSuggestions = (
 ): string[] => [...getRideableTypeSuggestions(genre as RideablePortraitGenre, category)];
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
-const LEGACY_NPC_PORTRAIT_TYPES = new Set(['Service NPC Portrait']);
-const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait', 'NPC Portrait', 'Service NPC Portrait']);
+const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait']);
 
 const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
-  LEGACY_NPC_PORTRAIT_TYPES.has(assetType) ? 'NPC Portrait' : (assetType as ImageAssetType);
+  assetType as ImageAssetType;
 
 const mergePortraitRaceOptions = (...lists: string[][]) => {
   const byLower = new Map<string, string>();
@@ -313,7 +311,7 @@ const getCatalogPortraitRaces = (assets: ImageAsset[], genre: ImageGenre) => {
 };
 
 const isPortraitAssetType = (assetType: string | undefined) =>
-  assetType === 'Character Portrait' || assetType === 'NPC Portrait';
+  assetType === 'Character Portrait';
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
@@ -376,7 +374,6 @@ interface NamingInput {
 
 const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Character Portrait': ['race', 'gender'],
-  'NPC Portrait': ['race', 'gender'],
   'Monster Portrait': ['monsterType', 'monsterSubtype'],
   'Mount Portrait': ['mountType'],
   'Vehicle Portrait': ['vehicleType'],
@@ -401,7 +398,6 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
 /** Primary "Type" field kept after a successful upload for faster repeat uploads. */
 const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'Character Portrait': 'race',
-  'NPC Portrait': 'race',
   'Monster Portrait': 'monsterType',
   'Mount Portrait': 'mountType',
   'Vehicle Portrait': 'vehicleType',
@@ -465,11 +461,18 @@ const ALL_MONSTER_PORTRAIT_TAG_OPTIONS = (() => {
   return options;
 })();
 
+const ALL_ITEM_SUBTYPES = (() => {
+  const options = new Set<string>();
+  for (const category of ITEM_CATEGORY_OPTIONS) {
+    for (const subtype of getItemPortraitSubtypes(category)) {
+      options.add(subtype);
+    }
+  }
+  return options;
+})();
+
 const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> => {
   if (assetType === 'Character Portrait') {
-    return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
-  }
-  if (assetType === 'NPC Portrait') {
     return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
   }
   if (assetType === 'Monster Portrait') {
@@ -1536,10 +1539,7 @@ export default function AdminMedia() {
                     value={formData.genre}
                     onChange={(event) => {
                       const nextGenre = event.target.value as ImageGenre;
-                      const allowedTypes = getAssetTypeOptionsForGenre(
-                        nextGenre,
-                        formData.assetType === 'NPC Portrait'
-                      );
+                      const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
                       const nextAssetType = allowedTypes.includes(formData.assetType)
                         ? formData.assetType
                         : 'Character Portrait';
@@ -1590,10 +1590,7 @@ export default function AdminMedia() {
                     }}
                     className="input-field"
                   >
-                    {getAssetTypeOptionsForGenre(
-                      formData.genre,
-                      formData.assetType === 'NPC Portrait'
-                    ).map((assetType) => (
+                    {getAssetTypeOptionsForGenre(formData.genre).map((assetType) => (
                       <option key={assetType} value={assetType}>
                         {formatOptionLabel(assetType, getCount(formAssetTypeCounts, assetType))}
                       </option>
