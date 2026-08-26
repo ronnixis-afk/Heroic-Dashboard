@@ -418,13 +418,14 @@ export default function AdminSettings() {
                       </p>
                       <p className="help-text mt-0.5">{meta?.description}</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end">
+                      <div className="md:col-span-5">
                         <label className="input-label">Primary Model</label>
                         <select
                           value={draft.primary}
                           onChange={(e) => updateRoleDraft(roleId, 'primary', e.target.value)}
-                          className="input-field cursor-pointer"
+                          className="input-field cursor-pointer truncate"
+                          title={draft.primary}
                         >
                           {aiConfig.catalog.map((m) => (
                             <option key={m.id} value={m.id}>
@@ -433,21 +434,22 @@ export default function AdminSettings() {
                           ))}
                         </select>
                       </div>
-                      <div>
+                      <div className="md:col-span-5">
                         <label className="input-label">Fallback Model</label>
                         <select
                           value={draft.fallback}
                           onChange={(e) => updateRoleDraft(roleId, 'fallback', e.target.value)}
-                          className="input-field cursor-pointer"
+                          className="input-field cursor-pointer truncate"
+                          title={draft.fallback}
                         >
                           {aiConfig.catalog.map((m) => (
                             <option key={m.id} value={m.id}>
-                              {m.displayName} · ${m.inputUsdPer1M.toFixed(2)}/${m.outputUsdPer1M.toFixed(2)}
+                              {m.displayName} (${m.inputUsdPer1M.toFixed(2)} / ${m.outputUsdPer1M.toFixed(2)})
                             </option>
                           ))}
                         </select>
                       </div>
-                      <div>
+                      <div className="md:col-span-2">
                         <label className="input-label">Timeout (Ms)</label>
                         <input
                           type="number"

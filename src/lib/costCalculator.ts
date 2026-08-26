@@ -12,8 +12,8 @@ export type CatalogRateEntry = {
 /** Offline defaults aligned with game app catalog (cache miss). */
 const FALLBACK_CATALOG_RATES: Record<string, { input: number; output: number }> = {
   'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
-  'deepseek-v4-flash': { input: 0.14, output: 0.28 },
-  'deepseek-v4-pro': { input: 0.435, output: 0.87 },
+  'deepseek-v4-flash': { input: 0.22, output: 0.66 },
+  'deepseek-v4-pro': { input: 0.66, output: 1.98 },
 };
 
 let catalogRates: Record<string, { input: number; output: number }> = {
@@ -91,10 +91,10 @@ export function calculateFallbackCost(log: any): number {
     return (inT * 0.25) / 1_000_000 + (outT * 1.5) / 1_000_000;
   }
   if (modelLower.includes('deepseek-v4-pro')) {
-    return (inT * 0.435) / 1_000_000 + (outT * 0.87) / 1_000_000;
+    return (inT * 0.66) / 1_000_000 + (outT * 1.98) / 1_000_000;
   }
   if (modelLower.includes('deepseek')) {
-    return (inT * 0.14) / 1_000_000 + (outT * 0.28) / 1_000_000;
+    return (inT * 0.22) / 1_000_000 + (outT * 0.66) / 1_000_000;
   }
   if (modelLower.includes('8b')) {
     return (inT * 0.0375) / 1_000_000 + (outT * 0.15) / 1_000_000;
