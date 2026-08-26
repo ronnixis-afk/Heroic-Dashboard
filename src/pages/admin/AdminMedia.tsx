@@ -230,7 +230,7 @@ const getCatalogRideableSuggestions = (
 ): string[] => [...getRideableTypeSuggestions(genre as RideablePortraitGenre, category)];
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
-const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait']);
+const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait', 'NPC Portrait']);
 
 const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
   assetType as ImageAssetType;
@@ -281,23 +281,62 @@ const assetMatchesStructuredGenre = (assetGenre: string, formGenre: ImageGenre, 
 };
 
 /**
- * Suggested custom races beyond the core five — same names for Fantasy, Sci-Fi, and Modern
- * so uploads and world races stay aligned across genres.
+ * Suggested custom races beyond the core five — structured by genre so uploads
+ * stay aligned with RPG races and world creation.
  */
-const SUGGESTED_PORTRAIT_RACES = [
-  'Vampire',
-  'Werewolf',
-  'Goblin',
-  'Troll',
-  'Demon',
-  'Angel',
-  'Undead',
-  'Ghost',
-  'Giant',
-  'Fey',
-] as const;
+const SUGGESTED_PORTRAIT_RACES_BY_GENRE: Record<SpecificImageGenre, readonly string[]> = {
+  Fantasy: [
+    'Aasimar',
+    'Angel',
+    'Birdfolk',
+    'Catfolk',
+    'Dark-Elf',
+    'Demon',
+    'Dragonborn',
+    'Fey',
+    'Giant',
+    'Goblin',
+    'Half-Elf',
+    'Half-Orc',
+    'Lizardfolk',
+    'Nymph',
+    'Tiefling',
+    'Troll',
+    'Undead',
+  ],
+  'Sci-Fi': [
+    'Aetherian',
+    'Cygnian',
+    'Gorgon',
+    'Krynn',
+    'Neura',
+    'Orionan',
+    'Synthetic',
+    'Vespidan',
+    'Voidborn',
+  ],
+  Modern: [
+    'Ghost',
+    'Lycanthrope',
+    'Vampire',
+    'Werewolf',
+  ],
+};
 
-const getSuggestedPortraitRacesForGenre = (_genre: ImageGenre): string[] => [...SUGGESTED_PORTRAIT_RACES];
+const ALL_SUGGESTED_PORTRAIT_RACES = [
+  ...new Set([
+    ...SUGGESTED_PORTRAIT_RACES_BY_GENRE.Fantasy,
+    ...SUGGESTED_PORTRAIT_RACES_BY_GENRE['Sci-Fi'],
+    ...SUGGESTED_PORTRAIT_RACES_BY_GENRE.Modern,
+  ]),
+].sort((a, b) => a.localeCompare(b));
+
+const getSuggestedPortraitRacesForGenre = (genre: ImageGenre): string[] => {
+  if (genre === 'Any Genre') {
+    return [...ALL_SUGGESTED_PORTRAIT_RACES];
+  }
+  return [...(SUGGESTED_PORTRAIT_RACES_BY_GENRE[genre] || ALL_SUGGESTED_PORTRAIT_RACES)];
+};
 
 const getCatalogPortraitRaces = (assets: ImageAsset[], genre: ImageGenre) => {
   const races: string[] = [];
