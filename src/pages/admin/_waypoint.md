@@ -75,7 +75,7 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 
 ## Rideable Portrait Catalog Sync
 
-- **Source of truth:** `heroic-ai-rpg/src/constants/rideableCatalog.ts` (72 genre-scoped mounts/vehicles/ships).
+- **Source of truth:** `heroic-ai-rpg/src/constants/rideableCatalog.ts` (56 genre-scoped mounts/vehicles/ships: Fantasy mounts/ships, Modern vehicles/ships, Sci-Fi all).
 - **Dashboard copy:** `src/constants/rideablePortraitCatalog.ts` — auto-generated; do not edit by hand.
 - **Sync command:** `npm run sync:rideable-catalog` (also runs optionally on `predev` / `prebuild`).
 - After changing rideable names/categories in the RPG, run the sync and commit the regenerated catalog.

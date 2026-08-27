@@ -1910,7 +1910,7 @@ export default function AdminMedia() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-brand-text-muted">
-                      Combat Mounts Sold At Stables For This Genre (E.g. War Destrier, Patrol Motorcycle). Must Match The RPG Catalog Exactly.
+                      Combat Mounts Sold At Stables For This Genre (E.g. War Destrier, Hover-Bike). Must Match The RPG Catalog Exactly.
                     </p>
                   </div>
                 )}
@@ -1933,7 +1933,7 @@ export default function AdminMedia() {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-brand-text-muted">
-                      Travel Vehicles Also Sold At Stables For This Genre (E.g. Travel Wagon, Cargo Truck). Stables Lists Mounts + Vehicles Together.
+                      Travel Vehicles Sold At The Garage / Motor Pool For This Genre (E.g. Cargo Truck, Speeder Taxi). Must Match The RPG Catalog Exactly.
                     </p>
                   </div>
                 )}

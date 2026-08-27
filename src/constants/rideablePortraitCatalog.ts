@@ -22,16 +22,7 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
     'Cave Bear',
     'Shadow Panther',
   ],
-    vehicle: [
-    'Travel Wagon',
-    'Merchant Cart',
-    'War Chariot',
-    'Royal Carriage',
-    'Mining Sled',
-    'Supply Caravan',
-    'Balloon Gondola',
-    'Covered Coach',
-  ],
+    vehicle: [],
     ship: [
     'War Galley',
     'Elven Cutter',
@@ -44,16 +35,7 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
   ],
   },
   Modern: {
-    mount: [
-    'Patrol Motorcycle',
-    'Armored SUV',
-    'Dirt Bike',
-    'Tactical Quad',
-    'Pursuit Interceptor',
-    'Riot APC',
-    'Combat ATV',
-    'Enforcer Cruiser',
-  ],
+    mount: [],
     vehicle: [
     'Cargo Truck',
     'Sedan Coupe',

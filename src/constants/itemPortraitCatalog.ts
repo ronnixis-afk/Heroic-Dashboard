@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-08-26
+ * Last synced: 2026-08-27
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
