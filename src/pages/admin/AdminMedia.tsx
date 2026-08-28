@@ -562,7 +562,9 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
     ]);
   }
   if (assetType === 'Origin Item') {
-    return new Set(ORIGIN_ITEM_OPTIONS.flatMap((option) => [option.id, option.name]));
+    return new Set(
+      ORIGIN_ITEM_OPTIONS.flatMap((option) => [option.id, option.name, option.storyTitle])
+    );
   }
   if (assetType === 'Zone Image') {
     return ALL_ZONE_TERRAIN_OPTIONS;
@@ -1232,7 +1234,7 @@ export default function AdminMedia() {
       if (formData.assetType === 'Origin Item') {
         const startingStoryId = formData.metadata.startingStoryId || '';
         if (!isOriginItemStartingStoryId(startingStoryId)) {
-          throw new Error('Pick Which Origin This Picture Belongs To.');
+          throw new Error('Pick Which Origin Item This Picture Belongs To.');
         }
         const existingCount = getCount(originStoryCounts, startingStoryId);
         const isSameOriginEdit =
@@ -1240,7 +1242,7 @@ export default function AdminMedia() {
           getStringMetadata(editingAsset?.metadata).startingStoryId === startingStoryId;
         if (existingCount > 0 && !isSameOriginEdit) {
           throw new Error(
-            'This Origin Already Has An Origin Item Image. Delete The Existing One To Replace It.'
+            'This Origin Item Already Has An Image. Delete The Existing One To Replace It.'
           );
         }
       }
@@ -1268,7 +1270,7 @@ export default function AdminMedia() {
       }
 
       if (saveData.assetType === 'Origin Item' && optimizedImages.length > 1) {
-        throw new Error('Origin Item Uploads One Picture Per Origin. Select A Single Image.');
+        throw new Error('Origin Item Uploads One Picture Per Origin Item. Select A Single Image.');
       }
 
       const firstUploadOrder = getNextUploadOrder(assets, saveData);
@@ -1954,26 +1956,49 @@ export default function AdminMedia() {
                   </div>
                 )}
 
-                {formData.assetType === 'Origin Item' && (
-                  <div>
-                    <label className="input-label">Origin</label>
-                    <select
-                      value={formData.metadata.startingStoryId || ''}
-                      onChange={(event) => setMetadataField('startingStoryId', event.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select Origin</option>
-                      {ORIGIN_ITEM_OPTIONS.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {formatOptionLabel(option.name, getCount(originStoryCounts, option.id))}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-brand-text-muted">
-                      One Picture Per Origin. Genre Is Always Any Genre So The Live Game Can Find It.
-                    </p>
-                  </div>
-                )}
+                {formData.assetType === 'Origin Item' && (() => {
+                  const selectedOrigin = ORIGIN_ITEM_OPTIONS.find(
+                    (option) => option.id === formData.metadata.startingStoryId
+                  );
+                  return (
+                    <div>
+                      <label className="input-label">Origin Item</label>
+                      <select
+                        value={formData.metadata.startingStoryId || ''}
+                        onChange={(event) => setMetadataField('startingStoryId', event.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">Select Origin Item</option>
+                        {ORIGIN_ITEM_OPTIONS.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {formatOptionLabel(
+                              `${option.name} (${option.storyTitle})`,
+                              getCount(originStoryCounts, option.id)
+                            )}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedOrigin && (
+                        <div className="mt-2 rounded-md border border-brand-border/40 bg-brand-surface/60 p-2.5 text-xs text-brand-text-muted">
+                          <p>
+                            <span className="font-semibold text-brand-text">Origin Story:</span>{' '}
+                            {selectedOrigin.storyTitle}
+                            <span className="mx-1.5 text-brand-border">•</span>
+                            <span className="font-semibold text-brand-text">Item Type:</span>{' '}
+                            {selectedOrigin.itemType}
+                          </p>
+                          <p className="mt-1 leading-relaxed text-brand-text-secondary">
+                            <span className="font-semibold text-brand-text">Description:</span>{' '}
+                            {selectedOrigin.description}
+                          </p>
+                        </div>
+                      )}
+                      <p className="mt-1.5 text-xs text-brand-text-muted">
+                        One Picture Per Origin Item. Genre Is Always Any Genre So The Live Game Can Find It.
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {formData.assetType === 'Mount Portrait' && (
                   <div>

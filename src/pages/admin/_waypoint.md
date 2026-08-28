@@ -102,9 +102,10 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 
 ## Origin Item Catalog
 
-- **Source of truth:** RPG origin story ids used by `GET /api/image-assets/origin-item-defaults?startingStoryId=…` (`humble_beginnings`, `the_drifter`, `the_blank_slate`, `the_pariah`, `the_fallen_house`).
-- **Dashboard copy:** `src/constants/originItemCatalog.ts` — fixed list of the five playable origins; not synced from loot catalogs.
-- **Upload dropdowns:** Origin Item (forces Genre = Any Genre) → Origin (display name). One picture per origin. Match keys: `assetType: "Origin Item"` + `genre: "Any Genre"` + `metadata.startingStoryId` → RPG origin keepsake `imageUrl`. Do not upload Origin Item as Item Image.
+- **Source of truth:** RPG origin story ids and keepsake definitions in `heroic-ai-rpg/src/config/startingStories.ts` used by `GET /api/image-assets/origin-item-defaults?startingStoryId=…` (`humble_beginnings`, `the_drifter`, `the_blank_slate`, `the_pariah`, `the_fallen_house`).
+- **Dashboard copy:** `src/constants/originItemCatalog.ts` — auto-generated via `scripts/extract-origin-item-catalog.mjs`.
+- **Sync command:** `npm run sync:origin-item-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
+- **Upload dropdowns:** Origin Item (forces Genre = Any Genre) → Origin Item (`{name} ({storyTitle})` dropdown options, with full visual description card when selected). One picture per origin keepsake. Match keys: `assetType: "Origin Item"` + `genre: "Any Genre"` + `metadata.startingStoryId` → RPG origin keepsake `imageUrl`. Do not upload Origin Item as Item Image.
 
 ## Zone Image Catalog
 
