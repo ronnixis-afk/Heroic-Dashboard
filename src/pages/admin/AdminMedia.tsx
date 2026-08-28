@@ -28,6 +28,11 @@ import {
 import { useMonsterCatalogWithSubtypes } from '../../hooks/useMonsterCatalog';
 import { useDiscoveredRaces } from '../../hooks/useDiscoveredRaces';
 import {
+  findPortraitRaceSecondaryMapping,
+  usePortraitRaceSecondaryImagery,
+  type PortraitRaceSecondaryGenre,
+} from '../../hooks/usePortraitRaceSecondaryImagery';
+import {
   countByAssetType,
   countByGenre,
   countByMetadataKey,
@@ -106,21 +111,6 @@ const formatArtFamilyOptionLabel = (
   }
   return formatOptionLabel(label, count);
 };
-const TAG_GROUPS = [
-  {
-    label: 'Warrior',
-    tags: ['Fighter', 'Warrior', 'Martial'],
-  },
-  {
-    label: 'Rogue',
-    tags: ['Ranger', 'Rogue', 'Sniper', 'Hunter', 'Scout'],
-  },
-  {
-    label: 'Caster',
-    tags: ['Mage', 'Magician', 'Wizard', 'Sorcerer', 'Spellcaster'],
-  },
-] as const;
-
 const POI_TAG_SUGGESTIONS: Record<SpecificImageGenre, { baseTypes: string[]; modifiers: string[] }> = {
   Fantasy: {
     baseTypes: [
@@ -700,6 +690,12 @@ export default function AdminMedia() {
     refetch: refetchDiscoveredRaces,
   } = useDiscoveredRaces();
 
+  const {
+    mappings: secondaryImageryMappings,
+    isSaving: isSavingSecondaryImagery,
+    setSecondaryRace: saveSecondaryRace,
+  } = usePortraitRaceSecondaryImagery();
+
   const discoveredRaceNamesByGenre = useMemo(() => {
     const byGenre: Record<string, string[]> = { Fantasy: [], 'Sci-Fi': [], Modern: [] };
     const all: string[] = [];
@@ -828,6 +824,33 @@ export default function AdminMedia() {
     if (!raceQuery) return options;
     return options.filter((option) => option.toLowerCase().includes(raceQuery));
   }, [formData.metadata.race, onlyUncoveredRaces, portraitRaceCounts, portraitRaceOptions]);
+  const selectedPortraitRace = (formData.metadata.race || '').trim();
+  const secondaryImageryGenre: PortraitRaceSecondaryGenre =
+    formData.genre === 'Fantasy' || formData.genre === 'Sci-Fi' || formData.genre === 'Modern'
+      ? formData.genre
+      : structuredGenre;
+  const currentSecondaryRace =
+    findPortraitRaceSecondaryMapping(
+      secondaryImageryMappings,
+      secondaryImageryGenre,
+      selectedPortraitRace
+    )?.secondaryRace || '';
+  const secondaryRaceOptions = useMemo(() => {
+    const currentKey = selectedPortraitRace.toLowerCase();
+    const selectedSecondaryKey = currentSecondaryRace.toLowerCase();
+    const options = portraitRaceOptions.filter((option) => {
+      const optionKey = option.toLowerCase();
+      if (optionKey === currentKey) return false;
+      return getCount(portraitRaceCounts, option) > 0 || optionKey === selectedSecondaryKey;
+    });
+    if (
+      currentSecondaryRace &&
+      !options.some((option) => option.toLowerCase() === selectedSecondaryKey)
+    ) {
+      options.unshift(currentSecondaryRace);
+    }
+    return options.sort((a, b) => a.localeCompare(b));
+  }, [currentSecondaryRace, portraitRaceCounts, portraitRaceOptions, selectedPortraitRace]);
   const formAssetTypeTotal = useMemo(
     () => countScopedTotal(facetRows, formAssetTypeScope),
     [facetRows, formAssetTypeScope]
@@ -1121,20 +1144,6 @@ export default function AdminMedia() {
     const tag = toTitleCase(value);
     if (!tag || formData.tags.includes(tag)) return;
     setFormData((current) => ({ ...current, tags: [...current.tags, tag] }));
-    setTagDraft('');
-  };
-
-  const addTagGroup = (tags: readonly string[]) => {
-    setFormData((current) => {
-      const nextTags = [...current.tags];
-      tags.forEach((value) => {
-        const tag = toTitleCase(value);
-        if (tag && !nextTags.includes(tag)) {
-          nextTags.push(tag);
-        }
-      });
-      return { ...current, tags: nextTags };
-    });
     setTagDraft('');
   };
 
@@ -1535,6 +1544,16 @@ export default function AdminMedia() {
     window.setTimeout(() => setIsRaceMenuOpen(false), 120);
   };
 
+  const handleSecondaryRaceChange = async (value: string) => {
+    if (!selectedPortraitRace) return;
+    setErrorMessage(null);
+    try {
+      await saveSecondaryRace(secondaryImageryGenre, selectedPortraitRace, value);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, 'Unable To Save Secondary Imagery.'));
+    }
+  };
+
   const handleDelete = async (asset: ImageAsset) => {
     if (!window.confirm(`Permanently Delete ${asset.title}?`)) return;
 
@@ -1694,7 +1713,7 @@ export default function AdminMedia() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="input-label">Genre</label>
                   <select
@@ -1771,7 +1790,7 @@ export default function AdminMedia() {
 
               {isPortraitAssetType(formData.assetType) && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3">
                     <div>
                       <label className="input-label">Portrait Gender</label>
                       <select
@@ -1843,17 +1862,6 @@ export default function AdminMedia() {
                         </button>
                         {isRaceMenuOpen && (
                           <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
-                            <button
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setMetadataField('race', '');
-                                setIsRaceMenuOpen(false);
-                              }}
-                              className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text-muted hover:bg-brand-primary/30 hover:text-brand-text"
-                            >
-                              {formatOptionLabel('Any Race', formAssetTypeTotal)}
-                            </button>
                             {filteredPortraitRaceOptions.map((option) => {
                               const count = getCount(portraitRaceCounts, option);
                               return (
@@ -1891,27 +1899,45 @@ export default function AdminMedia() {
                           </div>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-brand-text-muted">
-                        Dynamic Realm Races, Core Library, And Uploaded Portraits. Type A New Name To Add A Custom Race.
-                      </p>
 
-                      {selectedRaceInfo && (selectedRaceInfo.appearance || selectedRaceInfo.description) && (
-                        <div className="mt-2.5 rounded-md border border-brand-border/40 bg-brand-surface/60 p-2.5 text-xs text-brand-text-muted space-y-2">
+                      {selectedPortraitRace && (
+                        <div className="mt-3">
+                          <label className="input-label">Secondary Imagery</label>
+                          <select
+                            value={currentSecondaryRace}
+                            onChange={(event) => {
+                              void handleSecondaryRaceChange(event.target.value);
+                            }}
+                            disabled={isSavingSecondaryImagery}
+                            className="input-field disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <option value="">None</option>
+                            {secondaryRaceOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {formatOptionLabel(option, getCount(portraitRaceCounts, option))}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-brand-text-muted">
+                            Uses This Race's Portraits First, Then The Selected Race.
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedRaceInfo?.appearance && (
+                        <div className="mt-2.5 rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2 text-xs text-brand-text-muted space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 font-medium text-brand-text">
                               <Sparkles size={13} className="text-brand-accent" />
-                              <span>{selectedRaceInfo.race} Visual Guide & Lore</span>
+                              <span>{selectedRaceInfo.race} Visual Guide</span>
                             </div>
                             <button
                               type="button"
                               onClick={() =>
-                                handleCopyText(
-                                  selectedRaceInfo.appearance || selectedRaceInfo.description || '',
-                                  'race-prompt'
-                                )
+                                handleCopyText(selectedRaceInfo.appearance, 'race-prompt')
                               }
                               className="flex items-center gap-1 rounded bg-brand-primary/30 px-2 py-0.5 text-[11px] font-medium text-brand-text-secondary hover:bg-brand-primary/50 hover:text-brand-text transition-colors"
-                              title="Copy prompt description to clipboard"
+                              title="Copy Visual Appearance To Clipboard"
                             >
                               {copiedField === 'race-prompt' ? (
                                 <>
@@ -1927,23 +1953,12 @@ export default function AdminMedia() {
                             </button>
                           </div>
 
-                          {selectedRaceInfo.appearance && (
-                            <div>
-                              <span className="font-semibold text-brand-text">Visual Appearance: </span>
-                              <span className="text-brand-text-secondary leading-relaxed">
-                                {selectedRaceInfo.appearance}
-                              </span>
-                            </div>
-                          )}
-
-                          {selectedRaceInfo.description && (
-                            <div>
-                              <span className="font-semibold text-brand-text">Lore & Biology: </span>
-                              <span className="text-brand-text-secondary leading-relaxed">
-                                {selectedRaceInfo.description}
-                              </span>
-                            </div>
-                          )}
+                          <div>
+                            <span className="font-semibold text-brand-text">Visual Appearance: </span>
+                            <span className="text-brand-text-secondary leading-relaxed">
+                              {selectedRaceInfo.appearance}
+                            </span>
+                          </div>
 
                           {selectedRaceInfo.themes && selectedRaceInfo.themes.length > 0 && (
                             <div className="flex flex-wrap items-center gap-1 pt-0.5">
@@ -2341,34 +2356,6 @@ export default function AdminMedia() {
                 </div>
               </div>
 
-              <div>
-                <label className="input-label">Tag Groups</label>
-                <div className="space-y-2">
-                  {TAG_GROUPS.map((group) => (
-                    <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => addTagGroup(group.tags)}
-                        className="badge-accent hover:border-brand-accent hover:text-brand-text"
-                        title={`Add All ${group.label} Tags`}
-                      >
-                        {group.label}
-                      </button>
-                      {group.tags.map((tag) => (
-                        <button
-                          key={`${group.label}-${tag}`}
-                          type="button"
-                          onClick={() => addTag(tag)}
-                          className="badge-muted hover:border-brand-accent hover:text-brand-text"
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               <div className="rounded-lg border border-brand-primary/50 bg-brand-bg/50 p-2">
                 <label className="input-label mb-0">Naming Convention</label>
                 <p className="mt-1 text-xs text-brand-text-muted">
@@ -2381,16 +2368,16 @@ export default function AdminMedia() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+              <div className="flex w-full flex-col gap-2 pt-2">
                 {editingAsset && (
-                  <button type="button" onClick={resetForm} className="btn-ghost">
+                  <button type="button" onClick={resetForm} className="btn-ghost w-full">
                     Cancel
                   </button>
                 )}
                 <button
                   type="submit"
                   disabled={isSaving || isOptimizing || (!editingAsset && optimizedImages.length === 0)}
-                  className="btn-primary"
+                  className="btn-primary w-full"
                 >
                   <Save size={14} />
                   {isSaving ? 'Saving...' : editingAsset ? 'Save Metadata' : 'Upload Images'}
@@ -2402,7 +2389,7 @@ export default function AdminMedia() {
 
         <div className="space-y-3">
           <div className="card p-3.5">
-            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="mb-3 space-y-3">
               <div>
                 <h3 className="section-title flex items-center gap-2">
                   <Tags className="text-brand-accent" size={16} />
