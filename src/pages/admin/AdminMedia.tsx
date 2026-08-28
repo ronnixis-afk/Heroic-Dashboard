@@ -10,6 +10,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  RotateCw,
+  Check,
+  Copy,
+  Sparkles,
 } from 'lucide-react';
 import { PageHeader, StatusBanner } from '../../components/ui';
 import {
@@ -22,6 +26,7 @@ import {
   useImageAssets,
 } from '../../hooks/useImageAssets';
 import { useMonsterCatalogWithSubtypes } from '../../hooks/useMonsterCatalog';
+import { useDiscoveredRaces } from '../../hooks/useDiscoveredRaces';
 import {
   countByAssetType,
   countByGenre,
@@ -298,21 +303,25 @@ const SUGGESTED_PORTRAIT_RACES_BY_GENRE: Record<SpecificImageGenre, readonly str
     'Dark-Elf',
     'Demon',
     'Dragonborn',
+    'Fae',
     'Fey',
     'Giant',
     'Goblin',
     'Half-Elf',
     'Half-Orc',
     'Lizardfolk',
+    'Nephilim',
     'Nymph',
     'Tiefling',
     'Troll',
     'Undead',
+    'Witch',
   ],
   'Sci-Fi': [
     'Aetherian',
     'Cygnian',
     'Gorgon',
+    'Homunculus',
     'Krynn',
     'Neura',
     'Orionan',
@@ -321,10 +330,18 @@ const SUGGESTED_PORTRAIT_RACES_BY_GENRE: Record<SpecificImageGenre, readonly str
     'Voidborn',
   ],
   Modern: [
+    'Dhampir',
+    'Djinn',
+    'Fae',
+    'Gargoyle',
     'Ghost',
+    'Homunculus',
     'Lycanthrope',
+    'Nephilim',
+    'Revenant',
     'Vampire',
     'Werewolf',
+    'Witch',
   ],
 };
 
@@ -674,6 +691,50 @@ export default function AdminMedia() {
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [customRacesByGenre, setCustomRacesByGenre] = useState<Record<string, string[]>>({});
   const [isRaceMenuOpen, setIsRaceMenuOpen] = useState(false);
+  const [onlyUncoveredRaces, setOnlyUncoveredRaces] = useState(false);
+
+  const {
+    races: dynamicDiscoveredRaces,
+    uncoveredCount: dynamicUncoveredRaceCount,
+    isFetching: isFetchingDiscoveredRaces,
+    refetch: refetchDiscoveredRaces,
+  } = useDiscoveredRaces();
+
+  const discoveredRaceNamesByGenre = useMemo(() => {
+    const byGenre: Record<string, string[]> = { Fantasy: [], 'Sci-Fi': [], Modern: [] };
+    const all: string[] = [];
+    for (const item of dynamicDiscoveredRaces) {
+      all.push(item.race);
+      for (const g of item.genres) {
+        if (byGenre[g]) byGenre[g].push(item.race);
+      }
+    }
+    return {
+      all: [...new Set(all)],
+      Fantasy: [...new Set(byGenre.Fantasy)],
+      'Sci-Fi': [...new Set(byGenre['Sci-Fi'])],
+      Modern: [...new Set(byGenre.Modern)],
+    };
+  }, [dynamicDiscoveredRaces]);
+
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, fieldKey: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldKey);
+    window.setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const selectedRaceInfo = useMemo(() => {
+    const race = (formData.metadata.race || '').trim().toLowerCase();
+    if (!race) return null;
+    return (
+      dynamicDiscoveredRaces.find(
+        (r) => r.race.toLowerCase() === race || r.canonicalKey === race
+      ) || null
+    );
+  }, [dynamicDiscoveredRaces, formData.metadata.race]);
 
   useEffect(() => {
     return () => {
@@ -722,19 +783,16 @@ export default function AdminMedia() {
       mergePortraitRaceOptions(
         PORTRAIT_METADATA_OPTIONS.race,
         getSuggestedPortraitRacesForGenre(formData.genre),
+        formData.genre === 'Any Genre'
+          ? discoveredRaceNamesByGenre.all
+          : discoveredRaceNamesByGenre[formData.genre] || [],
         getCatalogPortraitRaces(assets, formData.genre),
         customRacesByGenre[formData.genre] || [],
         // Keep cross-genre customs discoverable while typing on Any Genre uploads.
         formData.genre === 'Any Genre' ? Object.values(customRacesByGenre).flat() : []
       ),
-    [assets, customRacesByGenre, formData.genre]
+    [assets, customRacesByGenre, discoveredRaceNamesByGenre, formData.genre]
   );
-  const filteredPortraitRaceOptions = useMemo(() => {
-    const raceQuery = (formData.metadata.race || '').trim().toLowerCase();
-    if (!raceQuery) return portraitRaceOptions;
-    return portraitRaceOptions.filter((option) => option.toLowerCase().includes(raceQuery));
-  }, [formData.metadata.race, portraitRaceOptions]);
-
   const structuredGenre = getStructuredGenre(formData.genre);
 
   const formGenreScope = useMemo(
@@ -761,6 +819,15 @@ export default function AdminMedia() {
     () => countByMetadataKey(facetRows, 'race', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
   );
+  const filteredPortraitRaceOptions = useMemo(() => {
+    const raceQuery = (formData.metadata.race || '').trim().toLowerCase();
+    let options = portraitRaceOptions;
+    if (onlyUncoveredRaces) {
+      options = options.filter((option) => getCount(portraitRaceCounts, option) === 0);
+    }
+    if (!raceQuery) return options;
+    return options.filter((option) => option.toLowerCase().includes(raceQuery));
+  }, [formData.metadata.race, onlyUncoveredRaces, portraitRaceCounts, portraitRaceOptions]);
   const formAssetTypeTotal = useMemo(
     () => countScopedTotal(facetRows, formAssetTypeScope),
     [facetRows, formAssetTypeScope]
@@ -1723,7 +1790,36 @@ export default function AdminMedia() {
                       </select>
                     </div>
                     <div>
-                      <label className="input-label">Portrait Race</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="input-label mb-0">Portrait Race</label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setOnlyUncoveredRaces((prev) => !prev)}
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              onlyUncoveredRaces
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'bg-brand-primary/30 text-brand-text-muted hover:text-brand-text border border-transparent'
+                            }`}
+                            title="Filter race list to races with 0 uploaded portraits"
+                          >
+                            Needs Artwork
+                            {dynamicUncoveredRaceCount > 0 && ` (${dynamicUncoveredRaceCount})`}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => refetchDiscoveredRaces()}
+                            disabled={isFetchingDiscoveredRaces}
+                            className="rounded p-0.5 text-brand-text-muted hover:text-brand-text transition-colors"
+                            title="Refresh discovered races from realms and library"
+                          >
+                            <RotateCw
+                              size={11}
+                              className={isFetchingDiscoveredRaces ? 'animate-spin' : ''}
+                            />
+                          </button>
+                        </div>
+                      </div>
                       <div className="relative">
                         <input
                           value={formData.metadata.race || ''}
@@ -1758,32 +1854,112 @@ export default function AdminMedia() {
                             >
                               {formatOptionLabel('Any Race', formAssetTypeTotal)}
                             </button>
-                            {filteredPortraitRaceOptions.map((option) => (
-                              <button
-                                key={option}
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => {
-                                  setMetadataField('race', option);
-                                  addCustomRaceOption(option);
-                                  setIsRaceMenuOpen(false);
-                                }}
-                                className="w-full rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
-                              >
-                                {formatOptionLabel(option, getCount(portraitRaceCounts, option))}
-                              </button>
-                            ))}
+                            {filteredPortraitRaceOptions.map((option) => {
+                              const count = getCount(portraitRaceCounts, option);
+                              return (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    setMetadataField('race', option);
+                                    addCustomRaceOption(option);
+                                    setIsRaceMenuOpen(false);
+                                  }}
+                                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-body-sm text-brand-text hover:bg-brand-primary/30"
+                                >
+                                  <span>{option}</span>
+                                  {count === 0 ? (
+                                    <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400">
+                                      0 Portraits
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-brand-text-muted">
+                                      ({count})
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
                             {filteredPortraitRaceOptions.length === 0 && (
                               <div className="px-2 py-1.5 text-body-sm text-brand-text-muted">
-                                Type A New Race Name
+                                {onlyUncoveredRaces
+                                  ? 'No Uncovered Races Found'
+                                  : 'Type A New Race Name'}
                               </div>
                             )}
                           </div>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-brand-text-muted">
-                        Core Races, Genre Suggestions, And Races Already Used On Uploaded Portraits. Type A New Name To Add A Custom Race.
+                        Dynamic Realm Races, Core Library, And Uploaded Portraits. Type A New Name To Add A Custom Race.
                       </p>
+
+                      {selectedRaceInfo && (selectedRaceInfo.appearance || selectedRaceInfo.description) && (
+                        <div className="mt-2.5 rounded-md border border-brand-border/40 bg-brand-surface/60 p-2.5 text-xs text-brand-text-muted space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-medium text-brand-text">
+                              <Sparkles size={13} className="text-brand-accent" />
+                              <span>{selectedRaceInfo.race} Visual Guide & Lore</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyText(
+                                  selectedRaceInfo.appearance || selectedRaceInfo.description || '',
+                                  'race-prompt'
+                                )
+                              }
+                              className="flex items-center gap-1 rounded bg-brand-primary/30 px-2 py-0.5 text-[11px] font-medium text-brand-text-secondary hover:bg-brand-primary/50 hover:text-brand-text transition-colors"
+                              title="Copy prompt description to clipboard"
+                            >
+                              {copiedField === 'race-prompt' ? (
+                                <>
+                                  <Check size={11} className="text-emerald-400" />
+                                  <span className="text-emerald-400">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={11} />
+                                  <span>Copy Prompt</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {selectedRaceInfo.appearance && (
+                            <div>
+                              <span className="font-semibold text-brand-text">Visual Appearance: </span>
+                              <span className="text-brand-text-secondary leading-relaxed">
+                                {selectedRaceInfo.appearance}
+                              </span>
+                            </div>
+                          )}
+
+                          {selectedRaceInfo.description && (
+                            <div>
+                              <span className="font-semibold text-brand-text">Lore & Biology: </span>
+                              <span className="text-brand-text-secondary leading-relaxed">
+                                {selectedRaceInfo.description}
+                              </span>
+                            </div>
+                          )}
+
+                          {selectedRaceInfo.themes && selectedRaceInfo.themes.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                              <span className="font-semibold text-brand-text mr-1">Themes:</span>
+                              {selectedRaceInfo.themes.map((theme) => (
+                                <span
+                                  key={theme}
+                                  className="rounded bg-brand-bg/80 px-1.5 py-0.5 text-[10px] text-brand-text-muted"
+                                >
+                                  {theme}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
