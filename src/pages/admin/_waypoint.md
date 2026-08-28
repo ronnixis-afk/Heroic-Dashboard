@@ -100,6 +100,12 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 - After adding/renaming damage types or power status debuffs in the RPG, run the sync and commit the regenerated catalog.
 - **Upload dropdowns:** Any Genre (or Fantasy / Modern / Sci-Fi) → Power Image → Power Category (`Single Damage`, `Multi Damage`, `Single Status`, `Multi Status`) then Power Subtype (damage types for Damage categories; combat status debuffs for Status categories). Match keys: `genre` + `metadata.powerCategory` + `metadata.powerSubtype` → RPG `Ability.imageUrl`.
 
+## Origin Item Catalog
+
+- **Source of truth:** RPG origin story ids used by `GET /api/image-assets/origin-item-defaults?startingStoryId=…` (`humble_beginnings`, `the_drifter`, `the_blank_slate`, `the_pariah`, `the_fallen_house`).
+- **Dashboard copy:** `src/constants/originItemCatalog.ts` — fixed list of the five playable origins; not synced from loot catalogs.
+- **Upload dropdowns:** Origin Item (forces Genre = Any Genre) → Origin (display name). One picture per origin. Match keys: `assetType: "Origin Item"` + `genre: "Any Genre"` + `metadata.startingStoryId` → RPG origin keepsake `imageUrl`. Do not upload Origin Item as Item Image.
+
 ## Zone Image Catalog
 
 - **Source of truth:** RPG `src/constants/terrainConfig.ts` (`GENRE_TERRAIN_MAP`).
