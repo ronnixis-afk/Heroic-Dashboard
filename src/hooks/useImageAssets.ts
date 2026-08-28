@@ -24,6 +24,7 @@ export const IMAGE_ASSET_TYPES = [
   'Zone Image',
   'Item Image',
   'Power Image',
+  'Origin Item',
   'App Assets',
 ] as const;
 
@@ -111,6 +112,8 @@ const getMetadataPathSegments = (input: ImageAssetInput) => {
       return compactSegments([metadata.itemCategory, metadata.itemSubtype]);
     case 'Power Image':
       return compactSegments([metadata.powerCategory, metadata.powerSubtype]);
+    case 'Origin Item':
+      return compactSegments([metadata.startingStoryId]);
     case 'Monster Portrait':
       return compactSegments([metadata.monsterType, metadata.monsterSubtype]);
     default:

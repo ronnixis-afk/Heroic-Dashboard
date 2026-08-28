@@ -62,6 +62,11 @@ import {
   POWER_IMAGE_DAMAGE_SUBTYPES,
   POWER_IMAGE_STATUS_SUBTYPES,
 } from '../../constants/powerImageCatalog';
+import {
+  getOriginItemDisplayName,
+  isOriginItemStartingStoryId,
+  ORIGIN_ITEM_OPTIONS,
+} from '../../constants/originItemCatalog';
 
 type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
 
@@ -421,6 +426,7 @@ const NAMING_METADATA_KEYS: Record<ImageAssetType, string[]> = {
   'Zone Image': ['terrainType'],
   'Item Image': ['itemCategory', 'itemSubtype'],
   'Power Image': ['powerCategory', 'powerSubtype'],
+  'Origin Item': ['startingStoryId'],
   'App Assets': [],
 };
 
@@ -429,6 +435,7 @@ const hasStructuredMetadataFields = (assetType: ImageAssetType) =>
   assetType === 'Zone Image' ||
   assetType === 'Item Image' ||
   assetType === 'Power Image' ||
+  assetType === 'Origin Item' ||
   assetType === 'Monster Portrait' ||
   assetType === 'Mount Portrait' ||
   assetType === 'Vehicle Portrait' ||
@@ -450,7 +457,16 @@ const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getNamingMetadataValues = (input: NamingInput) =>
-  NAMING_METADATA_KEYS[input.assetType].map((key) => input.metadata[key]).filter(Boolean);
+  NAMING_METADATA_KEYS[input.assetType]
+    .map((key) => {
+      const value = input.metadata[key];
+      if (!value) return '';
+      if (input.assetType === 'Origin Item' && key === 'startingStoryId') {
+        return getOriginItemDisplayName(value);
+      }
+      return value;
+    })
+    .filter(Boolean);
 
 const getImageTitlePrefix = (input: NamingInput) =>
   [input.genre, input.assetType, ...getNamingMetadataValues(input)].join(' ');
@@ -545,6 +561,9 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
       ...POWER_IMAGE_STATUS_SUBTYPES,
     ]);
   }
+  if (assetType === 'Origin Item') {
+    return new Set(ORIGIN_ITEM_OPTIONS.flatMap((option) => [option.id, option.name]));
+  }
   if (assetType === 'Zone Image') {
     return ALL_ZONE_TERRAIN_OPTIONS;
   }
@@ -555,7 +574,10 @@ const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
   const selectionTags = [
     input.genre,
     input.assetType,
-    ...NAMING_METADATA_KEYS[input.assetType].map((key) => input.metadata[key]),
+    ...getNamingMetadataValues(input),
+    ...(input.assetType === 'Origin Item' && input.metadata.startingStoryId
+      ? [input.metadata.startingStoryId]
+      : []),
   ].filter(Boolean);
   const managedTags = getManagedStructuredTagOptions(input.assetType);
   const baseTags =
@@ -796,6 +818,13 @@ export default function AdminMedia() {
   const powerSubtypeTotal = useMemo(
     () => countScopedTotal(facetRows, powerSubtypeScope),
     [facetRows, powerSubtypeScope]
+  );
+  const originStoryCounts = useMemo(
+    () =>
+      countByMetadataKey(facetRows, 'startingStoryId', {
+        assetTypes: ['Origin Item'],
+      }),
+    [facetRows]
   );
   const mountTypeCounts = useMemo(
     () => countByMetadataKey(facetRows, 'mountType', formAssetTypeScope),
@@ -1200,13 +1229,34 @@ export default function AdminMedia() {
     setIsSaving(true);
 
     try {
+      if (formData.assetType === 'Origin Item') {
+        const startingStoryId = formData.metadata.startingStoryId || '';
+        if (!isOriginItemStartingStoryId(startingStoryId)) {
+          throw new Error('Pick Which Origin This Picture Belongs To.');
+        }
+        const existingCount = getCount(originStoryCounts, startingStoryId);
+        const isSameOriginEdit =
+          Boolean(editingAsset) &&
+          getStringMetadata(editingAsset?.metadata).startingStoryId === startingStoryId;
+        if (existingCount > 0 && !isSameOriginEdit) {
+          throw new Error(
+            'This Origin Already Has An Origin Item Image. Delete The Existing One To Replace It.'
+          );
+        }
+      }
+
+      const saveData =
+        formData.assetType === 'Origin Item'
+          ? { ...formData, genre: 'Any Genre' as ImageGenre }
+          : formData;
+
       if (editingAsset) {
         const uploadOrder = getTrailingUploadOrder(editingAsset.title) || 1;
         await updateImageAsset(editingAsset.id, {
-          ...formData,
-          tags: getTagsWithStructuredMetadata(formData),
-          title: getGeneratedImageTitle(formData, uploadOrder),
-          description: formData.description.trim(),
+          ...saveData,
+          tags: getTagsWithStructuredMetadata(saveData),
+          title: getGeneratedImageTitle(saveData, uploadOrder),
+          description: saveData.description.trim(),
         });
         resetForm();
         setStatusMessage('Image Metadata Updated.');
@@ -1217,14 +1267,18 @@ export default function AdminMedia() {
         throw new Error('Please Select And Optimize At Least One Image First.');
       }
 
-      const firstUploadOrder = getNextUploadOrder(assets, formData);
+      if (saveData.assetType === 'Origin Item' && optimizedImages.length > 1) {
+        throw new Error('Origin Item Uploads One Picture Per Origin. Select A Single Image.');
+      }
+
+      const firstUploadOrder = getNextUploadOrder(assets, saveData);
 
       for (const [index, image] of optimizedImages.entries()) {
         await createImageAsset({
-          ...formData,
-          tags: getTagsWithStructuredMetadata(formData),
-          title: getGeneratedImageTitle(formData, firstUploadOrder + index),
-          description: formData.description.trim(),
+          ...saveData,
+          tags: getTagsWithStructuredMetadata(saveData),
+          title: getGeneratedImageTitle(saveData, firstUploadOrder + index),
+          description: saveData.description.trim(),
           blob: image.blob,
           sizeBytes: image.outputSize,
           width: image.width,
@@ -1576,6 +1630,7 @@ export default function AdminMedia() {
                   <label className="input-label">Genre</label>
                   <select
                     value={formData.genre}
+                    disabled={formData.assetType === 'Origin Item'}
                     onChange={(event) => {
                       const nextGenre = event.target.value as ImageGenre;
                       const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
@@ -1597,7 +1652,12 @@ export default function AdminMedia() {
                         };
                       });
                     }}
-                    className="input-field"
+                    className="input-field disabled:cursor-not-allowed disabled:opacity-60"
+                    title={
+                      formData.assetType === 'Origin Item'
+                        ? 'Origin Item Always Uses Any Genre'
+                        : undefined
+                    }
                   >
                     {IMAGE_GENRES.map((genre) => (
                       <option key={genre} value={genre}>
@@ -1616,6 +1676,8 @@ export default function AdminMedia() {
                       setFormData((current) => {
                         const nextForm = {
                           ...current,
+                          genre:
+                            nextAssetType === 'Origin Item' ? ('Any Genre' as ImageGenre) : current.genre,
                           assetType: nextAssetType,
                           metadata: {},
                           description: '',
@@ -1889,6 +1951,27 @@ export default function AdminMedia() {
                         ))}
                       </select>
                     </div>
+                  </div>
+                )}
+
+                {formData.assetType === 'Origin Item' && (
+                  <div>
+                    <label className="input-label">Origin</label>
+                    <select
+                      value={formData.metadata.startingStoryId || ''}
+                      onChange={(event) => setMetadataField('startingStoryId', event.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Select Origin</option>
+                      {ORIGIN_ITEM_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {formatOptionLabel(option.name, getCount(originStoryCounts, option.id))}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-text-muted">
+                      One Picture Per Origin. Genre Is Always Any Genre So The Live Game Can Find It.
+                    </p>
                   </div>
                 )}
 
@@ -2320,7 +2403,8 @@ export default function AdminMedia() {
                           asset.assetType === 'Vehicle Portrait' ||
                           asset.assetType === 'Ship Portrait' ||
                           asset.assetType === 'Item Image' ||
-                          asset.assetType === 'Power Image') &&
+                          asset.assetType === 'Power Image' ||
+                          asset.assetType === 'Origin Item') &&
                           (() => {
                             const meta = getStringMetadata(asset.metadata);
                             const templateName =
@@ -2333,6 +2417,10 @@ export default function AdminMedia() {
                                   : ''
                                 : asset.assetType === 'Power Image'
                                   ? [meta.powerCategory, meta.powerSubtype].filter(Boolean).join(' · ')
+                                  : asset.assetType === 'Origin Item'
+                                    ? meta.startingStoryId
+                                      ? getOriginItemDisplayName(meta.startingStoryId)
+                                      : ''
                                   : meta.mountType || meta.vehicleType || meta.shipType;
                             return templateName ? (
                               <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-center text-[10px] font-medium leading-tight text-white backdrop-blur">
