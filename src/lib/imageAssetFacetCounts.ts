@@ -1,9 +1,36 @@
 export interface ImageAssetFacetRow {
+  id: string;
   genre: string;
   assetType: string;
   metadata: Record<string, unknown>;
   tags: string[];
+  sizeBytes?: number;
+  updatedAt?: string;
 }
+
+export interface FacetCacheSnapshot {
+  rows: ImageAssetFacetRow[];
+  totalStorageBytes: number;
+  totalCount: number;
+  maxUpdatedAt: string | null;
+}
+
+export interface FacetSyncResponse {
+  unchanged: boolean;
+  snapshot: boolean;
+  totalCount: number;
+  totalStorageBytes: number;
+  maxUpdatedAt: string | null;
+  rows: ImageAssetFacetRow[];
+  activeIds?: string[];
+}
+
+export const EMPTY_FACET_SNAPSHOT: FacetCacheSnapshot = {
+  rows: [],
+  totalStorageBytes: 0,
+  totalCount: 0,
+  maxUpdatedAt: null,
+};
 
 export interface FacetScope {
   /** When `All` / `Any Genre` / empty, genre is not filtered. */
@@ -117,4 +144,105 @@ export function getCount(counts: Record<string, number>, key: string): number {
     if (entryKey.toLowerCase() === lower) return value;
   }
   return 0;
+}
+
+function laterTimestamp(left: string | null | undefined, right: string | null | undefined): string | null {
+  const leftMs = left ? new Date(left).getTime() : 0;
+  const rightMs = right ? new Date(right).getTime() : 0;
+  if (!leftMs && !rightMs) return right || left || null;
+  return rightMs >= leftMs ? right || null : left || null;
+}
+
+export function applyFacetSync(
+  cached: FacetCacheSnapshot | null,
+  response: FacetSyncResponse
+): FacetCacheSnapshot {
+  const base = cached ?? EMPTY_FACET_SNAPSHOT;
+  if (response.unchanged) {
+    return {
+      ...base,
+      totalStorageBytes: response.totalStorageBytes,
+      totalCount: response.totalCount,
+      maxUpdatedAt: response.maxUpdatedAt,
+    };
+  }
+  if (response.snapshot) {
+    return {
+      rows: response.rows.filter((row) => Boolean(row.id)),
+      totalStorageBytes: response.totalStorageBytes,
+      totalCount: response.totalCount,
+      maxUpdatedAt: response.maxUpdatedAt,
+    };
+  }
+
+  const byId = new Map(base.rows.filter((row) => row.id).map((row) => [row.id, row]));
+  for (const row of response.rows) {
+    if (row.id) byId.set(row.id, row);
+  }
+  if (response.activeIds) {
+    const keep = new Set(response.activeIds);
+    for (const id of [...byId.keys()]) {
+      if (!keep.has(id)) byId.delete(id);
+    }
+  }
+
+  return {
+    rows: [...byId.values()],
+    totalStorageBytes: response.totalStorageBytes,
+    totalCount: response.totalCount,
+    maxUpdatedAt: response.maxUpdatedAt,
+  };
+}
+
+export function needsFacetSnapshotFallback(
+  response: FacetSyncResponse,
+  merged: FacetCacheSnapshot
+): boolean {
+  return !response.unchanged && !response.snapshot && merged.rows.length !== response.totalCount;
+}
+
+export function buildFacetSyncQuery(cached: FacetCacheSnapshot | null): string {
+  if (!cached?.maxUpdatedAt || cached.rows.length === 0) return '';
+  const params = new URLSearchParams();
+  params.set('since', cached.maxUpdatedAt);
+  params.set('knownCount', String(cached.rows.length));
+  return params.toString();
+}
+
+export function upsertFacetRow(
+  snapshot: FacetCacheSnapshot,
+  row: ImageAssetFacetRow
+): FacetCacheSnapshot {
+  if (!row.id) return snapshot;
+  const previous = snapshot.rows.find((entry) => entry.id === row.id);
+  const rows = snapshot.rows.filter((entry) => entry.id !== row.id);
+  rows.push(row);
+  return {
+    rows,
+    totalStorageBytes: Math.max(
+      0,
+      snapshot.totalStorageBytes - (previous?.sizeBytes || 0) + (row.sizeBytes || 0)
+    ),
+    totalCount: rows.length,
+    maxUpdatedAt: laterTimestamp(snapshot.maxUpdatedAt, row.updatedAt),
+  };
+}
+
+export function removeFacetRows(
+  snapshot: FacetCacheSnapshot,
+  ids: string[]
+): FacetCacheSnapshot {
+  const remove = new Set(ids.filter(Boolean));
+  if (remove.size === 0) return snapshot;
+  const removedBytes = snapshot.rows.reduce(
+    (total, row) => (remove.has(row.id) ? total + (row.sizeBytes || 0) : total),
+    0
+  );
+  const rows = snapshot.rows.filter((row) => !remove.has(row.id));
+  return {
+    rows,
+    totalStorageBytes: Math.max(0, snapshot.totalStorageBytes - removedBytes),
+    totalCount: rows.length,
+    maxUpdatedAt: snapshot.maxUpdatedAt,
+  };
 }

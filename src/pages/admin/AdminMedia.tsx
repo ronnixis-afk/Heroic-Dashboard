@@ -14,8 +14,9 @@ import {
   Check,
   Copy,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
-import { PageHeader, StatusBanner } from '../../components/ui';
+import { PageHeader, StatusBanner, CountPendingControl } from '../../components/ui';
 import {
   IMAGE_ASSET_PAGE_SIZE,
   IMAGE_ASSET_TYPES,
@@ -646,6 +647,9 @@ export default function AdminMedia() {
   const {
     assets,
     facetRows,
+    facetsLoading,
+    facetsError,
+    isFetchingFacets,
     totalAssetCount,
     totalStorageBytes,
     totalPages,
@@ -686,9 +690,13 @@ export default function AdminMedia() {
   const {
     races: dynamicDiscoveredRaces,
     uncoveredCount: dynamicUncoveredRaceCount,
+    isLoading: isLoadingDiscoveredRaces,
     isFetching: isFetchingDiscoveredRaces,
     refetch: refetchDiscoveredRaces,
   } = useDiscoveredRaces();
+
+  const countsPending = facetsLoading;
+  const raceFieldPending = facetsLoading || isLoadingDiscoveredRaces;
 
   const {
     mappings: secondaryImageryMappings,
@@ -748,6 +756,10 @@ export default function AdminMedia() {
       console.warn('[MediaLibrary] Unable To Load Custom Race Options:', error);
     }
   }, []);
+
+  useEffect(() => {
+    if (raceFieldPending) setIsRaceMenuOpen(false);
+  }, [raceFieldPending]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -1616,6 +1628,12 @@ export default function AdminMedia() {
           }}
         />
       )}
+      {facetsError && (
+        <StatusBanner
+          type="error"
+          message={`Unable To Load Image Counts. ${facetsError}`}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[380px_1fr]">
         <div className="space-y-3">
@@ -1713,12 +1731,27 @@ export default function AdminMedia() {
                 </div>
               )}
 
+              <fieldset
+                disabled={countsPending}
+                className="min-w-0 space-y-3 border-0 p-0 m-0 disabled:opacity-100"
+              >
+              {countsPending && (
+                <p
+                  className="flex items-center gap-1.5 text-xs text-brand-text-muted"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 size={12} className="shrink-0 animate-spin text-brand-accent" />
+                  Loading Image Counts
+                </p>
+              )}
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="input-label">Genre</label>
+                  <CountPendingControl loading={countsPending}>
                   <select
                     value={formData.genre}
-                    disabled={formData.assetType === 'Origin Item'}
+                    disabled={countsPending || formData.assetType === 'Origin Item'}
                     onChange={(event) => {
                       const nextGenre = event.target.value as ImageGenre;
                       const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
@@ -1753,12 +1786,15 @@ export default function AdminMedia() {
                       </option>
                     ))}
                   </select>
+                  </CountPendingControl>
                 </div>
 
                 <div>
                   <label className="input-label">Asset Type</label>
+                  <CountPendingControl loading={countsPending}>
                   <select
                     value={formData.assetType}
+                    disabled={countsPending}
                     onChange={(event) => {
                       const nextAssetType = event.target.value as ImageAssetType;
                       setFormData((current) => {
@@ -1777,7 +1813,7 @@ export default function AdminMedia() {
                         };
                       });
                     }}
-                    className="input-field"
+                    className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {getAssetTypeOptionsForGenre(formData.genre).map((assetType) => (
                       <option key={assetType} value={assetType}>
@@ -1785,6 +1821,7 @@ export default function AdminMedia() {
                       </option>
                     ))}
                   </select>
+                  </CountPendingControl>
                 </div>
               </div>
 
@@ -1793,10 +1830,12 @@ export default function AdminMedia() {
                   <div className="grid grid-cols-1 gap-3">
                     <div>
                       <label className="input-label">Portrait Gender</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.gender || ''}
+                        disabled={countsPending}
                         onChange={(event) => setMetadataField('gender', event.target.value)}
-                        className="input-field"
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">
                           {formatOptionLabel('Any Gender', formAssetTypeTotal)}
@@ -1807,6 +1846,7 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -1815,7 +1855,8 @@ export default function AdminMedia() {
                           <button
                             type="button"
                             onClick={() => setOnlyUncoveredRaces((prev) => !prev)}
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            disabled={raceFieldPending}
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                               onlyUncoveredRaces
                                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                                 : 'bg-brand-primary/30 text-brand-text-muted hover:text-brand-text border border-transparent'
@@ -1828,8 +1869,8 @@ export default function AdminMedia() {
                           <button
                             type="button"
                             onClick={() => refetchDiscoveredRaces()}
-                            disabled={isFetchingDiscoveredRaces}
-                            className="rounded p-0.5 text-brand-text-muted hover:text-brand-text transition-colors"
+                            disabled={isFetchingDiscoveredRaces || raceFieldPending}
+                            className="rounded p-0.5 text-brand-text-muted hover:text-brand-text transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                             title="Refresh discovered races from realms and library"
                           >
                             <RotateCw
@@ -1839,28 +1880,33 @@ export default function AdminMedia() {
                           </button>
                         </div>
                       </div>
+                      <CountPendingControl loading={raceFieldPending}>
                       <div className="relative">
                         <input
                           value={formData.metadata.race || ''}
+                          disabled={raceFieldPending}
                           onChange={(event) => {
                             setMetadataField('race', event.target.value);
                             setIsRaceMenuOpen(true);
                           }}
-                          onFocus={() => setIsRaceMenuOpen(true)}
+                          onFocus={() => {
+                            if (!raceFieldPending) setIsRaceMenuOpen(true);
+                          }}
                           onBlur={handleRaceBlur}
-                          className="input-field pr-9"
+                          className="input-field pr-9 disabled:cursor-not-allowed disabled:opacity-60"
                           placeholder="Any Race"
                         />
                         <button
                           type="button"
+                          disabled={raceFieldPending}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => setIsRaceMenuOpen((current) => !current)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-text-muted hover:text-brand-text disabled:cursor-not-allowed"
                           aria-label="Toggle Race Options"
                         >
                           v
                         </button>
-                        {isRaceMenuOpen && (
+                        {isRaceMenuOpen && !raceFieldPending && (
                           <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
                             {filteredPortraitRaceOptions.map((option) => {
                               const count = getCount(portraitRaceCounts, option);
@@ -1899,16 +1945,18 @@ export default function AdminMedia() {
                           </div>
                         )}
                       </div>
+                      </CountPendingControl>
 
                       {selectedPortraitRace && (
                         <div className="mt-3">
                           <label className="input-label">Secondary Imagery</label>
+                          <CountPendingControl loading={countsPending}>
                           <select
                             value={currentSecondaryRace}
                             onChange={(event) => {
                               void handleSecondaryRaceChange(event.target.value);
                             }}
-                            disabled={isSavingSecondaryImagery}
+                            disabled={countsPending || isSavingSecondaryImagery}
                             className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <option value="">None</option>
@@ -1918,6 +1966,7 @@ export default function AdminMedia() {
                               </option>
                             ))}
                           </select>
+                          </CountPendingControl>
                           <p className="mt-1 text-xs text-brand-text-muted">
                             Uses This Race's Portraits First, Then The Selected Race.
                           </p>
@@ -1993,10 +2042,12 @@ export default function AdminMedia() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="input-label">Point Of Interest Type</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.poiBaseType || ''}
+                        disabled={countsPending}
                         onChange={(event) => setMetadataField('poiBaseType', event.target.value)}
-                        className="input-field"
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">
                           {formatOptionLabel('Any Type', formAssetTypeTotal)}
@@ -2007,13 +2058,16 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                     </div>
                     <div>
                       <label className="input-label">Point Of Interest Subtype</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.poiModifier || ''}
+                        disabled={countsPending}
                         onChange={(event) => setMetadataField('poiModifier', event.target.value)}
-                        className="input-field"
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">
                           {formatOptionLabel('Any Subtype', formAssetTypeTotal)}
@@ -2024,6 +2078,7 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                     </div>
                   </div>
                 )}
@@ -2031,10 +2086,12 @@ export default function AdminMedia() {
                 {formData.assetType === 'Zone Image' && (
                   <div>
                     <label className="input-label">Terrain Type</label>
+                    <CountPendingControl loading={countsPending}>
                     <select
                       value={formData.metadata.terrainType || ''}
+                      disabled={countsPending}
                       onChange={(event) => setMetadataField('terrainType', event.target.value)}
-                      className="input-field"
+                      className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">
                         {formatOptionLabel('Any Terrain', formAssetTypeTotal)}
@@ -2045,6 +2102,7 @@ export default function AdminMedia() {
                         </option>
                       ))}
                     </select>
+                    </CountPendingControl>
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Open-World Zone Art For This Genre. Must Match The RPG Terrain Type (E.g. Forest, Orbital).
                     </p>
@@ -2056,10 +2114,12 @@ export default function AdminMedia() {
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="input-label">Item Category</label>
+                        <CountPendingControl loading={countsPending}>
                         <select
                           value={formData.metadata.itemCategory || ''}
+                          disabled={countsPending}
                           onChange={(event) => setMetadataField('itemCategory', event.target.value)}
-                          className="input-field"
+                          className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="">
                             {formatOptionLabel('Any Category', formAssetTypeTotal)}
@@ -2070,9 +2130,11 @@ export default function AdminMedia() {
                             </option>
                           ))}
                         </select>
+                        </CountPendingControl>
                       </div>
                       <div>
                         <label className="input-label">Art Family</label>
+                        <CountPendingControl loading={countsPending}>
                         <select
                           value={
                             formData.metadata.itemSubtype
@@ -2080,8 +2142,8 @@ export default function AdminMedia() {
                               : ''
                           }
                           onChange={(event) => setMetadataField('itemSubtype', event.target.value)}
-                          className="input-field"
-                          disabled={!formData.metadata.itemCategory}
+                          className="input-field disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={countsPending || !formData.metadata.itemCategory}
                         >
                           <option value="">
                             {formatOptionLabel('Any Art Family', itemSubtypeTotal)}
@@ -2097,6 +2159,7 @@ export default function AdminMedia() {
                             </option>
                           ))}
                         </select>
+                        </CountPendingControl>
                       </div>
                     </div>
                     {selectedItemArtFamilyMembers.length > 0 && (
@@ -2111,10 +2174,12 @@ export default function AdminMedia() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="input-label">Power Category</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.powerCategory || ''}
+                        disabled={countsPending}
                         onChange={(event) => setMetadataField('powerCategory', event.target.value)}
-                        className="input-field"
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">
                           {formatOptionLabel('Any Category', formAssetTypeTotal)}
@@ -2125,14 +2190,16 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                     </div>
                     <div>
                       <label className="input-label">Power Subtype</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.powerSubtype || ''}
                         onChange={(event) => setMetadataField('powerSubtype', event.target.value)}
-                        className="input-field"
-                        disabled={!formData.metadata.powerCategory}
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={countsPending || !formData.metadata.powerCategory}
                       >
                         <option value="">
                           {formatOptionLabel('Any Subtype', powerSubtypeTotal)}
@@ -2143,6 +2210,7 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                     </div>
                   </div>
                 )}
@@ -2154,10 +2222,12 @@ export default function AdminMedia() {
                   return (
                     <div>
                       <label className="input-label">Origin Item</label>
+                      <CountPendingControl loading={countsPending}>
                       <select
                         value={formData.metadata.startingStoryId || ''}
+                        disabled={countsPending}
                         onChange={(event) => setMetadataField('startingStoryId', event.target.value)}
-                        className="input-field"
+                        className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">Select Origin Item</option>
                         {ORIGIN_ITEM_OPTIONS.map((option) => (
@@ -2169,6 +2239,7 @@ export default function AdminMedia() {
                           </option>
                         ))}
                       </select>
+                      </CountPendingControl>
                       {selectedOrigin && (
                         <div className="mt-2 rounded-md border border-brand-border/40 bg-brand-surface/60 p-2.5 text-xs text-brand-text-muted">
                           <p>
@@ -2194,10 +2265,12 @@ export default function AdminMedia() {
                 {formData.assetType === 'Mount Portrait' && (
                   <div>
                     <label className="input-label">Template Name</label>
+                    <CountPendingControl loading={countsPending}>
                     <select
                       value={formData.metadata.mountType || ''}
+                      disabled={countsPending}
                       onChange={(event) => setMetadataField('mountType', event.target.value)}
-                      className="input-field"
+                      className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">
                         {formatOptionLabel('Any Mount Type', formAssetTypeTotal)}
@@ -2208,6 +2281,7 @@ export default function AdminMedia() {
                         </option>
                       ))}
                     </select>
+                    </CountPendingControl>
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Combat Mounts Sold At Stables For This Genre (E.g. War Destrier, Hover-Bike). Must Match The RPG Catalog Exactly.
                     </p>
@@ -2217,10 +2291,12 @@ export default function AdminMedia() {
                 {formData.assetType === 'Vehicle Portrait' && (
                   <div>
                     <label className="input-label">Template Name</label>
+                    <CountPendingControl loading={countsPending}>
                     <select
                       value={formData.metadata.vehicleType || ''}
+                      disabled={countsPending}
                       onChange={(event) => setMetadataField('vehicleType', event.target.value)}
-                      className="input-field"
+                      className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">
                         {formatOptionLabel('Any Vehicle Type', formAssetTypeTotal)}
@@ -2231,6 +2307,7 @@ export default function AdminMedia() {
                         </option>
                       ))}
                     </select>
+                    </CountPendingControl>
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Travel Vehicles Sold At The Garage / Motor Pool For This Genre (E.g. Cargo Truck, Speeder Taxi). Must Match The RPG Catalog Exactly.
                     </p>
@@ -2240,10 +2317,12 @@ export default function AdminMedia() {
                 {formData.assetType === 'Ship Portrait' && (
                   <div>
                     <label className="input-label">Template Name</label>
+                    <CountPendingControl loading={countsPending}>
                     <select
                       value={formData.metadata.shipType || ''}
+                      disabled={countsPending}
                       onChange={(event) => setMetadataField('shipType', event.target.value)}
-                      className="input-field"
+                      className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">
                         {formatOptionLabel('Any Ship Type', formAssetTypeTotal)}
@@ -2254,6 +2333,7 @@ export default function AdminMedia() {
                         </option>
                       ))}
                     </select>
+                    </CountPendingControl>
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Shipyard Templates For This Genre (E.g. War Galley, SWAT Command Van, Heavy Dreadnought). Must Match The RPG Catalog Exactly.
                     </p>
@@ -2265,10 +2345,12 @@ export default function AdminMedia() {
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="input-label">Monster Type</label>
+                        <CountPendingControl loading={countsPending}>
                         <select
                           value={formData.metadata.monsterType || ''}
+                          disabled={countsPending}
                           onChange={(event) => setMetadataField('monsterType', event.target.value)}
-                          className="input-field"
+                          className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <option value="">
                             {formatOptionLabel('Any Type', formAssetTypeTotal)}
@@ -2279,14 +2361,16 @@ export default function AdminMedia() {
                             </option>
                           ))}
                         </select>
+                        </CountPendingControl>
                       </div>
                       <div>
                         <label className="input-label">Monster Subtype</label>
+                        <CountPendingControl loading={countsPending}>
                         <select
                           value={formData.metadata.monsterSubtype || ''}
                           onChange={(event) => setMonsterSubtype(event.target.value)}
-                          className="input-field"
-                          disabled={!formData.metadata.monsterType}
+                          className="input-field disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={countsPending || !formData.metadata.monsterType}
                         >
                           <option value="">
                             {formatOptionLabel('Any Subtype', monsterSubtypeTotal)}
@@ -2300,6 +2384,7 @@ export default function AdminMedia() {
                             </option>
                           ))}
                         </select>
+                        </CountPendingControl>
                       </div>
                     </div>
                     {formData.metadata.monsterSubtype && (
@@ -2323,6 +2408,7 @@ export default function AdminMedia() {
                 )}
                 </div>
               )}
+              </fieldset>
 
               <div>
                 <label className="input-label">Tags</label>
@@ -2397,7 +2483,13 @@ export default function AdminMedia() {
                 </h3>
                 <p className="card-subtitle">
                   Showing {visibleAssets.length} Of {totalAssetCount.toLocaleString()} Matching Image Assets
-                  {isFetching && !loading ? ' · Refreshing…' : '.'}
+                  {countsPending
+                    ? ' · Loading Counts…'
+                    : isFetchingFacets
+                      ? ' · Refreshing Counts…'
+                      : isFetching && !loading
+                        ? ' · Refreshing…'
+                        : '.'}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -2411,10 +2503,12 @@ export default function AdminMedia() {
                     className="input-field !pl-8"
                   />
                 </div>
+                <CountPendingControl loading={countsPending}>
                 <select
                   value={filters.genre}
+                  disabled={countsPending}
                   onChange={(event) => setFilters({ ...filters, genre: event.target.value })}
-                  className="input-field"
+                  className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="All">
                     {formatOptionLabel('All Genres', facetRows.length)}
@@ -2425,10 +2519,13 @@ export default function AdminMedia() {
                     </option>
                   ))}
                 </select>
+                </CountPendingControl>
+                <CountPendingControl loading={countsPending}>
                 <select
                   value={filters.assetType}
+                  disabled={countsPending}
                   onChange={(event) => setFilters({ ...filters, assetType: event.target.value })}
-                  className="input-field"
+                  className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="All">
                     {formatOptionLabel('All Asset Types', libraryAssetTypeTotal)}
@@ -2439,10 +2536,13 @@ export default function AdminMedia() {
                     </option>
                   ))}
                 </select>
+                </CountPendingControl>
+                <CountPendingControl loading={countsPending}>
                 <select
                   value={filters.tag}
+                  disabled={countsPending}
                   onChange={(event) => setFilters({ ...filters, tag: event.target.value })}
-                  className="input-field"
+                  className="input-field disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="All">
                     {formatOptionLabel('All Tags', libraryTagTotal)}
@@ -2453,6 +2553,7 @@ export default function AdminMedia() {
                     </option>
                   ))}
                 </select>
+                </CountPendingControl>
               </div>
             </div>
 

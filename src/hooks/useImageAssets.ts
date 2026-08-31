@@ -1,16 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  applyFacetSync,
+  buildFacetSyncQuery,
+  FacetCacheSnapshot,
+  FacetSyncResponse,
   ImageAssetFacetRow,
+  needsFacetSnapshotFallback,
+  removeFacetRows,
+  upsertFacetRow,
 } from '../lib/imageAssetFacetCounts';
+import { emptyFacetSnapshot, readFacetCache, writeFacetCache } from '../lib/imageAssetFacetCache';
 import { getAdminSupabase } from '../lib/getAdminSupabase';
 import { fetchRpgAdmin } from '../lib/rpgAdminApi';
 import { useAuth } from '../lib/AuthContext';
 
 export const IMAGE_ASSET_BUCKET = 'dashboard-image-assets';
 export const IMAGE_ASSET_PAGE_SIZE = 60;
-/** Page size for facet/storage totals so the full library is covered. */
-const IMAGE_ASSET_FACET_PAGE_SIZE = 1000;
+export const IMAGE_ASSET_FACET_QUERY_KEY = ['image-asset-facets'] as const;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 
 export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
@@ -161,6 +168,42 @@ function buildImageAssetsQuery(params: ImageAssetsQueryParams): string {
   return searchParams.toString();
 }
 
+function toFacetRow(asset: ImageAsset): ImageAssetFacetRow {
+  return {
+    id: asset.id,
+    genre: String(asset.genre || ''),
+    assetType: String(asset.assetType || ''),
+    metadata:
+      asset.metadata && typeof asset.metadata === 'object'
+        ? asset.metadata
+        : {},
+    tags: Array.isArray(asset.tags) ? asset.tags.map(String) : [],
+    sizeBytes: Number(asset.sizeBytes) || 0,
+    updatedAt: asset.updatedAt,
+  };
+}
+
+async function fetchFacetSnapshot(
+  getToken: (options?: any) => Promise<string | null>,
+  cached: FacetCacheSnapshot | null
+): Promise<FacetCacheSnapshot> {
+  const query = buildFacetSyncQuery(cached);
+  const response = await fetchRpgAdmin<FacetSyncResponse>(
+    `/api/admin/image-assets/facets${query ? `?${query}` : ''}`,
+    getToken
+  );
+  let next = applyFacetSync(cached, response);
+  if (needsFacetSnapshotFallback(response, next)) {
+    const snapshot = await fetchRpgAdmin<FacetSyncResponse>(
+      '/api/admin/image-assets/facets',
+      getToken
+    );
+    next = applyFacetSync(null, snapshot);
+  }
+  writeFacetCache(next);
+  return next;
+}
+
 async function fetchImageAssetsPage(
   getToken: (options?: any) => Promise<string | null>,
   params: ImageAssetsQueryParams
@@ -178,56 +221,6 @@ async function fetchImageAssetsPage(
   };
 }
 
-async function fetchAllImageAssetRows<T>(
-  getToken: (options?: any) => Promise<string | null>,
-  mapRow: (asset: ImageAsset) => T
-): Promise<T[]> {
-  const rows: T[] = [];
-  let page = 1;
-
-  while (true) {
-    const result = await fetchImageAssetsPage(getToken, {
-      page,
-      pageSize: IMAGE_ASSET_FACET_PAGE_SIZE,
-    });
-    rows.push(...result.assets.map(mapRow));
-
-    if (result.assets.length < IMAGE_ASSET_FACET_PAGE_SIZE) break;
-    if (rows.length >= (result.totalCount || 0) && result.totalCount > 0) break;
-    page += 1;
-  }
-
-  return rows;
-}
-
-async function fetchImageStorageBytes(getToken: (options?: any) => Promise<string | null>) {
-  try {
-    const rows = await fetchAllImageAssetRows(getToken, (asset) => Number(asset.sizeBytes) || 0);
-    return rows.reduce((total, sizeBytes) => total + sizeBytes, 0);
-  } catch (error) {
-    console.warn('[MediaLibrary] Storage totals fetch failed:', error);
-    return 0;
-  }
-}
-
-async function fetchImageAssetFacets(
-  getToken: (options?: any) => Promise<string | null>
-): Promise<ImageAssetFacetRow[]> {
-  try {
-    return await fetchAllImageAssetRows(getToken, (asset) => ({
-      genre: String(asset.genre || ''),
-      assetType: String(asset.assetType || ''),
-      metadata: (asset.metadata && typeof asset.metadata === 'object'
-        ? asset.metadata
-        : {}) as Record<string, unknown>,
-      tags: Array.isArray(asset.tags) ? asset.tags.map(String) : [],
-    }));
-  } catch (error) {
-    console.warn('[MediaLibrary] Facet fetch failed:', error);
-    return [];
-  }
-}
-
 export function useImageAssets(params: ImageAssetsQueryParams = {}) {
   const queryClient = useQueryClient();
   const { getToken, user } = useAuth();
@@ -241,6 +234,8 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
 
   const listQueryKey = ['image-assets', { page, pageSize, search, genre, assetType, tag }] as const;
 
+  const persistedFacets = useMemo(() => readFacetCache(), []);
+
   const { data: imageAssetResult, isLoading: loading, isFetching } = useQuery({
     queryKey: listQueryKey,
     queryFn: () =>
@@ -248,21 +243,57 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
     placeholderData: (previous) => previous,
   });
 
-  const { data: totalStorageBytes = 0 } = useQuery({
-    queryKey: ['image-assets', 'storage-bytes'],
-    queryFn: () => fetchImageStorageBytes(getToken),
-    staleTime: 1000 * 60 * 5,
+  const {
+    data: facetSnapshot,
+    isPending: facetsQueryPending,
+    isFetching: isFetchingFacets,
+    isError: isFacetsError,
+    error: facetsQueryError,
+  } = useQuery({
+    queryKey: IMAGE_ASSET_FACET_QUERY_KEY,
+    queryFn: async () => {
+      try {
+        const cached =
+          queryClient.getQueryData<FacetCacheSnapshot>(IMAGE_ASSET_FACET_QUERY_KEY) ??
+          readFacetCache();
+        return await fetchFacetSnapshot(getToken, cached ?? null);
+      } catch (error) {
+        const cached =
+          queryClient.getQueryData<FacetCacheSnapshot>(IMAGE_ASSET_FACET_QUERY_KEY) ??
+          readFacetCache();
+        if (cached && cached.rows.length > 0) {
+          console.warn('[MediaLibrary] Facet sync failed, using cached image counts:', error);
+          return cached;
+        }
+        throw error;
+      }
+    },
+    initialData: persistedFacets ?? undefined,
+    staleTime: 0,
+    retry: 1,
   });
 
-  const { data: facetRows = [] } = useQuery({
-    queryKey: ['image-assets', 'facets'],
-    queryFn: () => fetchImageAssetFacets(getToken),
-    staleTime: 1000 * 60 * 5,
-  });
-
+  const facetRows = facetSnapshot?.rows ?? [];
+  const totalStorageBytes = facetSnapshot?.totalStorageBytes ?? 0;
+  const facetsLoading =
+    (facetsQueryPending && !persistedFacets) || (isFacetsError && facetRows.length === 0);
+  const facetsError =
+    isFacetsError && facetRows.length === 0
+      ? facetsQueryError instanceof Error
+        ? facetsQueryError.message
+        : 'Unable To Load Image Counts.'
+      : null;
   const assets = imageAssetResult?.assets ?? [];
   const totalAssetCount = imageAssetResult?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalAssetCount / pageSize));
+
+  const patchFacets = (mutator: (current: FacetCacheSnapshot) => FacetCacheSnapshot) => {
+    queryClient.setQueryData<FacetCacheSnapshot>(IMAGE_ASSET_FACET_QUERY_KEY, (current) => {
+      const next = mutator(current ?? readFacetCache() ?? emptyFacetSnapshot());
+      writeFacetCache(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
@@ -277,6 +308,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
           if (invalidateTimer) clearTimeout(invalidateTimer);
           invalidateTimer = setTimeout(() => {
             queryClient.invalidateQueries({ queryKey: ['image-assets'] });
+            queryClient.invalidateQueries({ queryKey: IMAGE_ASSET_FACET_QUERY_KEY });
           }, REALTIME_INVALIDATE_DEBOUNCE_MS);
         })
         .subscribe();
@@ -352,8 +384,12 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
           body: JSON.stringify(record),
         }
       );
+      const asset = (
+        'asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data
+      ) as ImageAsset;
+      patchFacets((snapshot) => upsertFacetRow(snapshot, toFacetRow(asset)));
       queryClient.invalidateQueries({ queryKey: ['image-assets'] });
-      return (('asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data) as ImageAsset);
+      return asset;
     } catch (error) {
       await supabase.storage.from(IMAGE_ASSET_BUCKET).remove([objectPath]);
       console.error('[MediaLibrary] Create image asset metadata failed:', error);
@@ -378,8 +414,12 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       }
     );
 
+    const asset = (
+      'asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data
+    ) as ImageAsset;
+    patchFacets((snapshot) => upsertFacetRow(snapshot, toFacetRow(asset)));
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
-    return (('asset' in (data as object) ? (data as { asset: ImageAsset }).asset : data) as ImageAsset);
+    return asset;
   };
 
   const addTagsToImageAssets = async (selectedAssets: ImageAsset[], tags: string[]) => {
@@ -396,6 +436,16 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       })
     );
 
+    patchFacets((snapshot) =>
+      selectedAssets.reduce((current, asset) => {
+        const existing = current.rows.find((row) => row.id === asset.id);
+        const nextTags = Array.from(new Set([...(asset.tags || []), ...normalizedTags]));
+        return upsertFacetRow(current, {
+          ...(existing || toFacetRow(asset)),
+          tags: nextTags,
+        });
+      }, snapshot)
+    );
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };
 
@@ -414,6 +464,7 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       method: 'DELETE',
     });
 
+    patchFacets((snapshot) => removeFacetRows(snapshot, [asset.id]));
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };
 
@@ -445,12 +496,21 @@ export function useImageAssets(params: ImageAssetsQueryParams = {}) {
       )
     );
 
+    patchFacets((snapshot) =>
+      removeFacetRows(
+        snapshot,
+        selectedAssets.map((asset) => asset.id)
+      )
+    );
     queryClient.invalidateQueries({ queryKey: ['image-assets'] });
   };
 
   return {
     assets,
     facetRows,
+    facetsLoading,
+    facetsError,
+    isFetchingFacets,
     totalAssetCount,
     totalStorageBytes,
     totalPages,
