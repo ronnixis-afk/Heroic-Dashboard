@@ -112,6 +112,89 @@ const formatArtFamilyOptionLabel = (
   }
   return formatOptionLabel(label, count);
 };
+
+/** Transform raw Supabase storage object URLs into resized thumbnails for high performance. */
+export function getOptimizedThumbnailUrl(
+  url: string,
+  options: { width?: number; height?: number; quality?: number } = {}
+): string {
+  if (!url) return '';
+  const { width = 240, height = 240, quality = 80 } = options;
+
+  try {
+    if (url.includes('/storage/v1/object/public/')) {
+      const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+      const separator = transformed.includes('?') ? '&' : '?';
+      return `${transformed}${separator}width=${width}&height=${height}&resize=cover&quality=${quality}`;
+    }
+  } catch {
+    // Return original url if transformation parsing fails
+  }
+
+  return url;
+}
+
+interface MediaGridItemImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  thumbnailWidth?: number;
+}
+
+const MediaGridItemImage: React.FC<MediaGridItemImageProps> = ({
+  src,
+  alt,
+  className = '',
+  thumbnailWidth = 240,
+}) => {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  const thumbUrl = useMemo(
+    () => getOptimizedThumbnailUrl(src, { width: thumbnailWidth, height: thumbnailWidth, quality: 80 }),
+    [src, thumbnailWidth]
+  );
+
+  useEffect(() => {
+    setLoaded(false);
+    setError(false);
+  }, [thumbUrl]);
+
+  if (!thumbUrl) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-brand-bg text-brand-text-muted">
+        <ImageIcon size={20} className="opacity-40" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-brand-bg">
+      {!loaded && !error && (
+        <div className="absolute inset-0 animate-pulse bg-brand-border/40" />
+      )}
+
+      {error ? (
+        <div className="flex h-full w-full items-center justify-center bg-brand-bg text-brand-text-muted">
+          <ImageIcon size={20} className="opacity-40" />
+        </div>
+      ) : (
+        <img
+          src={thumbUrl}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+          className={`${className} ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          } transition-opacity duration-300`}
+        />
+      )}
+    </div>
+  );
+};
+
 const POI_TAG_SUGGESTIONS: Record<SpecificImageGenre, { baseTypes: string[]; modifiers: string[] }> = {
   Fantasy: {
     baseTypes: [
@@ -2682,11 +2765,11 @@ export default function AdminMedia() {
                         className="relative h-full w-full bg-brand-bg text-left"
                         title={`Open ${asset.title}`}
                       >
-                        <img
+                        <MediaGridItemImage
                           src={asset.publicUrl}
                           alt={asset.title}
                           className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
-                          loading="lazy"
+                          thumbnailWidth={240}
                         />
                         {(asset.assetType === 'Mount Portrait' ||
                           asset.assetType === 'Vehicle Portrait' ||

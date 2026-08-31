@@ -120,7 +120,7 @@ Analytics / PII views are **not** readable via PostgREST (anon grants revoked). 
 | Surface | Primary sources |
 |---------|-----------------|
 | Audience | RPG `active-users`, `retention`, `churn-signals`; dashboard metrics API for tiers & signups |
-| Live Analytics | RPG `view-data` + `session-length`, `messages-per-user`, `feature-usage`; Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior`. Engine Health also renders a **Model Routing Health** table from `telemetry.byRole` (calls, p50/p95 latency, failover rate, model seen) |
+| Live Analytics | RPG `/api/admin/analytics/overview` (consolidated 60s cached bundle, with individual `view-data` / `session-length` / `messages-per-user` / `feature-usage` fallback); Engine Health via `/api/admin/telemetry` + `/api/analytics/behavior`. Engine Health also renders a **Model Routing Health** table from `telemetry.byRole` (calls, p50/p95 latency, failover rate, model seen) |
 | Usage Reports | RPG `feature-usage` (unique users / avg duration) + `view-data` cost merge; Product Surfaces from usage views |
 | Financial | RPG `dashboard-metrics` + `cost-analytics` / `view-data` model-usage. `cost-analytics` also returns `byRole` (cost, tokens, latency, failover per role) and an overall `failoverRate`, surfaced via `useCostAnalytics` / `useAnalyticsMetrics` |
 | Users list | Supabase `User` (+ RLS) for rows; RPG `view-data?resource=save-sizes` for cloud save stats |
