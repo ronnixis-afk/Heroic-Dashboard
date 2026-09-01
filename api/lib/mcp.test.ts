@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { formatAnalyticsOverview } from '../../src/lib/analyticsInsights';
 import handler from '../mcp';
 import { extractBearerToken, isAuthorizedMcpRequest } from './mcpAuth';
+import { formatAnalyticsOverview } from './mcpInsights';
 import { buildPatchNotePayload, sortPatchNotesNewestFirst } from './mcpPatchNotes';
 import { dispatchMcpMessage } from './mcpProtocol';
 import { MCP_TOOLS, executeMcpTool } from './mcpTools';
@@ -311,6 +314,12 @@ describe('get_insights snapshot shape', () => {
 });
 
 describe('MCP HTTP handler JSON-RPC', () => {
+  it('answers OPTIONS without loading insights or requiring a key', async () => {
+    const res = mockResponse();
+    await handler(mockRequest({ method: 'OPTIONS', headers: {} }), res.response);
+    assert.equal(res.state.statusCode, 204);
+  });
+
   it('returns tools/list after a valid Bearer token', async () => {
     process.env.MCP_API_KEY = KEY;
     const res = mockResponse();
@@ -326,6 +335,36 @@ describe('MCP HTTP handler JSON-RPC', () => {
     assert.deepEqual(
       body.result.tools.map((tool) => tool.name),
       ['get_insights', 'publish_patch_note', 'list_patch_notes']
+    );
+  });
+});
+
+describe('Vercel function import graph', () => {
+  it('keeps api/ TypeScript sources from importing src/', () => {
+    const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+          files.push(full);
+        }
+      }
+    };
+    walk(apiRoot);
+
+    const offenders = files.filter((file) => {
+      const source = readFileSync(file, 'utf8');
+      return /from ['"][^'"]*src\//.test(source) || /import\(['"][^'"]*src\//.test(source);
+    });
+    assert.deepEqual(
+      offenders,
+      [],
+      `api/ must not import src/ (breaks Vercel bundling): ${offenders.join(', ')}`
     );
   });
 });
