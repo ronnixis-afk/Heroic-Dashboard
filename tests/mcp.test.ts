@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import handler from '../mcp';
-import { extractBearerToken, isAuthorizedMcpRequest } from './mcpAuth';
-import { formatAnalyticsOverview } from './mcpInsights';
-import { buildPatchNotePayload, sortPatchNotesNewestFirst } from './mcpPatchNotes';
-import { dispatchMcpMessage } from './mcpProtocol';
-import { MCP_TOOLS, executeMcpTool } from './mcpTools';
+import handler, {
+  buildPatchNotePayload,
+  dispatchMcpMessage,
+  executeMcpTool,
+  extractBearerToken,
+  formatAnalyticsOverview,
+  isAuthorizedMcpRequest,
+  MCP_TOOLS,
+  sortPatchNotesNewestFirst,
+} from '../api/mcp';
 
 const KEY = 'test-mcp-key-please-ignore';
 
@@ -101,10 +105,14 @@ describe('MCP bearer auth', () => {
   it('returns HTTP 500 when MCP_API_KEY is not configured', async () => {
     const res = mockResponse();
     await handler(
-      mockRequest({ headers: { authorization: `Bearer ${KEY}` }, body: { jsonrpc: '2.0', id: 1, method: 'ping' } }),
+      mockRequest({
+        headers: { authorization: `Bearer ${KEY}` },
+        body: { jsonrpc: '2.0', id: 1, method: 'ping' },
+      }),
       res.response
     );
     assert.equal(res.state.statusCode, 500);
+    assert.deepEqual(res.state.body, { error: 'MCP Server Is Not Configured.' });
   });
 });
 
@@ -149,7 +157,10 @@ describe('list_patch_notes ordering', () => {
       { id: 'new', createdAt: '2026-09-01T00:00:00.000Z' },
       { id: 'mid', createdAt: '2026-06-01T00:00:00.000Z' },
     ]);
-    assert.deepEqual(sorted.map((item) => item.id), ['new', 'mid', 'old']);
+    assert.deepEqual(
+      sorted.map((item) => item.id),
+      ['new', 'mid', 'old']
+    );
   });
 });
 
@@ -300,7 +311,7 @@ describe('get_insights snapshot shape', () => {
         distribution: [],
       },
       messagesPerUser: [],
-    });
+    } as Parameters<typeof formatAnalyticsOverview>[0]);
 
     assert.equal(snapshot.activeSessionsCount, 7);
     assert.equal(snapshot.totalCost, 6);
@@ -314,7 +325,7 @@ describe('get_insights snapshot shape', () => {
 });
 
 describe('MCP HTTP handler JSON-RPC', () => {
-  it('answers OPTIONS without loading insights or requiring a key', async () => {
+  it('answers OPTIONS without requiring a key', async () => {
     const res = mockResponse();
     await handler(mockRequest({ method: 'OPTIONS', headers: {} }), res.response);
     assert.equal(res.state.statusCode, 204);
@@ -339,32 +350,19 @@ describe('MCP HTTP handler JSON-RPC', () => {
   });
 });
 
-describe('Vercel function import graph', () => {
-  it('keeps api/ TypeScript sources from importing src/', () => {
-    const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-    const files: string[] = [];
-    const walk = (dir: string) => {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const full = join(dir, entry.name);
-        if (entry.isDirectory()) {
-          walk(full);
-          continue;
-        }
-        if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
-          files.push(full);
-        }
-      }
-    };
-    walk(apiRoot);
+describe('Vercel function layout', () => {
+  it('only ships clerk-proxy and mcp under api/, with no local runtime imports', () => {
+    const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'api');
+    const files = readdirSync(apiRoot).sort();
+    assert.deepEqual(files, ['clerk-proxy.ts', 'mcp.ts']);
 
-    const offenders = files.filter((file) => {
-      const source = readFileSync(file, 'utf8');
-      return /from ['"][^'"]*src\//.test(source) || /import\(['"][^'"]*src\//.test(source);
-    });
-    assert.deepEqual(
-      offenders,
-      [],
-      `api/ must not import src/ (breaks Vercel bundling): ${offenders.join(', ')}`
-    );
+    const mcpSource = readFileSync(join(apiRoot, 'mcp.ts'), 'utf8');
+    assert.equal(mcpSource.includes("from 'node:crypto'"), false);
+    assert.equal(mcpSource.includes('from "node:crypto"'), false);
+    assert.equal(mcpSource.includes("from './"), false);
+    assert.equal(mcpSource.includes('from "./'), false);
+    assert.equal(mcpSource.trim().startsWith('import type '), true);
+    const runtimeImports = [...mcpSource.matchAll(/^import (?!type ).+$/gm)].map((m) => m[0]);
+    assert.deepEqual(runtimeImports, []);
   });
 });
