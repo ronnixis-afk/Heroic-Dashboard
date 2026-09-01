@@ -1,4 +1,3 @@
-import { fetchAnalyticsInsights } from '../../src/lib/analyticsInsights';
 import {
   buildPatchNotePayload,
   normalizePatchNotesList,
@@ -84,6 +83,7 @@ export type McpToolRuntime = {
 };
 
 async function defaultGetInsights() {
+  const { fetchAnalyticsInsights } = await import('./mcpInsights');
   return fetchAnalyticsInsights((path) => fetchRpgAdminServer(path));
 }
 

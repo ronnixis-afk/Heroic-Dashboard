@@ -1,7 +1,8 @@
 /**
- * Analytics aggregation used by AdminAnalytics.
- * The MCP serverless function uses a copy at api/lib/mcpInsights.ts so Vercel
- * does not have to bundle src/ into /api/mcp.
+ * MCP get_insights aggregation. Kept inside api/ so the Vercel function graph
+ * never imports src/ (Vite+Vercel only bundles api/ for serverless).
+ * AdminAnalytics continues to use src/lib/analyticsInsights.ts.
+ * Callers supply a GET helper so ADMIN_API_KEY (server) works.
  */
 export type RpgGet = <T>(path: string) => Promise<T>;
 
