@@ -67,7 +67,8 @@ export function filterFacetRows(
   );
 
   return rows.filter((row) => {
-    if (filterGenre && row.genre !== genre) return false;
+    // Live matching treats Any Genre as a fallback pool for every specific genre.
+    if (filterGenre && row.genre !== genre && row.genre !== 'Any Genre') return false;
     if (assetTypes && assetTypes.length > 0 && !assetTypes.includes(row.assetType)) return false;
     for (const [key, expected] of metadataFilters) {
       if (getMetadataString(row.metadata || {}, key) !== expected.trim()) return false;

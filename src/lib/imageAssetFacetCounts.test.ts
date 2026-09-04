@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   applyFacetSync,
   buildFacetSyncQuery,
+  countByAssetType,
   EMPTY_FACET_SNAPSHOT,
   FacetCacheSnapshot,
   FacetSyncResponse,
+  filterFacetRows,
   ImageAssetFacetRow,
   needsFacetSnapshotFallback,
   removeFacetRows,
@@ -174,6 +176,39 @@ describe('needsFacetSnapshotFallback', () => {
         applyFacetSync(cached, sync({ snapshot: true, totalCount: 1, rows: [row('z')] }))
       )
     ).toBe(false);
+  });
+});
+
+describe('filterFacetRows genre scope', () => {
+  const rows = [
+    row('fantasy', { genre: 'Fantasy', assetType: 'Monster Portrait' }),
+    row('any', { genre: 'Any Genre', assetType: 'Monster Portrait' }),
+    row('scifi', { genre: 'Sci-Fi', assetType: 'Monster Portrait' }),
+    row('item', { genre: 'Fantasy', assetType: 'Item Image' }),
+  ];
+
+  it('includes Any Genre assets when scoped to a specific genre', () => {
+    expect(filterFacetRows(rows, { genre: 'Fantasy' }).map((item) => item.id).sort()).toEqual([
+      'any',
+      'fantasy',
+      'item',
+    ]);
+    expect(countByAssetType(rows, { genre: 'Fantasy' })).toEqual({
+      'Monster Portrait': 2,
+      'Item Image': 1,
+    });
+  });
+
+  it('does not mix other specific genres into the selected genre', () => {
+    expect(filterFacetRows(rows, { genre: 'Sci-Fi' }).map((item) => item.id).sort()).toEqual([
+      'any',
+      'scifi',
+    ]);
+  });
+
+  it('does not filter when the scope is All or Any Genre', () => {
+    expect(filterFacetRows(rows, { genre: 'All' })).toHaveLength(4);
+    expect(filterFacetRows(rows, { genre: 'Any Genre' })).toHaveLength(4);
   });
 });
 

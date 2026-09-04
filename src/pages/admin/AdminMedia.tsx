@@ -361,7 +361,7 @@ const assetMatchesStructuredGenre = (assetGenre: string, formGenre: ImageGenre, 
   if (formGenre === 'Any Genre') {
     return assetGenre === structuredGenre || assetGenre === 'Any Genre';
   }
-  return assetGenre === formGenre;
+  return assetGenre === formGenre || assetGenre === 'Any Genre';
 };
 
 /**
