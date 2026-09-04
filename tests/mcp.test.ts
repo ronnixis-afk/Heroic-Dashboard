@@ -5,6 +5,10 @@ import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import handler, {
+  buildMonsterSubtypeCreatePayload,
+  buildMonsterSubtypeUpdatePayload,
+  buildMonsterTypeCreatePayload,
+  buildMonsterTypeUpdatePayload,
   buildPatchNotePayload,
   dispatchMcpMessage,
   executeMcpTool,
@@ -12,8 +16,21 @@ import handler, {
   formatAnalyticsOverview,
   isAuthorizedMcpRequest,
   MCP_TOOLS,
+  normalizeMonsterTypesList,
   sortPatchNotesNewestFirst,
 } from '../api/mcp';
+
+const EXPECTED_TOOL_NAMES = [
+  'get_insights',
+  'publish_patch_note',
+  'list_patch_notes',
+  'list_monster_types',
+  'get_monster_type',
+  'create_monster_type',
+  'update_monster_type',
+  'create_monster_subtype',
+  'update_monster_subtype',
+];
 
 const KEY = 'test-mcp-key-please-ignore';
 
@@ -165,10 +182,10 @@ describe('list_patch_notes ordering', () => {
 });
 
 describe('MCP JSON-RPC tools', () => {
-  it('lists exactly the three v1 tools', async () => {
+  it('lists insights, patch-note, and monster catalog tools', async () => {
     assert.deepEqual(
       MCP_TOOLS.map((tool) => tool.name),
-      ['get_insights', 'publish_patch_note', 'list_patch_notes']
+      EXPECTED_TOOL_NAMES
     );
 
     const result = await dispatchMcpMessage({
@@ -181,7 +198,7 @@ describe('MCP JSON-RPC tools', () => {
     const tools = (result.response.result as { tools: { name: string }[] }).tools;
     assert.deepEqual(
       tools.map((tool) => tool.name),
-      ['get_insights', 'publish_patch_note', 'list_patch_notes']
+      EXPECTED_TOOL_NAMES
     );
   });
 
@@ -345,7 +362,7 @@ describe('MCP HTTP handler JSON-RPC', () => {
     const body = res.state.body as { result: { tools: { name: string }[] } };
     assert.deepEqual(
       body.result.tools.map((tool) => tool.name),
-      ['get_insights', 'publish_patch_note', 'list_patch_notes']
+      EXPECTED_TOOL_NAMES
     );
   });
 });
@@ -364,5 +381,342 @@ describe('Vercel function layout', () => {
     assert.equal(mcpSource.trim().startsWith('import type '), true);
     const runtimeImports = [...mcpSource.matchAll(/^import (?!type ).+$/gm)].map((m) => m[0]);
     assert.deepEqual(runtimeImports, []);
+  });
+});
+
+describe('monster catalog payloads', () => {
+  it('creates a type payload with required fields and combat attributes', () => {
+    const payload = buildMonsterTypeCreatePayload({
+      name: '  Drake  ',
+      description: '  Winged reptiles.  ',
+      genres: ['Fantasy'],
+      minEncounterLevel: 4,
+      defaultArchetype: 'Brute',
+      immunities: ['Fire'],
+      defaultAffinity: 'Fire',
+    });
+
+    assert.deepEqual(payload, {
+      name: 'Drake',
+      description: 'Winged reptiles.',
+      genres: ['Fantasy'],
+      minEncounterLevel: 4,
+      defaultArchetype: 'Brute',
+      immunities: ['Fire'],
+      defaultAffinity: 'Fire',
+      enabled: true,
+    });
+  });
+
+  it('defaults create-type genres and level when omitted', () => {
+    const payload = buildMonsterTypeCreatePayload({
+      name: 'Ooze',
+      description: 'Amorphous hunters.',
+    });
+    assert.deepEqual(payload.genres, ['Fantasy']);
+    assert.equal(payload.minEncounterLevel, 1);
+    assert.equal(payload.enabled, true);
+  });
+
+  it('rejects a blank type name and unknown genre', () => {
+    assert.throws(
+      () => buildMonsterTypeCreatePayload({ name: '  ', description: 'body' }),
+      /Name Is Required/
+    );
+    assert.throws(
+      () =>
+        buildMonsterTypeCreatePayload({
+          name: 'Ooze',
+          description: 'body',
+          genres: ['Noir'],
+        }),
+      /Genre Must Be One Of/
+    );
+  });
+
+  it('builds a partial type update and rejects an empty patch', () => {
+    assert.deepEqual(buildMonsterTypeUpdatePayload({ immunities: ['Cold'], enabled: false }), {
+      immunities: ['Cold'],
+      enabled: false,
+    });
+    assert.throws(() => buildMonsterTypeUpdatePayload({}), /At Least One Type Attribute/);
+  });
+
+  it('creates a subtype payload with identity defaults', () => {
+    const payload = buildMonsterSubtypeCreatePayload({
+      name: '  Ember Drake  ',
+      visualDescription: '  A small dragon wreathed in coals.  ',
+    });
+    assert.deepEqual(payload, {
+      name: 'Ember Drake',
+      visualDescription: 'A small dragon wreathed in coals.',
+      size: 'Medium',
+      allowedTerrains: ['Plains'],
+      encounterExcluded: false,
+      rideable: false,
+      enabled: true,
+      archetype: null,
+    });
+  });
+
+  it('builds a partial subtype update and rejects an empty patch', () => {
+    assert.deepEqual(
+      buildMonsterSubtypeUpdatePayload({
+        visualDescription: 'Updated look',
+        allowedTerrains: ['Desert', 'Mountain'],
+      }),
+      {
+        visualDescription: 'Updated look',
+        allowedTerrains: ['Desert', 'Mountain'],
+      }
+    );
+    assert.throws(() => buildMonsterSubtypeUpdatePayload({}), /At Least One Subtype Attribute/);
+  });
+
+  it('normalizes list responses to { types }', () => {
+    assert.deepEqual(normalizeMonsterTypesList({ types: [{ id: '1' }] }), { types: [{ id: '1' }] });
+    assert.deepEqual(normalizeMonsterTypesList([{ id: '2' }]), { types: [{ id: '2' }] });
+    assert.deepEqual(normalizeMonsterTypesList({}), { types: [] });
+  });
+});
+
+describe('monster catalog MCP tools', () => {
+  const catalog = {
+    types: [
+      {
+        id: 'type-1',
+        name: 'Beast',
+        description: 'Natural animals.',
+        genres: ['Fantasy'],
+        minEncounterLevel: 1,
+        immunities: [],
+        subtypes: [
+          {
+            id: 'sub-1',
+            name: 'Grassland Prowler',
+            visualDescription: 'A plains wolf.',
+            size: 'Medium',
+            allowedTerrains: ['Plains'],
+          },
+        ],
+      },
+    ],
+  };
+
+  it('lists types with subtypes via the game admin route', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    const output = await executeMcpTool(
+      'list_monster_types',
+      {},
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return catalog;
+        },
+      }
+    );
+
+    assert.deepEqual(calls, [{ path: '/api/admin/monster-types?includeSubtypes=1', init: undefined }]);
+    assert.deepEqual(output, catalog);
+    const types = (output as { types: { subtypes: unknown[] }[] }).types;
+    assert.equal(types[0].subtypes.length, 1);
+  });
+
+  it('gets one type by id', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    const output = await executeMcpTool(
+      'get_monster_type',
+      { id: 'type-1' },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { type: catalog.types[0] };
+        },
+      }
+    );
+
+    assert.deepEqual(calls, [{ path: '/api/admin/monster-types/type-1', init: undefined }]);
+    assert.equal((output as { type: { name: string } }).type.name, 'Beast');
+  });
+
+  it('rejects get/update without an id', async () => {
+    await assert.rejects(() => executeMcpTool('get_monster_type', {}, { fetchRpgAdmin: async () => ({}) }), /Id Is Required/);
+    await assert.rejects(
+      () => executeMcpTool('update_monster_type', { description: 'x' }, { fetchRpgAdmin: async () => ({}) }),
+      /Id Is Required/
+    );
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'create_monster_subtype',
+          { name: 'X', visualDescription: 'Y' },
+          { fetchRpgAdmin: async () => ({}) }
+        ),
+      /Type Id Is Required/
+    );
+  });
+
+  it('forwards create/update type payloads to the game admin routes', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    const created = await executeMcpTool(
+      'create_monster_type',
+      {
+        name: 'Drake',
+        description: 'Winged reptiles.',
+        genres: ['Fantasy'],
+        defaultArchetype: 'Brute',
+        immunities: ['Fire'],
+      },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { type: { id: 'type-9' } };
+        },
+      }
+    );
+
+    assert.equal(calls[0].path, '/api/admin/monster-types');
+    assert.equal(calls[0].init?.method, 'POST');
+    const createdBody = JSON.parse(String(calls[0].init?.body));
+    assert.equal(createdBody.name, 'Drake');
+    assert.deepEqual(createdBody.immunities, ['Fire']);
+    assert.equal(createdBody.enabled, true);
+    assert.deepEqual((created as { result: { type: { id: string } } }).result, { type: { id: 'type-9' } });
+
+    const updated = await executeMcpTool(
+      'update_monster_type',
+      { id: 'type-9', immunities: ['Fire', 'Cold'], enabled: false },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { type: { id: 'type-9' } };
+        },
+      }
+    );
+
+    assert.equal(calls[1].path, '/api/admin/monster-types/type-9');
+    assert.equal(calls[1].init?.method, 'PATCH');
+    const updatedBody = JSON.parse(String(calls[1].init?.body));
+    assert.deepEqual(updatedBody, { immunities: ['Fire', 'Cold'], enabled: false });
+    assert.equal('id' in updatedBody, false);
+    assert.equal((updated as { ok: boolean }).ok, true);
+  });
+
+  it('forwards create/update subtype payloads under the parent type', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'create_monster_subtype',
+      {
+        typeId: 'type-1',
+        name: 'Ember Drake',
+        visualDescription: 'A small dragon wreathed in coals.',
+        size: 'Large',
+        allowedTerrains: ['Mountain'],
+      },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+
+    assert.equal(calls[0].path, '/api/admin/monster-types/type-1/subtypes');
+    assert.equal(calls[0].init?.method, 'POST');
+    const createdBody = JSON.parse(String(calls[0].init?.body));
+    assert.equal(createdBody.name, 'Ember Drake');
+    assert.equal(createdBody.size, 'Large');
+    assert.deepEqual(createdBody.allowedTerrains, ['Mountain']);
+    assert.equal(createdBody.encounterExcluded, false);
+    assert.equal('typeId' in createdBody, false);
+
+    await executeMcpTool(
+      'update_monster_subtype',
+      {
+        typeId: 'type-1',
+        subtypeId: 'sub-9',
+        visualDescription: 'Updated look',
+        rideable: true,
+      },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+
+    assert.equal(calls[1].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
+    assert.equal(calls[1].init?.method, 'PATCH');
+    const updatedBody = JSON.parse(String(calls[1].init?.body));
+    assert.deepEqual(updatedBody, { visualDescription: 'Updated look', rideable: true });
+    assert.equal('typeId' in updatedBody, false);
+    assert.equal('subtypeId' in updatedBody, false);
+  });
+
+  it('surfaces game admin auth/config errors without live credentials', async () => {
+    delete process.env.ADMIN_API_KEY;
+    delete process.env.RPG_API_URL;
+    delete process.env.VITE_RPG_API_URL;
+
+    await assert.rejects(() => executeMcpTool('list_monster_types', {}), /RPG_API_URL is not configured/);
+
+    process.env.RPG_API_URL = 'https://game.example';
+    await assert.rejects(() => executeMcpTool('list_monster_types', {}), /ADMIN_API_KEY is not configured/);
+    delete process.env.RPG_API_URL;
+  });
+
+  it('forwards Bearer and x-admin-key on the game admin request', async () => {
+    process.env.RPG_API_URL = 'https://game.example';
+    process.env.ADMIN_API_KEY = 'admin-secret';
+    const originalFetch = globalThis.fetch;
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      calls.push({
+        url: String(url),
+        headers: (init?.headers || {}) as Record<string, string>,
+      });
+      return {
+        ok: true,
+        json: async () => catalog,
+      } as Response;
+    }) as typeof fetch;
+
+    try {
+      const output = await executeMcpTool('list_monster_types', {});
+      assert.equal(calls[0].url, 'https://game.example/api/admin/monster-types?includeSubtypes=1');
+      assert.equal(calls[0].headers.Authorization, 'Bearer admin-secret');
+      assert.equal(calls[0].headers['x-admin-key'], 'admin-secret');
+      assert.deepEqual(output, catalog);
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.RPG_API_URL;
+      delete process.env.ADMIN_API_KEY;
+    }
+  });
+
+  it('returns list_monster_types through tools/call as MCP text content', async () => {
+    const result = await dispatchMcpMessage(
+      {
+        jsonrpc: '2.0',
+        id: 11,
+        method: 'tools/call',
+        params: { name: 'list_monster_types', arguments: {} },
+      },
+      {
+        fetchRpgAdmin: async () => catalog,
+      }
+    );
+    assert.equal(result.kind, 'response');
+    if (result.kind !== 'response') return;
+    const payload = result.response.result as {
+      isError: boolean;
+      content: { type: string; text: string }[];
+    };
+    assert.equal(payload.isError, false);
+    const parsed = JSON.parse(payload.content[0].text);
+    assert.equal(parsed.types[0].name, 'Beast');
+    assert.equal(parsed.types[0].subtypes[0].name, 'Grassland Prowler');
   });
 });
