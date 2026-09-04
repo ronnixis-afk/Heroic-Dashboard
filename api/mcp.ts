@@ -196,6 +196,12 @@ function requireTrimmed(value: unknown, field: string): string {
   return value.trim();
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 export function buildPatchNotePayload(input: PublishPatchNoteInput): PatchNotePayload {
   const title = requireTrimmed(input.title, 'Title');
   const content = requireTrimmed(input.content, 'Content');
@@ -234,6 +240,248 @@ export function sortPatchNotesNewestFirst(items: PatchNoteListItem[]): PatchNote
     const bTime = Date.parse(String(b.createdAt || '')) || 0;
     return bTime - aTime;
   });
+}
+
+export const MONSTER_GENRES = ['Fantasy', 'Modern', 'Sci-Fi'] as const;
+export type MonsterGenre = (typeof MONSTER_GENRES)[number];
+
+export interface MonsterMaturityPrefix {
+  minLevel: number;
+  prefix: string;
+}
+
+export interface MonsterTypeAttributes {
+  name?: string;
+  description?: string;
+  genres?: string[];
+  minEncounterLevel?: number;
+  defaultArchetype?: string;
+  allowedArchetypes?: string[];
+  maturityPrefixes?: MonsterMaturityPrefix[];
+  immunities?: string[];
+  resistances?: string[];
+  vulnerabilities?: string[];
+  statusImmunities?: string[];
+  defaultAffinity?: string | null;
+  poiTags?: string[];
+  enabled?: boolean;
+}
+
+export interface MonsterSubtypeAttributes {
+  name?: string;
+  visualDescription?: string;
+  size?: string;
+  archetype?: string | null;
+  allowedTerrains?: string[];
+  encounterExcluded?: boolean;
+  rideable?: boolean;
+  affinityOverride?: string | null;
+  acquisition?: unknown;
+  enabled?: boolean;
+}
+
+export function requireCatalogId(value: unknown, field: string): string {
+  const id = requireTrimmed(value, field);
+  if (/[/?#]/.test(id)) {
+    throw new Error(`${field} Is Invalid.`);
+  }
+  return id;
+}
+
+function optionalTrimmedString(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') {
+    throw new Error(`${field} Must Be A String.`);
+  }
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function optionalNullableString(value: unknown, field: string): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error(`${field} Must Be A String Or Null.`);
+  }
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function optionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'boolean') {
+    throw new Error(`${field} Must Be A Boolean.`);
+  }
+  return value;
+}
+
+function optionalFiniteNumber(value: unknown, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${field} Must Be A Number.`);
+  }
+  return value;
+}
+
+function optionalStringArray(value: unknown, field: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+    throw new Error(`${field} Must Be An Array Of Strings.`);
+  }
+  return value.map((item) => item.trim()).filter(Boolean);
+}
+
+function optionalGenres(value: unknown): string[] | undefined {
+  const genres = optionalStringArray(value, 'Genres');
+  if (!genres) return undefined;
+  const invalid = genres.find((genre) => !MONSTER_GENRES.includes(genre as MonsterGenre));
+  if (invalid) {
+    throw new Error(`Genre Must Be One Of ${MONSTER_GENRES.join(', ')}.`);
+  }
+  return genres;
+}
+
+function optionalMaturityPrefixes(value: unknown): MonsterMaturityPrefix[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error('Maturity Prefixes Must Be An Array.');
+  }
+  return value.map((item, index) => {
+    const record = asRecord(item);
+    const minLevel = optionalFiniteNumber(record.minLevel, `Maturity Prefixes[${index}].minLevel`);
+    const prefix = optionalTrimmedString(record.prefix, `Maturity Prefixes[${index}].prefix`);
+    if (minLevel === undefined || !prefix) {
+      throw new Error(`Maturity Prefixes[${index}] Requires minLevel And prefix.`);
+    }
+    return { minLevel, prefix };
+  });
+}
+
+function assignDefined<T extends object>(
+  target: T,
+  entries: Record<string, unknown>
+): T {
+  for (const [key, value] of Object.entries(entries)) {
+    if (value !== undefined) {
+      (target as Record<string, unknown>)[key] = value;
+    }
+  }
+  return target;
+}
+
+export function parseMonsterTypeAttributes(input: unknown): MonsterTypeAttributes {
+  const record = asRecord(input);
+  return assignDefined({} as MonsterTypeAttributes, {
+    name: optionalTrimmedString(record.name, 'Name'),
+    description: optionalTrimmedString(record.description, 'Description'),
+    genres: optionalGenres(record.genres),
+    minEncounterLevel: optionalFiniteNumber(record.minEncounterLevel, 'Min Encounter Level'),
+    defaultArchetype: optionalTrimmedString(record.defaultArchetype, 'Default Archetype'),
+    allowedArchetypes: optionalStringArray(record.allowedArchetypes, 'Allowed Archetypes'),
+    maturityPrefixes: optionalMaturityPrefixes(record.maturityPrefixes),
+    immunities: optionalStringArray(record.immunities, 'Immunities'),
+    resistances: optionalStringArray(record.resistances, 'Resistances'),
+    vulnerabilities: optionalStringArray(record.vulnerabilities, 'Vulnerabilities'),
+    statusImmunities: optionalStringArray(record.statusImmunities, 'Status Immunities'),
+    defaultAffinity: optionalNullableString(record.defaultAffinity, 'Default Affinity'),
+    poiTags: optionalStringArray(record.poiTags, 'POI Tags'),
+    enabled: optionalBoolean(record.enabled, 'Enabled'),
+  });
+}
+
+export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAttributes {
+  const record = asRecord(input);
+  return assignDefined({} as MonsterSubtypeAttributes, {
+    name: optionalTrimmedString(record.name, 'Name'),
+    visualDescription: optionalTrimmedString(record.visualDescription, 'Visual Description'),
+    size: optionalTrimmedString(record.size, 'Size'),
+    archetype: optionalNullableString(record.archetype, 'Archetype'),
+    allowedTerrains: optionalStringArray(record.allowedTerrains, 'Allowed Terrains'),
+    encounterExcluded: optionalBoolean(record.encounterExcluded, 'Encounter Excluded'),
+    rideable: optionalBoolean(record.rideable, 'Rideable'),
+    affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
+    acquisition: record.acquisition === undefined ? undefined : record.acquisition,
+    enabled: optionalBoolean(record.enabled, 'Enabled'),
+  });
+}
+
+export function buildMonsterTypeCreatePayload(input: unknown): Record<string, unknown> {
+  const attributes = parseMonsterTypeAttributes(input);
+  const name = attributes.name;
+  const description = attributes.description;
+  if (!name) throw new Error('Name Is Required.');
+  if (!description) throw new Error('Description Is Required.');
+
+  return assignDefined(
+    {
+      name,
+      description,
+      genres: attributes.genres?.length ? attributes.genres : ['Fantasy'],
+      minEncounterLevel: attributes.minEncounterLevel ?? 1,
+    } as Record<string, unknown>,
+    {
+      defaultArchetype: attributes.defaultArchetype,
+      allowedArchetypes: attributes.allowedArchetypes,
+      maturityPrefixes: attributes.maturityPrefixes,
+      immunities: attributes.immunities,
+      resistances: attributes.resistances,
+      vulnerabilities: attributes.vulnerabilities,
+      statusImmunities: attributes.statusImmunities,
+      defaultAffinity: attributes.defaultAffinity,
+      poiTags: attributes.poiTags,
+      enabled: attributes.enabled ?? true,
+    }
+  );
+}
+
+export function buildMonsterTypeUpdatePayload(input: unknown): Record<string, unknown> {
+  const attributes = parseMonsterTypeAttributes(input);
+  const payload = assignDefined({} as Record<string, unknown>, attributes as Record<string, unknown>);
+  if (Object.keys(payload).length === 0) {
+    throw new Error('At Least One Type Attribute Is Required.');
+  }
+  return payload;
+}
+
+export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string, unknown> {
+  const attributes = parseMonsterSubtypeAttributes(input);
+  if (!attributes.name) throw new Error('Name Is Required.');
+  if (!attributes.visualDescription) throw new Error('Visual Description Is Required.');
+
+  return assignDefined(
+    {
+      name: attributes.name,
+      visualDescription: attributes.visualDescription,
+      size: attributes.size || 'Medium',
+      allowedTerrains: attributes.allowedTerrains?.length ? attributes.allowedTerrains : ['Plains'],
+      encounterExcluded: attributes.encounterExcluded ?? false,
+      rideable: attributes.rideable ?? false,
+      enabled: attributes.enabled ?? true,
+    } as Record<string, unknown>,
+    {
+      archetype: attributes.archetype ?? null,
+      affinityOverride: attributes.affinityOverride,
+      acquisition: attributes.acquisition,
+    }
+  );
+}
+
+export function buildMonsterSubtypeUpdatePayload(input: unknown): Record<string, unknown> {
+  const attributes = parseMonsterSubtypeAttributes(input);
+  const payload = assignDefined({} as Record<string, unknown>, attributes as Record<string, unknown>);
+  if (Object.keys(payload).length === 0) {
+    throw new Error('At Least One Subtype Attribute Is Required.');
+  }
+  return payload;
+}
+
+export function normalizeMonsterTypesList(data: unknown): { types: unknown[] } {
+  if (Array.isArray(data)) return { types: data };
+  if (data && typeof data === 'object') {
+    const record = data as { types?: unknown };
+    if (Array.isArray(record.types)) return { types: record.types };
+  }
+  return { types: [] };
 }
 
 function getRpgApiUrl(): string {
@@ -348,6 +596,63 @@ export type McpToolDefinition = {
   inputSchema: JsonSchema;
 };
 
+const MONSTER_TYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
+  name: { type: 'string', description: 'Monster type name.' },
+  description: { type: 'string', description: 'Monster type description.' },
+  genres: {
+    type: 'array',
+    items: { type: 'string', enum: [...MONSTER_GENRES] },
+    description: 'Genres this type appears in: Fantasy, Modern, Sci-Fi.',
+  },
+  minEncounterLevel: { type: 'number', description: 'Minimum encounter level.' },
+  defaultArchetype: { type: 'string', description: 'Default combat archetype.' },
+  allowedArchetypes: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Allowed combat archetypes.',
+  },
+  maturityPrefixes: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        minLevel: { type: 'number' },
+        prefix: { type: 'string' },
+      },
+      required: ['minLevel', 'prefix'],
+      additionalProperties: false,
+    },
+    description: 'Level-gated name prefixes, e.g. Young / Elder.',
+  },
+  immunities: { type: 'array', items: { type: 'string' }, description: 'Damage immunities.' },
+  resistances: { type: 'array', items: { type: 'string' }, description: 'Damage resistances.' },
+  vulnerabilities: { type: 'array', items: { type: 'string' }, description: 'Damage vulnerabilities.' },
+  statusImmunities: { type: 'array', items: { type: 'string' }, description: 'Status immunities.' },
+  defaultAffinity: {
+    type: ['string', 'null'],
+    description: 'Default elemental affinity, or null.',
+  },
+  poiTags: { type: 'array', items: { type: 'string' }, description: 'POI / biome tags.' },
+  enabled: { type: 'boolean', description: 'Whether the type is enabled.' },
+};
+
+const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
+  name: { type: 'string', description: 'Subtype name.' },
+  visualDescription: { type: 'string', description: 'Visual description used for portraits and prompts.' },
+  size: { type: 'string', description: 'Size class, e.g. Medium, Huge.' },
+  archetype: { type: ['string', 'null'], description: 'Archetype override, or null to inherit the type.' },
+  allowedTerrains: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Terrains this subtype can appear in.',
+  },
+  encounterExcluded: { type: 'boolean', description: 'Exclude from random encounters.' },
+  rideable: { type: 'boolean', description: 'Whether this subtype is rideable.' },
+  affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
+  acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
+  enabled: { type: 'boolean', description: 'Whether the subtype is enabled.' },
+};
+
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'get_insights',
@@ -393,12 +698,92 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'list_monster_types',
+    description:
+      'List monster types with subtypes and attributes from the game CMS via GET /api/admin/monster-types?includeSubtypes=1. Does not maintain a local bestiary.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_monster_type',
+    description:
+      'Get one monster type and its subtypes from the game CMS via GET /api/admin/monster-types/:id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Monster type id.' },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_monster_type',
+    description:
+      'Create a monster type via POST /api/admin/monster-types. Name and description are required. Copy combat identity (archetypes, immunities, POI tags) from list_monster_types when adding a sibling type.',
+    inputSchema: {
+      type: 'object',
+      properties: MONSTER_TYPE_ATTRIBUTE_PROPERTIES,
+      required: ['name', 'description'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_monster_type',
+    description:
+      'Update an existing monster type via PATCH /api/admin/monster-types/:id. Send only the attributes to change.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Monster type id.' },
+        ...MONSTER_TYPE_ATTRIBUTE_PROPERTIES,
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_monster_subtype',
+    description:
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        typeId: { type: 'string', description: 'Parent monster type id.' },
+        ...MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES,
+      },
+      required: ['typeId', 'name', 'visualDescription'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_monster_subtype',
+    description:
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        typeId: { type: 'string', description: 'Parent monster type id.' },
+        subtypeId: { type: 'string', description: 'Monster subtype id.' },
+        ...MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES,
+      },
+      required: ['typeId', 'subtypeId'],
+      additionalProperties: false,
+    },
+  },
 ];
+
+export type RpgAdminFetch = (path: string, init?: RequestInit) => Promise<unknown>;
 
 export type McpToolRuntime = {
   getInsights?: () => Promise<unknown>;
   publishPatchNote?: (payload: PatchNotePayload) => Promise<unknown>;
   listPatchNotes?: () => Promise<unknown>;
+  fetchRpgAdmin?: RpgAdminFetch;
 };
 
 async function defaultGetInsights() {
@@ -417,10 +802,8 @@ async function defaultListPatchNotes() {
   return sortPatchNotesNewestFirst(normalizePatchNotesList(data));
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+function rpgAdminFetch(runtime: McpToolRuntime): RpgAdminFetch {
+  return runtime.fetchRpgAdmin || ((path, init) => fetchRpgAdminServer(path, init));
 }
 
 export async function executeMcpTool(
@@ -431,6 +814,7 @@ export async function executeMcpTool(
   const getInsights = runtime.getInsights || defaultGetInsights;
   const publishPatchNote = runtime.publishPatchNote || defaultPublishPatchNote;
   const listPatchNotes = runtime.listPatchNotes || defaultListPatchNotes;
+  const fetchRpgAdmin = rpgAdminFetch(runtime);
 
   if (name === 'get_insights') {
     return getInsights();
@@ -450,6 +834,69 @@ export async function executeMcpTool(
 
   if (name === 'list_patch_notes') {
     return listPatchNotes();
+  }
+
+  if (name === 'list_monster_types') {
+    const data = await fetchRpgAdmin('/api/admin/monster-types?includeSubtypes=1');
+    return normalizeMonsterTypesList(data);
+  }
+
+  if (name === 'get_monster_type') {
+    const id = requireCatalogId(asRecord(args).id, 'Id');
+    return fetchRpgAdmin(`/api/admin/monster-types/${encodeURIComponent(id)}`);
+  }
+
+  if (name === 'create_monster_type') {
+    const payload = buildMonsterTypeCreatePayload(args);
+    const created = await fetchRpgAdmin('/api/admin/monster-types', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return { ok: true, payload, result: created };
+  }
+
+  if (name === 'update_monster_type') {
+    const record = asRecord(args);
+    const id = requireCatalogId(record.id, 'Id');
+    const payload = buildMonsterTypeUpdatePayload(args);
+    delete payload.id;
+    const updated = await fetchRpgAdmin(`/api/admin/monster-types/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return { ok: true, id, payload, result: updated };
+  }
+
+  if (name === 'create_monster_subtype') {
+    const record = asRecord(args);
+    const typeId = requireCatalogId(record.typeId, 'Type Id');
+    const payload = buildMonsterSubtypeCreatePayload(args);
+    delete payload.typeId;
+    const created = await fetchRpgAdmin(
+      `/api/admin/monster-types/${encodeURIComponent(typeId)}/subtypes`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+    return { ok: true, typeId, payload, result: created };
+  }
+
+  if (name === 'update_monster_subtype') {
+    const record = asRecord(args);
+    const typeId = requireCatalogId(record.typeId, 'Type Id');
+    const subtypeId = requireCatalogId(record.subtypeId, 'Subtype Id');
+    const payload = buildMonsterSubtypeUpdatePayload(args);
+    delete payload.typeId;
+    delete payload.subtypeId;
+    const updated = await fetchRpgAdmin(
+      `/api/admin/monster-types/${encodeURIComponent(typeId)}/subtypes/${encodeURIComponent(subtypeId)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }
+    );
+    return { ok: true, typeId, subtypeId, payload, result: updated };
   }
 
   throw new Error(`Unknown Tool: ${name}`);
@@ -550,7 +997,7 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live game analytics, list_patch_notes to read published notes newest-first, and publish_patch_note to create a published News row with is_patch_note true. Do not set is_popup.',
+            'Use get_insights for live game analytics, list_patch_notes / publish_patch_note for published notes (never set is_popup), and list_monster_types / get_monster_type / create_monster_type / update_monster_type / create_monster_subtype / update_monster_subtype to manage the game CMS monster catalog. Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});
