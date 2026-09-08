@@ -45,6 +45,10 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
     'City Scooter',
     'Airport Shuttle',
     'Flatbed Hauler',
+    'Street Motorcycle',
+    'Touring Motorcycle',
+    'Dirt Bike',
+    'Trail Quad',
   ],
     ship: [
     'SWAT Command Van',
