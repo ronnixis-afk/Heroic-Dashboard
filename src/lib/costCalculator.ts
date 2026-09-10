@@ -12,6 +12,8 @@ export type CatalogRateEntry = {
 /** Offline defaults aligned with game app catalog (cache miss). */
 const FALLBACK_CATALOG_RATES: Record<string, { input: number; output: number }> = {
   'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'deepseek-v4.1-flash': { input: 0.22, output: 0.66 },
+  // One-release leftover UsageLog / offline default.
   'deepseek-v4-flash': { input: 0.22, output: 0.66 },
   'deepseek-v4-pro': { input: 0.66, output: 1.98 },
 };

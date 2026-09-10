@@ -12,7 +12,7 @@ interface ModelOption {
 
 const MODELS: ModelOption[] = [
   { name: 'Gemini 3.1 Flash Lite', blendedRate: 0.875, creditMultiplier: 1 },
-  { name: 'DeepSeek V4 Flash', blendedRate: 0.44, creditMultiplier: 0.5 },
+  { name: 'DeepSeek V4.1 Flash', blendedRate: 0.44, creditMultiplier: 0.5 },
   { name: 'DeepSeek V4 Pro', blendedRate: 1.32, creditMultiplier: 1.51 },
   { name: 'Gemini 3.5 Flash', blendedRate: 5.25 },
   { name: 'Gemini 3 Flash', blendedRate: 1.75 },
