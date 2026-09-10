@@ -20,6 +20,7 @@ import {
   Mail,
   Globe,
   Compass,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
@@ -62,6 +63,7 @@ const NAV_GROUPS = [
       { icon: Compass, label: 'Product Roadmap', path: '/admin/roadmap' },
       { icon: Images, label: 'Media Library', path: '/admin/media' },
       { icon: Images, label: 'Monsters', path: '/admin/monsters' },
+      { icon: Sparkles, label: 'Races', path: '/admin/races' },
       { icon: MessageSquare, label: 'User Feedback', path: '/admin/feedback' },
       { icon: Globe, label: 'Public Realms', path: '/admin/public-realms' },
       { icon: ClipboardList, label: 'User Surveys', path: '/admin/surveys' },

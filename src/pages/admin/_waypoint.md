@@ -43,6 +43,7 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 | `/admin/roadmap` | Product Roadmap | Hook: `useRoadmap` → RPG `/api/admin/roadmap*` CRUD (Clerk session). Realtime via `getAdminSupabase`. Fields: title, summary, phase, status, category, featured, published, sortOrder. RPG public `GET /api/roadmap-items` for marketing site. |
 | `/admin/media` | Media Library | Storage upload via Supabase (`getAdminSupabase` + RLS); `ImageAsset` metadata CRUD/list via RPG `/api/admin/image-assets*`. Facet counts hydrate from a local watermark cache (`heroic.admin.imageAssetFacets.v1`) and sync through `GET /api/admin/image-assets/facets?since=&knownCount=` so only rows with a newer `updatedAt` are fetched; unchanged libraries return `{ unchanged: true }` without paging the catalog. First visit still blocks Genre / Asset Type / Gender / Race with `CountPendingControl` until the snapshot arrives. Local uploads/edits/deletes patch the cache immediately. Genre-scoped dropdown counts and the Fantasy/Modern/Sci-Fi library filter include `Any Genre` assets (same fallback pool as live matching) — most Monster Portraits, Zone Images, and Power Images are tagged Any Genre. Dynamic realm race discovery via `/api/admin/image-assets/discovered-races` with "Needs Artwork" zero-portrait filter. Character Portrait uploads can set **Secondary Imagery** (genre + race → fallback library race) via `/api/admin/image-assets/race-secondary-imagery`; live matching prefers the race's own portraits, then the selected race. Zone Image uploads use **Terrain Type** (`metadata.terrainType`), not narrative zone properties. |
 | `/admin/monsters` | Monsters | Hook: `useMonsterCatalog` → RPG `/api/admin/monster-types*`. Desktop master-detail: sticky catalog (search, status, genre) + type identity form + expandable subtype table. Edits type/subtype identity and enabled flags; combat templates stay unchanged. |
+| `/admin/races` | Races | Hook: `useRaceCatalog` → RPG `/api/admin/races*`. Full Race CMS table for illustrated archetypes, genres, appearance/themes defaults, and racial movement checklist (Fly / Climb / Swim). Edits persist to DB; old stamped realms are never mutated. |
 | `/admin/feedback` | User Feedback | Bug/suggestion inbox |
 | `/admin/surveys` | User Surveys | Multi-survey insights picker; each catalog survey has its own averages, distributions, and response list (`SurveyResponse.surveyId`) |
 | `/admin/emails` | Email Templates | Hook: `src/hooks/useEmails.ts` → RPG `/api/admin/emails/*` |
@@ -137,5 +138,18 @@ Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminM
 
 - Templates, low-credit threshold, test send, and recent send logs
 - Keys include `welcome`, `subscription_purchase`, `credits_low`, `credit_adjustment`, `feedback_received`, `feedback_admin`
-- `credit_adjustment` fires from RPG admin credit grants (`amount > 0`) with `{{amount}}`, `{{credits}}`, and `{{reason}}`
 - Resend API key stays on the RPG server only
+
+## Race Catalog CMS & Movement Defaults
+
+- **Source of truth:** DB `Race` table (managed via `/admin/races` and Media Library portrait uploads).
+- **Runtime adapter:** `heroic-ai-rpg/src/constants/raceArchetypes.ts` hydrates dynamic catalog from DB (`/api/race-catalog`) with in-memory cache, falling back to static code seeds when offline.
+- **Portrait upload checklist:**
+  - Typing a new race label in Character/NPC Portrait upload presents a multi-select **Fly / Climb / Swim** checklist.
+  - Checked movement modes default to **30 ft** (editable).
+  - Persists on the `Race` record and links image asset metadata via `metadata.raceId`.
+  - Help text: *Racial Extras Only; Stacks With Traits And Magic Items.*
+- **Playtime stamping:**
+  - World creation copies catalog movement speeds onto realm lore snapshot JSON (with optional `catalogRaceId`).
+  - Editing catalog movement later in the Dashboard does **not** alter or mutate existing world saves or public realm snapshots.
+  - Runtime actor movement calculations (`getActorEffectiveSpeed`) read base speeds directly from the actor without live DB queries.

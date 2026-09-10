@@ -15,6 +15,9 @@ import {
   Copy,
   Sparkles,
   Loader2,
+  Wind,
+  Mountain,
+  Waves,
 } from 'lucide-react';
 import { PageHeader, StatusBanner, CountPendingControl } from '../../components/ui';
 import {
@@ -28,6 +31,7 @@ import {
 } from '../../hooks/useImageAssets';
 import { useMonsterCatalogWithSubtypes } from '../../hooks/useMonsterCatalog';
 import { useDiscoveredRaces } from '../../hooks/useDiscoveredRaces';
+import { useRaceCatalog, type Race, type RaceGenre } from '../../hooks/useRaceCatalog';
 import {
   findPortraitRaceSecondaryMapping,
   usePortraitRaceSecondaryImagery,
@@ -318,6 +322,17 @@ const PORTRAIT_RACE_ASSET_TYPES = new Set(['Character Portrait', 'NPC Portrait']
 
 const normalizeAssetTypeForForm = (assetType: string): ImageAssetType =>
   assetType as ImageAssetType;
+
+const titleCaseRaceName = (input: string): string => {
+  return (input || '')
+    .trim()
+    .split(/([\s/-]+)/)
+    .map((part) => {
+      if (/^[\s/-]+$/.test(part) || !part) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join('');
+};
 
 const mergePortraitRaceOptions = (...lists: string[][]) => {
   const byLower = new Map<string, string>();
@@ -770,6 +785,39 @@ export default function AdminMedia() {
   const [isRaceMenuOpen, setIsRaceMenuOpen] = useState(false);
   const [onlyUncoveredRaces, setOnlyUncoveredRaces] = useState(false);
 
+  const { races: dbRaces, createRace: createDbRace } = useRaceCatalog();
+
+  const [newRaceMovement, setNewRaceMovement] = useState({
+    hasFly: false,
+    flySpeed: 30,
+    hasClimb: false,
+    climbSpeed: 30,
+    hasSwim: false,
+    swimSpeed: 30,
+  });
+
+  const liveRacesByName = useMemo(() => {
+    const map = new Map<string, Race>();
+    for (const r of dbRaces) {
+      map.set(r.name.toLowerCase(), r);
+      if (r.slug) map.set(r.slug.toLowerCase(), r);
+      if (r.portraitLabel) map.set(r.portraitLabel.toLowerCase(), r);
+    }
+    return map;
+  }, [dbRaces]);
+
+  const matchedCatalogRace = useMemo(() => {
+    const raw = (formData.metadata.race || '').trim().toLowerCase();
+    if (!raw || raw === 'none') return null;
+    return liveRacesByName.get(raw) || null;
+  }, [formData.metadata.race, liveRacesByName]);
+
+  const isNewRaceLabel = useMemo(() => {
+    const raw = (formData.metadata.race || '').trim().toLowerCase();
+    if (!raw || raw === 'none' || /^humans?$/i.test(raw)) return false;
+    return !liveRacesByName.has(raw);
+  }, [formData.metadata.race, liveRacesByName]);
+
   const {
     races: dynamicDiscoveredRaces,
     uncoveredCount: dynamicUncoveredRaceCount,
@@ -873,6 +921,7 @@ export default function AdminMedia() {
     () =>
       mergePortraitRaceOptions(
         PORTRAIT_METADATA_OPTIONS.race,
+        dbRaces.map((r) => r.name),
         getSuggestedPortraitRacesForGenre(formData.genre),
         formData.genre === 'Any Genre'
           ? discoveredRaceNamesByGenre.all
@@ -882,7 +931,7 @@ export default function AdminMedia() {
         // Keep cross-genre customs discoverable while typing on Any Genre uploads.
         formData.genre === 'Any Genre' ? Object.values(customRacesByGenre).flat() : []
       ),
-    [assets, customRacesByGenre, discoveredRaceNamesByGenre, formData.genre]
+    [assets, customRacesByGenre, dbRaces, discoveredRaceNamesByGenre, formData.genre]
   );
   const structuredGenre = getStructuredGenre(formData.genre);
 
@@ -1204,6 +1253,14 @@ export default function AdminMedia() {
     setTagDraft('');
     setErrorMessage(null);
     setStatusMessage(null);
+    setNewRaceMovement({
+      hasFly: false,
+      flySpeed: 30,
+      hasClimb: false,
+      climbSpeed: 30,
+      hasSwim: false,
+      swimSpeed: 30,
+    });
   };
 
   const resetFormAfterUpload = () => {
@@ -1214,6 +1271,14 @@ export default function AdminMedia() {
     setPendingSingleFile(null);
     setTagDraft('');
     setErrorMessage(null);
+    setNewRaceMovement({
+      hasFly: false,
+      flySpeed: 30,
+      hasClimb: false,
+      climbSpeed: 30,
+      hasSwim: false,
+      swimSpeed: 30,
+    });
 
     setFormData((current) => {
       const typeKey = PRIMARY_TYPE_METADATA_KEY[current.assetType];
@@ -1418,10 +1483,32 @@ export default function AdminMedia() {
         }
       }
 
-      const saveData =
+      let saveData =
         formData.assetType === 'Origin Item'
           ? { ...formData, genre: 'Any Genre' as ImageGenre }
-          : formData;
+          : { ...formData, metadata: { ...formData.metadata } };
+
+      if (isPortraitAssetType(saveData.assetType) && saveData.metadata.race?.trim()) {
+        const rawRace = saveData.metadata.race.trim();
+        const lowerRace = rawRace.toLowerCase();
+        const liveRace = liveRacesByName.get(lowerRace);
+        if (liveRace) {
+          saveData.metadata.raceId = liveRace.id;
+          saveData.metadata.race = liveRace.name;
+        } else if (!/^humans?$/i.test(rawRace) && rawRace.toLowerCase() !== 'none') {
+          // New race label! Create Race row in DB with chosen Fly / Climb / Swim checklist
+          const created = await createDbRace({
+            name: titleCaseRaceName(rawRace),
+            genres: saveData.genre === 'Any Genre' ? ['Fantasy'] : [saveData.genre as RaceGenre],
+            flySpeed: newRaceMovement.hasFly ? Math.max(5, Math.min(60, Number(newRaceMovement.flySpeed) || 30)) : 0,
+            climbSpeed: newRaceMovement.hasClimb ? Math.max(5, Math.min(60, Number(newRaceMovement.climbSpeed) || 30)) : 0,
+            swimSpeed: newRaceMovement.hasSwim ? Math.max(5, Math.min(60, Number(newRaceMovement.swimSpeed) || 30)) : 0,
+            enabled: true,
+          });
+          saveData.metadata.raceId = created.id;
+          saveData.metadata.race = created.name;
+        }
+      }
 
       if (editingAsset) {
         const uploadOrder = getTrailingUploadOrder(editingAsset.title) || 1;
@@ -1516,6 +1603,16 @@ export default function AdminMedia() {
 
       if (key === 'powerCategory') {
         delete metadata.powerSubtype;
+      }
+
+      if (key === 'race') {
+        const nextRaceName = (value || '').trim();
+        const nextLiveRace = nextRaceName ? liveRacesByName.get(nextRaceName.toLowerCase()) : undefined;
+        if (nextLiveRace?.id) {
+          metadata.raceId = nextLiveRace.id;
+        } else {
+          delete metadata.raceId;
+        }
       }
 
       if (key === 'monsterType') {
@@ -2029,6 +2126,168 @@ export default function AdminMedia() {
                         )}
                       </div>
                       </CountPendingControl>
+
+                      {matchedCatalogRace && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="text-brand-text-muted text-[11px]">Racial Speeds:</span>
+                          {matchedCatalogRace.flySpeed > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300 border border-sky-500/40">
+                              <Wind size={10} /> Fly {matchedCatalogRace.flySpeed} Ft
+                            </span>
+                          )}
+                          {matchedCatalogRace.climbSpeed > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/40">
+                              <Mountain size={10} /> Climb {matchedCatalogRace.climbSpeed} Ft
+                            </span>
+                          )}
+                          {matchedCatalogRace.swimSpeed > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-cyan-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-300 border border-cyan-500/40">
+                              <Waves size={10} /> Swim {matchedCatalogRace.swimSpeed} Ft
+                            </span>
+                          )}
+                          {matchedCatalogRace.flySpeed === 0 &&
+                            matchedCatalogRace.climbSpeed === 0 &&
+                            matchedCatalogRace.swimSpeed === 0 && (
+                              <span className="text-[11px] text-brand-text-muted">No Extra Movement</span>
+                            )}
+                        </div>
+                      )}
+
+                      {isNewRaceLabel && (
+                        <div className="mt-3 rounded-lg border border-brand-accent/40 bg-brand-bg/80 p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-medium text-xs text-brand-accent">
+                              <Sparkles size={13} />
+                              <span>New Race Movement Defaults: {formData.metadata.race}</span>
+                            </div>
+                            <span className="rounded bg-brand-accent/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand-accent">
+                              New Catalog Race
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-brand-text-muted leading-relaxed">
+                            Racial Extras Only; Stacks With Traits And Magic Items.
+                          </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                            {/* Fly */}
+                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
+                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
+                                <input
+                                  type="checkbox"
+                                  checked={newRaceMovement.hasFly}
+                                  onChange={(e) =>
+                                    setNewRaceMovement({
+                                      ...newRaceMovement,
+                                      hasFly: e.target.checked,
+                                      flySpeed: e.target.checked ? newRaceMovement.flySpeed || 30 : 0,
+                                    })
+                                  }
+                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
+                                />
+                                <Wind size={12} className="text-sky-400" />
+                                <span>Fly</span>
+                              </label>
+                              {newRaceMovement.hasFly && (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="5"
+                                    max="60"
+                                    step="5"
+                                    value={newRaceMovement.flySpeed}
+                                    onChange={(e) =>
+                                      setNewRaceMovement({
+                                        ...newRaceMovement,
+                                        flySpeed: Number(e.target.value),
+                                      })
+                                    }
+                                    className="input-field w-14 py-0.5 text-center text-xs"
+                                  />
+                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Climb */}
+                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
+                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
+                                <input
+                                  type="checkbox"
+                                  checked={newRaceMovement.hasClimb}
+                                  onChange={(e) =>
+                                    setNewRaceMovement({
+                                      ...newRaceMovement,
+                                      hasClimb: e.target.checked,
+                                      climbSpeed: e.target.checked ? newRaceMovement.climbSpeed || 30 : 0,
+                                    })
+                                  }
+                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
+                                />
+                                <Mountain size={12} className="text-amber-400" />
+                                <span>Climb</span>
+                              </label>
+                              {newRaceMovement.hasClimb && (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="5"
+                                    max="60"
+                                    step="5"
+                                    value={newRaceMovement.climbSpeed}
+                                    onChange={(e) =>
+                                      setNewRaceMovement({
+                                        ...newRaceMovement,
+                                        climbSpeed: Number(e.target.value),
+                                      })
+                                    }
+                                    className="input-field w-14 py-0.5 text-center text-xs"
+                                  />
+                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Swim */}
+                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
+                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
+                                <input
+                                  type="checkbox"
+                                  checked={newRaceMovement.hasSwim}
+                                  onChange={(e) =>
+                                    setNewRaceMovement({
+                                      ...newRaceMovement,
+                                      hasSwim: e.target.checked,
+                                      swimSpeed: e.target.checked ? newRaceMovement.swimSpeed || 30 : 0,
+                                    })
+                                  }
+                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
+                                />
+                                <Waves size={12} className="text-cyan-400" />
+                                <span>Swim</span>
+                              </label>
+                              {newRaceMovement.hasSwim && (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="5"
+                                    max="60"
+                                    step="5"
+                                    value={newRaceMovement.swimSpeed}
+                                    onChange={(e) =>
+                                      setNewRaceMovement({
+                                        ...newRaceMovement,
+                                        swimSpeed: Number(e.target.value),
+                                      })
+                                    }
+                                    className="input-field w-14 py-0.5 text-center text-xs"
+                                  />
+                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {selectedPortraitRace && (
                         <div className="mt-3">
