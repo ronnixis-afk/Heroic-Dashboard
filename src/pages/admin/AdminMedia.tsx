@@ -37,6 +37,7 @@ import {
   usePortraitRaceSecondaryImagery,
   type PortraitRaceSecondaryGenre,
 } from '../../hooks/usePortraitRaceSecondaryImagery';
+import { getRacePortraitCount } from '../../lib/raceAliasUtils';
 import {
   countByAssetType,
   countByGenre,
@@ -959,11 +960,17 @@ export default function AdminMedia() {
     () => countByMetadataKey(facetRows, 'race', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
   );
+  const uncoveredRaceCountForForm = useMemo(() => {
+    return portraitRaceOptions.filter(
+      (option) => getRacePortraitCount(portraitRaceCounts, option) === 0
+    ).length;
+  }, [portraitRaceCounts, portraitRaceOptions]);
+
   const filteredPortraitRaceOptions = useMemo(() => {
     const raceQuery = (formData.metadata.race || '').trim().toLowerCase();
     let options = portraitRaceOptions;
     if (onlyUncoveredRaces) {
-      options = options.filter((option) => getCount(portraitRaceCounts, option) === 0);
+      options = options.filter((option) => getRacePortraitCount(portraitRaceCounts, option) === 0);
     }
     if (!raceQuery) return options;
     return options.filter((option) => option.toLowerCase().includes(raceQuery));
@@ -985,7 +992,7 @@ export default function AdminMedia() {
     const options = portraitRaceOptions.filter((option) => {
       const optionKey = option.toLowerCase();
       if (optionKey === currentKey) return false;
-      return getCount(portraitRaceCounts, option) > 0 || optionKey === selectedSecondaryKey;
+      return getRacePortraitCount(portraitRaceCounts, option) > 0 || optionKey === selectedSecondaryKey;
     });
     if (
       currentSecondaryRace &&
@@ -2044,7 +2051,7 @@ export default function AdminMedia() {
                             title="Filter race list to races with 0 uploaded portraits"
                           >
                             Needs Artwork
-                            {dynamicUncoveredRaceCount > 0 && ` (${dynamicUncoveredRaceCount})`}
+                            {uncoveredRaceCountForForm > 0 && ` (${uncoveredRaceCountForForm})`}
                           </button>
                           <button
                             type="button"
@@ -2089,7 +2096,7 @@ export default function AdminMedia() {
                         {isRaceMenuOpen && !raceFieldPending && (
                           <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-52 overflow-y-auto rounded-lg border border-brand-primary bg-brand-bg p-1 shadow-xl">
                             {filteredPortraitRaceOptions.map((option) => {
-                              const count = getCount(portraitRaceCounts, option);
+                              const count = getRacePortraitCount(portraitRaceCounts, option);
                               return (
                                 <button
                                   key={option}
@@ -2304,7 +2311,7 @@ export default function AdminMedia() {
                             <option value="">None</option>
                             {secondaryRaceOptions.map((option) => (
                               <option key={option} value={option}>
-                                {formatOptionLabel(option, getCount(portraitRaceCounts, option))}
+                                {formatOptionLabel(option, getRacePortraitCount(portraitRaceCounts, option))}
                               </option>
                             ))}
                           </select>
