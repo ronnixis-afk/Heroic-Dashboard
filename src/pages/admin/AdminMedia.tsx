@@ -118,26 +118,8 @@ const formatArtFamilyOptionLabel = (
   return formatOptionLabel(label, count);
 };
 
-/** Transform raw Supabase storage object URLs into resized thumbnails for high performance. */
-export function getOptimizedThumbnailUrl(
-  url: string,
-  options: { width?: number; height?: number; quality?: number } = {}
-): string {
-  if (!url) return '';
-  const { width = 240, height = 240, quality = 80 } = options;
-
-  try {
-    if (url.includes('/storage/v1/object/public/')) {
-      const transformed = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-      const separator = transformed.includes('?') ? '&' : '?';
-      return `${transformed}${separator}width=${width}&height=${height}&resize=cover&quality=${quality}`;
-    }
-  } catch {
-    // Return original url if transformation parsing fails
-  }
-
-  return url;
-}
+import { getOptimizedThumbnailUrl } from '../../lib/thumbnailUtils';
+export { getOptimizedThumbnailUrl };
 
 interface MediaGridItemImageProps {
   src: string;
