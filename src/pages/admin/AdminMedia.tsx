@@ -1486,16 +1486,29 @@ export default function AdminMedia() {
           saveData.metadata.race = liveRace.name;
         } else if (!/^humans?$/i.test(rawRace) && rawRace.toLowerCase() !== 'none') {
           // New race label! Create Race row in DB with chosen Fly / Climb / Swim checklist
-          const created = await createDbRace({
-            name: titleCaseRaceName(rawRace),
-            genres: saveData.genre === 'Any Genre' ? ['Fantasy'] : [saveData.genre as RaceGenre],
-            flySpeed: newRaceMovement.hasFly ? Math.max(5, Math.min(60, Number(newRaceMovement.flySpeed) || 30)) : 0,
-            climbSpeed: newRaceMovement.hasClimb ? Math.max(5, Math.min(60, Number(newRaceMovement.climbSpeed) || 30)) : 0,
-            swimSpeed: newRaceMovement.hasSwim ? Math.max(5, Math.min(60, Number(newRaceMovement.swimSpeed) || 30)) : 0,
-            enabled: true,
-          });
-          saveData.metadata.raceId = created.id;
-          saveData.metadata.race = created.name;
+          try {
+            const created = await createDbRace({
+              name: titleCaseRaceName(rawRace),
+              genres: saveData.genre === 'Any Genre' ? ['Fantasy'] : [saveData.genre as RaceGenre],
+              flySpeed: newRaceMovement.hasFly ? Math.max(5, Math.min(60, Number(newRaceMovement.flySpeed) || 30)) : 0,
+              climbSpeed: newRaceMovement.hasClimb ? Math.max(5, Math.min(60, Number(newRaceMovement.climbSpeed) || 30)) : 0,
+              swimSpeed: newRaceMovement.hasSwim ? Math.max(5, Math.min(60, Number(newRaceMovement.swimSpeed) || 30)) : 0,
+              enabled: true,
+            });
+            saveData.metadata.raceId = created.id;
+            saveData.metadata.race = created.name;
+          } catch (createErr) {
+            // Edge case: Race was created concurrently or already exists in catalog
+            const existingMatch = dbRaces.find(
+              (r) => r.name.toLowerCase() === lowerRace || r.slug?.toLowerCase() === lowerRace
+            );
+            if (existingMatch) {
+              saveData.metadata.raceId = existingMatch.id;
+              saveData.metadata.race = existingMatch.name;
+            } else {
+              throw createErr;
+            }
+          }
         }
       }
 
