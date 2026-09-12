@@ -76,11 +76,11 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 
 ## Rideable Portrait Catalog Sync
 
-- **Source of truth:** `heroic-ai-rpg/src/constants/rideableCatalog.ts` (60 genre-scoped mounts/vehicles/ships: Fantasy mounts/ships, Modern 12 vehicles + ships, Sci-Fi all).
+- **Source of truth:** `heroic-ai-rpg/src/constants/rideableCatalog.ts` (68 genre-scoped mounts/vehicles/ships: Fantasy 8 mounts + 8 ships, Modern 8 mounts + 12 vehicles + 8 ships, Sci-Fi 8 mounts + 8 vehicles + 8 ships). Modern Mount Portrait keys (Beast Pens combat animals): Hunting Dog, K9 Unit, Trained Hawk, Trained Eagle, Brown Bear, Riding Horse, Police Horse, Mountain Lion — no assets uploaded yet; the game falls back to the Stables icon until they exist.
 - **Dashboard copy:** `src/constants/rideablePortraitCatalog.ts` — auto-generated; do not edit by hand.
 - **Sync command:** `npm run sync:rideable-catalog` (also runs optionally on `predev` / `prebuild`).
 - After changing rideable names/categories in the RPG, run the sync and commit the regenerated catalog.
-- **Upload dropdowns:** Mount / Vehicle / Ship template selects use catalog order for the selected genre only (do not mix orphan types from other genres). In-game Stables = Mount Portrait list; Garage = Vehicle Portrait list; Shipyard = Ship Portrait list.
+- **Upload dropdowns:** Mount / Vehicle / Ship template selects use catalog order for the selected genre only (do not mix orphan types from other genres). In-game Beast Pens / War Mount Bay (`stables`) = Mount Portrait list; Garage / Motor Pool = Vehicle Portrait list; Shipyard = Ship Portrait list.
 
 ## Item Image Catalog Sync
 

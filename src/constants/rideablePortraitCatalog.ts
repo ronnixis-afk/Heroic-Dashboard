@@ -35,7 +35,16 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
   ],
   },
   Modern: {
-    mount: [],
+    mount: [
+    'Hunting Dog',
+    'K9 Unit',
+    'Trained Hawk',
+    'Trained Eagle',
+    'Brown Bear',
+    'Riding Horse',
+    'Police Horse',
+    'Mountain Lion',
+  ],
     vehicle: [
     'Cargo Truck',
     'Sedan Coupe',
