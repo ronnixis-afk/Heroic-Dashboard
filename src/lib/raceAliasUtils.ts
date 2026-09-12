@@ -173,3 +173,36 @@ export function getRacePortraitCount(
 
   return 0;
 }
+
+/** Genre assumed for catalog Race rows with an empty `genres` list (same default as Media create). */
+export const DEFAULT_RACE_GENRE = 'Fantasy';
+
+/** Minimal shape of a DB catalog race needed for genre-scoped dropdown filtering. */
+export interface RaceGenreFilterInput {
+  name: string;
+  genres?: readonly string[] | null;
+}
+
+/** Genres a catalog race should be listed under; empty rows fall back to Fantasy (never every genre). */
+export function getRaceGenresForFilter(race: Pick<RaceGenreFilterInput, 'genres'>): string[] {
+  return race.genres && race.genres.length > 0 ? [...race.genres] : [DEFAULT_RACE_GENRE];
+}
+
+/**
+ * DB catalog race names for a portrait upload genre.
+ * - `Any Genre` (or empty) → the full catalog union.
+ * - Fantasy / Modern / Sci-Fi → only races whose `genres` include that genre
+ *   (multi-genre races appear under each of their genres).
+ */
+export function getDbRaceNamesForGenre(
+  races: readonly RaceGenreFilterInput[],
+  genre: string | undefined | null
+): string[] {
+  const scopedGenre = (genre || '').trim();
+  if (!scopedGenre || scopedGenre === 'Any Genre') {
+    return races.map((race) => race.name);
+  }
+  return races
+    .filter((race) => getRaceGenresForFilter(race).includes(scopedGenre))
+    .map((race) => race.name);
+}

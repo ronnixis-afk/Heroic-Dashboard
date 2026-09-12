@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Edit3,
+  ExternalLink,
   Image as ImageIcon,
   Save,
   Search,
@@ -18,6 +20,7 @@ import {
   Wind,
   Mountain,
   Waves,
+  type LucideIcon,
 } from 'lucide-react';
 import { PageHeader, StatusBanner, CountPendingControl } from '../../components/ui';
 import {
@@ -37,7 +40,7 @@ import {
   usePortraitRaceSecondaryImagery,
   type PortraitRaceSecondaryGenre,
 } from '../../hooks/usePortraitRaceSecondaryImagery';
-import { getRacePortraitCount } from '../../lib/raceAliasUtils';
+import { getDbRaceNamesForGenre, getRacePortraitCount } from '../../lib/raceAliasUtils';
 import {
   countByAssetType,
   countByGenre,
@@ -446,6 +449,85 @@ const getCatalogPortraitRaces = (assets: ImageAsset[], genre: ImageGenre) => {
 const isPortraitAssetType = (assetType: string | undefined) =>
   assetType === 'Character Portrait';
 
+/** Human never gets racial movement extras; the RPG admin API forces 0 on create/update. */
+const isHumanRaceLabel = (label: string | undefined | null) => /^humans?$/i.test((label || '').trim());
+
+/** Racial movement extras: unchecked = 0; checked defaults to 30 Ft, clamped to 5–60 Ft. */
+const RACIAL_MOVEMENT_MIN_FT = 5;
+const RACIAL_MOVEMENT_MAX_FT = 60;
+const RACIAL_MOVEMENT_DEFAULT_FT = 30;
+
+interface RaceMovementDraft {
+  hasFly: boolean;
+  flySpeed: number;
+  hasClimb: boolean;
+  climbSpeed: number;
+  hasSwim: boolean;
+  swimSpeed: number;
+}
+
+interface CatalogRaceSpeeds {
+  flySpeed: number;
+  climbSpeed: number;
+  swimSpeed: number;
+}
+
+const DEFAULT_RACE_MOVEMENT: RaceMovementDraft = {
+  hasFly: false,
+  flySpeed: RACIAL_MOVEMENT_DEFAULT_FT,
+  hasClimb: false,
+  climbSpeed: RACIAL_MOVEMENT_DEFAULT_FT,
+  hasSwim: false,
+  swimSpeed: RACIAL_MOVEMENT_DEFAULT_FT,
+};
+
+/** Prefill the checklist from catalog speeds (>0 ⇒ checked; 0 keeps the 30 Ft default ready). */
+const movementDraftFromRace = (race: CatalogRaceSpeeds): RaceMovementDraft => ({
+  hasFly: race.flySpeed > 0,
+  flySpeed: race.flySpeed > 0 ? race.flySpeed : RACIAL_MOVEMENT_DEFAULT_FT,
+  hasClimb: race.climbSpeed > 0,
+  climbSpeed: race.climbSpeed > 0 ? race.climbSpeed : RACIAL_MOVEMENT_DEFAULT_FT,
+  hasSwim: race.swimSpeed > 0,
+  swimSpeed: race.swimSpeed > 0 ? race.swimSpeed : RACIAL_MOVEMENT_DEFAULT_FT,
+});
+
+const clampRacialSpeed = (enabled: boolean, speed: number): number => {
+  if (!enabled) return 0;
+  const value = Number(speed) || RACIAL_MOVEMENT_DEFAULT_FT;
+  return Math.max(RACIAL_MOVEMENT_MIN_FT, Math.min(RACIAL_MOVEMENT_MAX_FT, value));
+};
+
+/** Checklist → catalog payload speeds (0 or 5–60). */
+const toCatalogRaceSpeeds = (draft: RaceMovementDraft): CatalogRaceSpeeds => ({
+  flySpeed: clampRacialSpeed(draft.hasFly, draft.flySpeed),
+  climbSpeed: clampRacialSpeed(draft.hasClimb, draft.climbSpeed),
+  swimSpeed: clampRacialSpeed(draft.hasSwim, draft.swimSpeed),
+});
+
+const haveSameCatalogSpeeds = (a: CatalogRaceSpeeds, b: CatalogRaceSpeeds) =>
+  a.flySpeed === b.flySpeed && a.climbSpeed === b.climbSpeed && a.swimSpeed === b.swimSpeed;
+
+const describeCatalogSpeeds = (speeds: CatalogRaceSpeeds): string => {
+  const parts: string[] = [];
+  if (speeds.flySpeed > 0) parts.push(`Fly ${speeds.flySpeed} Ft`);
+  if (speeds.climbSpeed > 0) parts.push(`Climb ${speeds.climbSpeed} Ft`);
+  if (speeds.swimSpeed > 0) parts.push(`Swim ${speeds.swimSpeed} Ft`);
+  return parts.length > 0 ? parts.join(', ') : 'No Extra Movement';
+};
+
+/** Rows of the Fly / Climb / Swim checklist (shared by new and matched catalog races). */
+const RACE_MOVEMENT_MODES: ReadonlyArray<{
+  label: string;
+  enabledKey: 'hasFly' | 'hasClimb' | 'hasSwim';
+  speedKey: 'flySpeed' | 'climbSpeed' | 'swimSpeed';
+  Icon: LucideIcon;
+  iconClassName: string;
+}> = [
+  { label: 'Fly', enabledKey: 'hasFly', speedKey: 'flySpeed', Icon: Wind, iconClassName: 'text-sky-400' },
+  { label: 'Climb', enabledKey: 'hasClimb', speedKey: 'climbSpeed', Icon: Mountain, iconClassName: 'text-amber-400' },
+  { label: 'Swim', enabledKey: 'hasSwim', speedKey: 'swimSpeed', Icon: Waves, iconClassName: 'text-cyan-400' },
+];
+
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
   genre === 'Any Genre' ? 'Fantasy' : genre;
 
@@ -768,16 +850,9 @@ export default function AdminMedia() {
   const [isRaceMenuOpen, setIsRaceMenuOpen] = useState(false);
   const [onlyUncoveredRaces, setOnlyUncoveredRaces] = useState(false);
 
-  const { races: dbRaces, createRace: createDbRace } = useRaceCatalog();
-
-  const [newRaceMovement, setNewRaceMovement] = useState({
-    hasFly: false,
-    flySpeed: 30,
-    hasClimb: false,
-    climbSpeed: 30,
-    hasSwim: false,
-    swimSpeed: 30,
-  });
+  // Full catalog (all genres) so name / raceId matching keeps working when editing assets;
+  // the dropdown filters DB names by genre separately (see portraitRaceOptions).
+  const { races: dbRaces, createRace: createDbRace, updateRace: updateDbRace } = useRaceCatalog();
 
   const liveRacesByName = useMemo(() => {
     const map = new Map<string, Race>();
@@ -797,9 +872,38 @@ export default function AdminMedia() {
 
   const isNewRaceLabel = useMemo(() => {
     const raw = (formData.metadata.race || '').trim().toLowerCase();
-    if (!raw || raw === 'none' || /^humans?$/i.test(raw)) return false;
+    if (!raw || raw === 'none' || isHumanRaceLabel(raw)) return false;
     return !liveRacesByName.has(raw);
   }, [formData.metadata.race, liveRacesByName]);
+
+  /**
+   * Fly / Climb / Swim checklist draft for the race label currently in the form.
+   * Matched catalog races derive from their stored speeds; the draft is keyed to the race
+   * (catalog id, or one shared key for any new label) so edits never leak between races
+   * and picking another catalog race re-prefills from the catalog.
+   */
+  const raceMovementKey = matchedCatalogRace ? `catalog:${matchedCatalogRace.id}` : 'new-race';
+  const [raceMovementDraft, setRaceMovementDraft] = useState<{
+    key: string;
+    value: RaceMovementDraft;
+  } | null>(null);
+  const raceMovement: RaceMovementDraft =
+    raceMovementDraft?.key === raceMovementKey
+      ? raceMovementDraft.value
+      : matchedCatalogRace
+        ? movementDraftFromRace(matchedCatalogRace)
+        : DEFAULT_RACE_MOVEMENT;
+  const updateRaceMovement = (patch: Partial<RaceMovementDraft>) => {
+    setRaceMovementDraft({ key: raceMovementKey, value: { ...raceMovement, ...patch } });
+  };
+  const isHumanRaceSelected = isHumanRaceLabel(formData.metadata.race);
+  const showRaceMovementChecklist =
+    isNewRaceLabel || (Boolean(matchedCatalogRace) && !isHumanRaceSelected);
+  /** Matched race whose checklist differs from the catalog — saving will PATCH the Race row. */
+  const hasPendingCatalogMovementChange =
+    matchedCatalogRace !== null &&
+    !isHumanRaceSelected &&
+    !haveSameCatalogSpeeds(toCatalogRaceSpeeds(raceMovement), matchedCatalogRace);
 
   const {
     races: dynamicDiscoveredRaces,
@@ -904,7 +1008,9 @@ export default function AdminMedia() {
     () =>
       mergePortraitRaceOptions(
         PORTRAIT_METADATA_OPTIONS.race,
-        dbRaces.map((r) => r.name),
+        // Genre-scoped: only catalog races whose genres include the form genre
+        // (empty genres ⇒ Fantasy); Any Genre lists the full catalog union.
+        getDbRaceNamesForGenre(dbRaces, formData.genre),
         getSuggestedPortraitRacesForGenre(formData.genre),
         formData.genre === 'Any Genre'
           ? discoveredRaceNamesByGenre.all
@@ -1242,14 +1348,7 @@ export default function AdminMedia() {
     setTagDraft('');
     setErrorMessage(null);
     setStatusMessage(null);
-    setNewRaceMovement({
-      hasFly: false,
-      flySpeed: 30,
-      hasClimb: false,
-      climbSpeed: 30,
-      hasSwim: false,
-      swimSpeed: 30,
-    });
+    setRaceMovementDraft(null);
   };
 
   const resetFormAfterUpload = () => {
@@ -1260,14 +1359,9 @@ export default function AdminMedia() {
     setPendingSingleFile(null);
     setTagDraft('');
     setErrorMessage(null);
-    setNewRaceMovement({
-      hasFly: false,
-      flySpeed: 30,
-      hasClimb: false,
-      climbSpeed: 30,
-      hasSwim: false,
-      swimSpeed: 30,
-    });
+    // Race label is preserved for the next upload; the checklist re-derives from the
+    // (already refetched) catalog so it shows the saved speeds, not a stale draft.
+    setRaceMovementDraft(null);
 
     setFormData((current) => {
       const typeKey = PRIMARY_TYPE_METADATA_KEY[current.assetType];
@@ -1430,6 +1524,7 @@ export default function AdminMedia() {
     setOptimizedImages([]);
     setUploadMode(null);
     setTagDraft('');
+    setRaceMovementDraft(null);
     setErrorMessage(null);
     setStatusMessage('Editing Metadata Only.');
   };
@@ -1477,6 +1572,8 @@ export default function AdminMedia() {
           ? { ...formData, genre: 'Any Genre' as ImageGenre }
           : { ...formData, metadata: { ...formData.metadata } };
 
+      let catalogMovementNote: string | null = null;
+
       if (isPortraitAssetType(saveData.assetType) && saveData.metadata.race?.trim()) {
         const rawRace = saveData.metadata.race.trim();
         const lowerRace = rawRace.toLowerCase();
@@ -1484,15 +1581,22 @@ export default function AdminMedia() {
         if (liveRace) {
           saveData.metadata.raceId = liveRace.id;
           saveData.metadata.race = liveRace.name;
-        } else if (!/^humans?$/i.test(rawRace) && rawRace.toLowerCase() !== 'none') {
+          // Existing catalog race: the checklist edits the catalog itself (Human stays locked at 0).
+          // Only PATCH when speeds actually changed; old realm stamps are never rewritten.
+          if (!isHumanRaceLabel(liveRace.name)) {
+            const nextSpeeds = toCatalogRaceSpeeds(raceMovement);
+            if (!haveSameCatalogSpeeds(nextSpeeds, liveRace)) {
+              await updateDbRace(liveRace.id, nextSpeeds);
+              catalogMovementNote = `${liveRace.name} Racial Movement Updated In Race Catalog (${describeCatalogSpeeds(nextSpeeds)}).`;
+            }
+          }
+        } else if (!isHumanRaceLabel(rawRace) && lowerRace !== 'none') {
           // New race label! Create Race row in DB with chosen Fly / Climb / Swim checklist
           try {
             const created = await createDbRace({
               name: titleCaseRaceName(rawRace),
               genres: saveData.genre === 'Any Genre' ? ['Fantasy'] : [saveData.genre as RaceGenre],
-              flySpeed: newRaceMovement.hasFly ? Math.max(5, Math.min(60, Number(newRaceMovement.flySpeed) || 30)) : 0,
-              climbSpeed: newRaceMovement.hasClimb ? Math.max(5, Math.min(60, Number(newRaceMovement.climbSpeed) || 30)) : 0,
-              swimSpeed: newRaceMovement.hasSwim ? Math.max(5, Math.min(60, Number(newRaceMovement.swimSpeed) || 30)) : 0,
+              ...toCatalogRaceSpeeds(raceMovement),
               enabled: true,
             });
             saveData.metadata.raceId = created.id;
@@ -1521,7 +1625,9 @@ export default function AdminMedia() {
           description: saveData.description.trim(),
         });
         resetForm();
-        setStatusMessage('Image Metadata Updated.');
+        setStatusMessage(
+          catalogMovementNote ? `Image Metadata Updated. ${catalogMovementNote}` : 'Image Metadata Updated.'
+        );
         return;
       }
 
@@ -1551,7 +1657,9 @@ export default function AdminMedia() {
       const uploadedCount = optimizedImages.length;
       resetFormAfterUpload();
       setStatusMessage(
-        `${uploadedCount} ${uploadedCount === 1 ? 'Image' : 'Images'} Uploaded To Media Library.`
+        `${uploadedCount} ${uploadedCount === 1 ? 'Image' : 'Images'} Uploaded To Media Library.${
+          catalogMovementNote ? ` ${catalogMovementNote}` : ''
+        }`
       );
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Unable To Save Image Asset.'));
@@ -2129,164 +2237,108 @@ export default function AdminMedia() {
                       </div>
                       </CountPendingControl>
 
-                      {matchedCatalogRace && (
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="text-brand-text-muted text-[11px]">Racial Speeds:</span>
-                          {matchedCatalogRace.flySpeed > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300 border border-sky-500/40">
-                              <Wind size={10} /> Fly {matchedCatalogRace.flySpeed} Ft
-                            </span>
-                          )}
-                          {matchedCatalogRace.climbSpeed > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/40">
-                              <Mountain size={10} /> Climb {matchedCatalogRace.climbSpeed} Ft
-                            </span>
-                          )}
-                          {matchedCatalogRace.swimSpeed > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded bg-cyan-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-300 border border-cyan-500/40">
-                              <Waves size={10} /> Swim {matchedCatalogRace.swimSpeed} Ft
-                            </span>
-                          )}
-                          {matchedCatalogRace.flySpeed === 0 &&
-                            matchedCatalogRace.climbSpeed === 0 &&
-                            matchedCatalogRace.swimSpeed === 0 && (
-                              <span className="text-[11px] text-brand-text-muted">No Extra Movement</span>
-                            )}
-                        </div>
+                      {isHumanRaceSelected && (
+                        <p className="mt-2 text-[11px] text-brand-text-muted">
+                          Human: No Extra Movement. Racial Fly / Climb / Swim Stay At 0 For Humans.
+                        </p>
                       )}
 
-                      {isNewRaceLabel && (
-                        <div className="mt-3 rounded-lg border border-brand-accent/40 bg-brand-bg/80 p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 font-medium text-xs text-brand-accent">
-                              <Sparkles size={13} />
-                              <span>New Race Movement Defaults: {formData.metadata.race}</span>
+                      {showRaceMovementChecklist && (
+                        <div
+                          className={`mt-3 rounded-lg border bg-brand-bg/80 p-3 space-y-2 ${
+                            isNewRaceLabel ? 'border-brand-accent/40' : 'border-brand-primary'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div
+                              className={`flex items-center gap-1.5 font-medium text-xs ${
+                                isNewRaceLabel ? 'text-brand-accent' : 'text-brand-text'
+                              }`}
+                            >
+                              <Sparkles size={13} className={isNewRaceLabel ? '' : 'text-brand-accent'} />
+                              <span>
+                                {isNewRaceLabel
+                                  ? `New Race Movement Defaults: ${formData.metadata.race}`
+                                  : `Racial Movement Extras: ${matchedCatalogRace?.name}`}
+                              </span>
                             </div>
-                            <span className="rounded bg-brand-accent/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand-accent">
-                              New Catalog Race
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {isNewRaceLabel ? (
+                                <span className="rounded bg-brand-accent/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand-accent">
+                                  New Catalog Race
+                                </span>
+                              ) : (
+                                <>
+                                  {hasPendingCatalogMovementChange ? (
+                                    <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/40">
+                                      Updates Catalog On Save
+                                    </span>
+                                  ) : (
+                                    <span className="rounded bg-brand-primary/40 px-1.5 py-0.5 text-[10px] font-semibold text-brand-text-muted">
+                                      Catalog Race
+                                    </span>
+                                  )}
+                                  <Link
+                                    to="/admin/races"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 rounded bg-brand-primary/30 px-1.5 py-0.5 text-[10px] font-medium text-brand-text-secondary hover:bg-brand-primary/50 hover:text-brand-text transition-colors"
+                                    title="Open The Race Catalog In A New Tab"
+                                  >
+                                    <ExternalLink size={10} />
+                                    <span>Open In Race Catalog</span>
+                                  </Link>
+                                </>
+                              )}
+                            </div>
                           </div>
                           <p className="text-[11px] text-brand-text-muted leading-relaxed">
                             Racial Extras Only; Stacks With Traits And Magic Items.
+                            {!isNewRaceLabel &&
+                              ' Saving Updates The Race Catalog For New Worlds; Existing Realms Keep Their Stamped Speeds.'}
                           </p>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                            {/* Fly */}
-                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
-                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
-                                <input
-                                  type="checkbox"
-                                  checked={newRaceMovement.hasFly}
-                                  onChange={(e) =>
-                                    setNewRaceMovement({
-                                      ...newRaceMovement,
-                                      hasFly: e.target.checked,
-                                      flySpeed: e.target.checked ? newRaceMovement.flySpeed || 30 : 0,
-                                    })
-                                  }
-                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
-                                />
-                                <Wind size={12} className="text-sky-400" />
-                                <span>Fly</span>
-                              </label>
-                              {newRaceMovement.hasFly && (
-                                <div className="flex items-center gap-1">
+                            {RACE_MOVEMENT_MODES.map(({ label, enabledKey, speedKey, Icon, iconClassName }) => (
+                              <div
+                                key={label}
+                                className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2"
+                              >
+                                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
                                   <input
-                                    type="number"
-                                    min="5"
-                                    max="60"
-                                    step="5"
-                                    value={newRaceMovement.flySpeed}
+                                    type="checkbox"
+                                    checked={raceMovement[enabledKey]}
                                     onChange={(e) =>
-                                      setNewRaceMovement({
-                                        ...newRaceMovement,
-                                        flySpeed: Number(e.target.value),
+                                      updateRaceMovement({
+                                        [enabledKey]: e.target.checked,
+                                        [speedKey]: e.target.checked
+                                          ? raceMovement[speedKey] || RACIAL_MOVEMENT_DEFAULT_FT
+                                          : 0,
                                       })
                                     }
-                                    className="input-field w-14 py-0.5 text-center text-xs"
+                                    className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
                                   />
-                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Climb */}
-                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
-                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
-                                <input
-                                  type="checkbox"
-                                  checked={newRaceMovement.hasClimb}
-                                  onChange={(e) =>
-                                    setNewRaceMovement({
-                                      ...newRaceMovement,
-                                      hasClimb: e.target.checked,
-                                      climbSpeed: e.target.checked ? newRaceMovement.climbSpeed || 30 : 0,
-                                    })
-                                  }
-                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
-                                />
-                                <Mountain size={12} className="text-amber-400" />
-                                <span>Climb</span>
-                              </label>
-                              {newRaceMovement.hasClimb && (
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="number"
-                                    min="5"
-                                    max="60"
-                                    step="5"
-                                    value={newRaceMovement.climbSpeed}
-                                    onChange={(e) =>
-                                      setNewRaceMovement({
-                                        ...newRaceMovement,
-                                        climbSpeed: Number(e.target.value),
-                                      })
-                                    }
-                                    className="input-field w-14 py-0.5 text-center text-xs"
-                                  />
-                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Swim */}
-                            <div className="flex items-center justify-between rounded border border-brand-primary/60 bg-brand-surface/60 p-2">
-                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-brand-text">
-                                <input
-                                  type="checkbox"
-                                  checked={newRaceMovement.hasSwim}
-                                  onChange={(e) =>
-                                    setNewRaceMovement({
-                                      ...newRaceMovement,
-                                      hasSwim: e.target.checked,
-                                      swimSpeed: e.target.checked ? newRaceMovement.swimSpeed || 30 : 0,
-                                    })
-                                  }
-                                  className="rounded border-brand-primary text-brand-accent focus:ring-brand-accent"
-                                />
-                                <Waves size={12} className="text-cyan-400" />
-                                <span>Swim</span>
-                              </label>
-                              {newRaceMovement.hasSwim && (
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="number"
-                                    min="5"
-                                    max="60"
-                                    step="5"
-                                    value={newRaceMovement.swimSpeed}
-                                    onChange={(e) =>
-                                      setNewRaceMovement({
-                                        ...newRaceMovement,
-                                        swimSpeed: Number(e.target.value),
-                                      })
-                                    }
-                                    className="input-field w-14 py-0.5 text-center text-xs"
-                                  />
-                                  <span className="text-[10px] text-brand-text-muted">Ft</span>
-                                </div>
-                              )}
-                            </div>
+                                  <Icon size={12} className={iconClassName} />
+                                  <span>{label}</span>
+                                </label>
+                                {raceMovement[enabledKey] && (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min={RACIAL_MOVEMENT_MIN_FT}
+                                      max={RACIAL_MOVEMENT_MAX_FT}
+                                      step="5"
+                                      value={raceMovement[speedKey]}
+                                      onChange={(e) =>
+                                        updateRaceMovement({ [speedKey]: Number(e.target.value) })
+                                      }
+                                      className="input-field w-14 py-0.5 text-center text-xs"
+                                    />
+                                    <span className="text-[10px] text-brand-text-muted">Ft</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
