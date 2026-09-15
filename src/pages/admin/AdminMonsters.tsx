@@ -23,9 +23,18 @@ import { cn } from '../../lib/utils';
 import {
   useMonsterCatalog,
   useMonsterTypeDetails,
+  COMBAT_FLAVOR_DAMAGE_TYPES,
+  COMBAT_FLAVOR_SAVE_ABILITIES,
+  COMBAT_FLAVOR_SAVE_EFFECTS,
+  COMBAT_FLAVOR_TARGET_TYPES,
   COMBAT_FLAVOR_TEMPLATE_NAMES,
+  type CombatFlavorDamageType,
+  type CombatFlavorSaveAbility,
+  type CombatFlavorSaveEffect,
+  type CombatFlavorTargetType,
   type CombatFlavorTemplateName,
   type MonsterCombatFlavorMap,
+  type MonsterCombatFlavorSlot,
   type MonsterCombatTemplateFlavorKit,
   type MonsterGenre,
   type MonsterSubtype,
@@ -62,6 +71,43 @@ const TERRAINS = [
   'Warp Rift',
 ] as const;
 
+function slotFromKit(slot?: MonsterCombatFlavorSlot): MonsterCombatFlavorSlot {
+  return {
+    name: slot?.name || '',
+    description: slot?.description || '',
+    ...(slot?.damageType ? { damageType: slot.damageType } : {}),
+    ...(slot?.targetType ? { targetType: slot.targetType } : {}),
+    ...(slot?.saveAbility ? { saveAbility: slot.saveAbility } : {}),
+    ...(slot?.saveEffect ? { saveEffect: slot.saveEffect } : {}),
+  };
+}
+
+function compactFlavorSlot(slot: MonsterCombatFlavorSlot): MonsterCombatFlavorSlot | null {
+  const name = (slot.name || '').trim();
+  const description = (slot.description || '').trim();
+  if (!name || !description) return null;
+  return {
+    name,
+    description,
+    ...(slot.damageType ? { damageType: slot.damageType } : {}),
+    ...(slot.targetType ? { targetType: slot.targetType } : {}),
+    ...(slot.saveAbility ? { saveAbility: slot.saveAbility } : {}),
+    ...(slot.saveEffect ? { saveEffect: slot.saveEffect } : {}),
+  };
+}
+
+function slotsFromKit(slots?: MonsterCombatFlavorSlot[]): MonsterCombatFlavorSlot[] {
+  const mapped = (slots || []).map(slotFromKit);
+  return mapped.length > 0 ? mapped : [slotFromKit()];
+}
+
+function replaceFirstSlot(
+  slots: MonsterCombatFlavorSlot[] | undefined,
+  next: MonsterCombatFlavorSlot
+): MonsterCombatFlavorSlot[] {
+  return [next, ...(slots || []).slice(1)];
+}
+
 function kitFromDraftMap(
   map: MonsterCombatFlavorMap,
   template: CombatFlavorTemplateName
@@ -69,18 +115,8 @@ function kitFromDraftMap(
   const kit = map[template];
   return {
     description: kit?.description || '',
-    attacks: [
-      {
-        name: kit?.attacks?.[0]?.name || '',
-        description: kit?.attacks?.[0]?.description || '',
-      },
-    ],
-    specialAbilities: [
-      {
-        name: kit?.specialAbilities?.[0]?.name || '',
-        description: kit?.specialAbilities?.[0]?.description || '',
-      },
-    ],
+    attacks: slotsFromKit(kit?.attacks),
+    specialAbilities: slotsFromKit(kit?.specialAbilities),
   };
 }
 
@@ -93,12 +129,10 @@ function compactCombatFlavor(
   for (const [template, kit] of Object.entries(map)) {
     if (!kit) continue;
     const description = (kit.description || '').trim();
-    const attacks = (kit.attacks || [])
-      .map((a) => ({ name: (a.name || '').trim(), description: (a.description || '').trim() }))
-      .filter((a) => a.name && a.description);
+    const attacks = (kit.attacks || []).map(compactFlavorSlot).filter((a): a is MonsterCombatFlavorSlot => !!a);
     const specialAbilities = (kit.specialAbilities || [])
-      .map((a) => ({ name: (a.name || '').trim(), description: (a.description || '').trim() }))
-      .filter((a) => a.name && a.description);
+      .map(compactFlavorSlot)
+      .filter((a): a is MonsterCombatFlavorSlot => !!a);
     if (!description && attacks.length === 0 && specialAbilities.length === 0) continue;
     out[template] = {
       ...(description ? { description } : {}),
@@ -137,6 +171,123 @@ const EMPTY_SUB_FORM = {
   allowedTerrains: ['Plains'] as string[],
   enabled: true,
 };
+
+function titleCaseAbility(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function FlavorSlotMechanics({
+  idPrefix,
+  slot,
+  disabled,
+  onChange,
+}: {
+  idPrefix: string;
+  slot: MonsterCombatFlavorSlot;
+  disabled: boolean;
+  onChange: (next: MonsterCombatFlavorSlot) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label className="input-label" htmlFor={`${idPrefix}-damage`}>
+          Damage Type
+        </label>
+        <select
+          id={`${idPrefix}-damage`}
+          className="input-field cursor-pointer"
+          value={slot.damageType || ''}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({
+              ...slot,
+              damageType: (e.target.value || undefined) as CombatFlavorDamageType | undefined,
+            })
+          }
+        >
+          <option value="">Template Default</option>
+          {COMBAT_FLAVOR_DAMAGE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="input-label" htmlFor={`${idPrefix}-target`}>
+          Target Type
+        </label>
+        <select
+          id={`${idPrefix}-target`}
+          className="input-field cursor-pointer"
+          value={slot.targetType || ''}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({
+              ...slot,
+              targetType: (e.target.value || undefined) as CombatFlavorTargetType | undefined,
+            })
+          }
+        >
+          <option value="">Template Default</option>
+          {COMBAT_FLAVOR_TARGET_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="input-label" htmlFor={`${idPrefix}-save`}>
+          Save Ability
+        </label>
+        <select
+          id={`${idPrefix}-save`}
+          className="input-field cursor-pointer"
+          value={slot.saveAbility || ''}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({
+              ...slot,
+              saveAbility: (e.target.value || undefined) as CombatFlavorSaveAbility | undefined,
+            })
+          }
+        >
+          <option value="">Template Default</option>
+          {COMBAT_FLAVOR_SAVE_ABILITIES.map((ability) => (
+            <option key={ability} value={ability}>
+              {titleCaseAbility(ability)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="input-label" htmlFor={`${idPrefix}-effect`}>
+          Save Effect
+        </label>
+        <select
+          id={`${idPrefix}-effect`}
+          className="input-field cursor-pointer"
+          value={slot.saveEffect || ''}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({
+              ...slot,
+              saveEffect: (e.target.value || undefined) as CombatFlavorSaveEffect | undefined,
+            })
+          }
+        >
+          <option value="">Template Default</option>
+          {COMBAT_FLAVOR_SAVE_EFFECTS.map((effect) => (
+            <option key={effect} value={effect}>
+              {titleCaseAbility(effect)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
 
 function toggleValue<T extends string>(list: T[], value: T, min = 1): T[] {
   const has = list.includes(value);
@@ -613,7 +764,7 @@ export default function AdminMonsters() {
     <div className="page">
       <PageHeader
         title="Monsters"
-        description="Edit monster type and subtype identity for procedural encounters. Combat kit mechanics stay in code; flavor (description, attack and ability names) is CMS-authored per subtype and template."
+        description="Edit monster type and subtype identity for procedural encounters. Per-template flavor can set names, blurbs, and optional damage type, target type, save ability, and save effect. Dice and DC stay on the CR template pipeline."
         actions={
           isCreating ? (
             <button type="button" onClick={() => setIsCreating(false)} className="btn-secondary">
@@ -1133,7 +1284,7 @@ export default function AdminMonsters() {
                                           <div>
                                             <p className="section-title">Combat Flavor</p>
                                             <p className="help-text">
-                                              Per Template Names And Descriptions Used When This Subtype Rolls That Combat Kit.
+                                              Per Template Names, Descriptions, And Optional Combat Mechanics. Unset Fields Keep Template And CR Defaults. Editing Attacks Or Special Abilities Replaces The Full Array For That Kit.
                                             </p>
                                           </div>
                                           <div className="min-w-[160px]">
@@ -1162,8 +1313,8 @@ export default function AdminMonsters() {
                                         </div>
                                         {(() => {
                                           const kit = kitFromDraftMap(draft.combatFlavor, draft.flavorTemplate);
-                                          const attack = kit.attacks?.[0] || { name: '', description: '' };
-                                          const ability = kit.specialAbilities?.[0] || { name: '', description: '' };
+                                          const attack = slotFromKit(kit.attacks?.[0]);
+                                          const ability = slotFromKit(kit.specialAbilities?.[0]);
                                           return (
                                             <div className="space-y-3">
                                               <div>
@@ -1187,93 +1338,126 @@ export default function AdminMonsters() {
                                                   }
                                                 />
                                               </div>
-                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                  <label
-                                                    className="input-label"
-                                                    htmlFor={`atk-name-${subtype.id}`}
-                                                  >
-                                                    Attack Name
-                                                  </label>
-                                                  <input
-                                                    id={`atk-name-${subtype.id}`}
-                                                    className="input-field"
-                                                    value={attack.name}
-                                                    disabled={subtype.isProtected}
-                                                    onChange={(e) =>
-                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
-                                                        attacks: [
-                                                          { name: e.target.value, description: attack.description },
-                                                        ],
-                                                      })
-                                                    }
-                                                  />
+                                              <div className="space-y-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                  <div>
+                                                    <label
+                                                      className="input-label"
+                                                      htmlFor={`atk-name-${subtype.id}`}
+                                                    >
+                                                      Attack Name
+                                                    </label>
+                                                    <input
+                                                      id={`atk-name-${subtype.id}`}
+                                                      className="input-field"
+                                                      value={attack.name}
+                                                      disabled={subtype.isProtected}
+                                                      onChange={(e) =>
+                                                        updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                          attacks: replaceFirstSlot(kit.attacks, {
+                                                            ...attack,
+                                                            name: e.target.value,
+                                                          }),
+                                                        })
+                                                      }
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <label
+                                                      className="input-label"
+                                                      htmlFor={`atk-desc-${subtype.id}`}
+                                                    >
+                                                      Attack Description
+                                                    </label>
+                                                    <input
+                                                      id={`atk-desc-${subtype.id}`}
+                                                      className="input-field"
+                                                      value={attack.description}
+                                                      disabled={subtype.isProtected}
+                                                      onChange={(e) =>
+                                                        updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                          attacks: replaceFirstSlot(kit.attacks, {
+                                                            ...attack,
+                                                            description: e.target.value,
+                                                          }),
+                                                        })
+                                                      }
+                                                    />
+                                                  </div>
                                                 </div>
-                                                <div>
-                                                  <label
-                                                    className="input-label"
-                                                    htmlFor={`atk-desc-${subtype.id}`}
-                                                  >
-                                                    Attack Description
-                                                  </label>
-                                                  <input
-                                                    id={`atk-desc-${subtype.id}`}
-                                                    className="input-field"
-                                                    value={attack.description}
-                                                    disabled={subtype.isProtected}
-                                                    onChange={(e) =>
-                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
-                                                        attacks: [
-                                                          { name: attack.name, description: e.target.value },
-                                                        ],
-                                                      })
-                                                    }
-                                                  />
-                                                </div>
+                                                <p className="help-text">Attack Mechanics</p>
+                                                <FlavorSlotMechanics
+                                                  idPrefix={`atk-mech-${subtype.id}`}
+                                                  slot={attack}
+                                                  disabled={subtype.isProtected}
+                                                  onChange={(next) =>
+                                                    updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                      attacks: replaceFirstSlot(kit.attacks, next),
+                                                    })
+                                                  }
+                                                />
                                               </div>
-                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                  <label
-                                                    className="input-label"
-                                                    htmlFor={`abil-name-${subtype.id}`}
-                                                  >
-                                                    Special Ability Name
-                                                  </label>
-                                                  <input
-                                                    id={`abil-name-${subtype.id}`}
-                                                    className="input-field"
-                                                    value={ability.name}
-                                                    disabled={subtype.isProtected}
-                                                    onChange={(e) =>
-                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
-                                                        specialAbilities: [
-                                                          { name: e.target.value, description: ability.description },
-                                                        ],
-                                                      })
-                                                    }
-                                                  />
+                                              <div className="space-y-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                  <div>
+                                                    <label
+                                                      className="input-label"
+                                                      htmlFor={`abil-name-${subtype.id}`}
+                                                    >
+                                                      Special Ability Name
+                                                    </label>
+                                                    <input
+                                                      id={`abil-name-${subtype.id}`}
+                                                      className="input-field"
+                                                      value={ability.name}
+                                                      disabled={subtype.isProtected}
+                                                      onChange={(e) =>
+                                                        updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                          specialAbilities: replaceFirstSlot(kit.specialAbilities, {
+                                                            ...ability,
+                                                            name: e.target.value,
+                                                          }),
+                                                        })
+                                                      }
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <label
+                                                      className="input-label"
+                                                      htmlFor={`abil-desc-${subtype.id}`}
+                                                    >
+                                                      Special Ability Description
+                                                    </label>
+                                                    <input
+                                                      id={`abil-desc-${subtype.id}`}
+                                                      className="input-field"
+                                                      value={ability.description}
+                                                      disabled={subtype.isProtected}
+                                                      onChange={(e) =>
+                                                        updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                          specialAbilities: replaceFirstSlot(kit.specialAbilities, {
+                                                            ...ability,
+                                                            description: e.target.value,
+                                                          }),
+                                                        })
+                                                      }
+                                                    />
+                                                  </div>
                                                 </div>
-                                                <div>
-                                                  <label
-                                                    className="input-label"
-                                                    htmlFor={`abil-desc-${subtype.id}`}
-                                                  >
-                                                    Special Ability Description
-                                                  </label>
-                                                  <input
-                                                    id={`abil-desc-${subtype.id}`}
-                                                    className="input-field"
-                                                    value={ability.description}
-                                                    disabled={subtype.isProtected}
-                                                    onChange={(e) =>
-                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
-                                                        specialAbilities: [
-                                                          { name: ability.name, description: e.target.value },
-                                                        ],
-                                                      })
-                                                    }
-                                                  />
-                                                </div>
+                                                <p className="help-text">Special Ability Mechanics</p>
+                                                <FlavorSlotMechanics
+                                                  idPrefix={`abil-mech-${subtype.id}`}
+                                                  slot={ability}
+                                                  disabled={subtype.isProtected}
+                                                  onChange={(next) =>
+                                                    updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                      specialAbilities: replaceFirstSlot(
+                                                        kit.specialAbilities,
+                                                        next
+                                                      ),
+                                                    })
+                                                  }
+                                                />
                                               </div>
                                             </div>
                                           );

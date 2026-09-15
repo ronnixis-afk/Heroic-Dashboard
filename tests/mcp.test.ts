@@ -476,6 +476,14 @@ describe('monster catalog payloads', () => {
   });
 
   it('builds combatFlavor on subtype update and incremental flavor patches', () => {
+    const grenadierSlot = {
+      name: 'Rime Grenade',
+      description: 'A frost charge that detonates on impact.',
+      damageType: 'Cold',
+      targetType: 'Multiple',
+      saveAbility: 'dexterity',
+      saveEffect: 'half',
+    };
     assert.deepEqual(
       buildMonsterSubtypeUpdatePayload({
         combatFlavor: {
@@ -494,12 +502,52 @@ describe('monster catalog payloads', () => {
         },
       }
     );
+    assert.deepEqual(
+      buildMonsterSubtypeUpdatePayload({
+        combatFlavor: {
+          Grenadier: {
+            description: 'A bombardier that saturates the field.',
+            specialAbilities: [grenadierSlot],
+          },
+        },
+      }),
+      {
+        combatFlavor: {
+          Grenadier: {
+            description: 'A bombardier that saturates the field.',
+            specialAbilities: [grenadierSlot],
+          },
+        },
+      }
+    );
     assert.throws(
       () =>
         buildMonsterSubtypeUpdatePayload({
           combatFlavor: { Custom: { description: 'Nope' } },
         }),
       /Unknown Combat Template Key/
+    );
+    assert.throws(
+      () =>
+        buildMonsterSubtypeUpdatePayload({
+          combatFlavor: {
+            Brute: {
+              attacks: [{ name: 'Slam', description: 'Hits.', damageType: 'Ice' }],
+            },
+          },
+        }),
+      /damageType Must Be One Of/
+    );
+    assert.throws(
+      () =>
+        buildMonsterSubtypeUpdatePayload({
+          combatFlavor: {
+            Brute: {
+              specialAbilities: [{ name: 'Burst', description: 'Explodes.', target: 'Multiple' }],
+            },
+          },
+        }),
+      /Unknown Key: target/
     );
     assert.deepEqual(
       buildMonsterCombatFlavorUpdatePayload({
@@ -516,7 +564,53 @@ describe('monster catalog payloads', () => {
         },
       }
     );
+    assert.deepEqual(
+      buildMonsterCombatFlavorUpdatePayload({
+        template: 'Grenadier',
+        specialAbilities: [grenadierSlot],
+      }),
+      {
+        combatFlavor: {
+          Grenadier: {
+            specialAbilities: [grenadierSlot],
+          },
+        },
+      }
+    );
     assert.throws(() => buildMonsterCombatFlavorUpdatePayload({ template: 'Custom' }), /Unknown Combat Template/);
+    assert.throws(
+      () => buildMonsterCombatFlavorUpdatePayload({ template: 'Brute', attacks: [] }),
+      /Must Include description, attacks, Or specialAbilities/
+    );
+    assert.throws(
+      () =>
+        buildMonsterCombatFlavorUpdatePayload({
+          template: 'Brute',
+          attacks: [{ name: 'Slam', description: 'Hits.', damageDice: '1d8' }],
+        }),
+      /Unknown Key: damageDice/
+    );
+    assert.throws(
+      () =>
+        buildMonsterCombatFlavorUpdatePayload({
+          template: 'Brute',
+          specialAbilities: [{ name: 'Burst', description: 'Explodes.', saveEffect: 'none' }],
+        }),
+      /saveEffect Must Be One Of/
+    );
+    assert.deepEqual(
+      buildMonsterCombatFlavorUpdatePayload({
+        template: 'Brute',
+        attacks: [{ name: 'Rime Slam', description: 'Ice fists.', damageType: '  Fire  ' }],
+      }),
+      {
+        combatFlavor: {
+          Brute: {
+            attacks: [{ name: 'Rime Slam', description: 'Ice fists.', damageType: 'Fire' }],
+          },
+        },
+      }
+    );
     assert.deepEqual(
       buildMonsterSubtypeUpdatePayload({
         combatFlavor: { Brute: null },
@@ -551,6 +645,21 @@ describe('monster catalog MCP tools', () => {
             visualDescription: 'A plains wolf.',
             size: 'Medium',
             allowedTerrains: ['Plains'],
+            combatFlavor: {
+              Grenadier: {
+                description: 'A bombardier that saturates the field.',
+                specialAbilities: [
+                  {
+                    name: 'Rime Grenade',
+                    description: 'A frost charge that detonates on impact.',
+                    damageType: 'Cold',
+                    targetType: 'Multiple',
+                    saveAbility: 'dexterity',
+                    saveEffect: 'half',
+                  },
+                ],
+              },
+            },
           },
         ],
       },
@@ -574,6 +683,7 @@ describe('monster catalog MCP tools', () => {
     assert.deepEqual(output, catalog);
     const types = (output as { types: { subtypes: unknown[] }[] }).types;
     assert.equal(types[0].subtypes.length, 1);
+    assert.deepEqual((types[0].subtypes[0] as { combatFlavor: unknown }).combatFlavor, catalog.types[0].subtypes[0].combatFlavor);
   });
 
   it('gets one type by id', async () => {
@@ -666,6 +776,21 @@ describe('monster catalog MCP tools', () => {
         visualDescription: 'A small dragon wreathed in coals.',
         size: 'Large',
         allowedTerrains: ['Mountain'],
+        combatFlavor: {
+          Grenadier: {
+            description: 'A bombardier that saturates the field.',
+            specialAbilities: [
+              {
+                name: 'Rime Grenade',
+                description: 'A frost charge that detonates on impact.',
+                damageType: 'Cold',
+                targetType: 'Multiple',
+                saveAbility: 'dexterity',
+                saveEffect: 'half',
+              },
+            ],
+          },
+        },
       },
       {
         fetchRpgAdmin: async (path, init) => {
@@ -683,6 +808,21 @@ describe('monster catalog MCP tools', () => {
     assert.deepEqual(createdBody.allowedTerrains, ['Mountain']);
     assert.equal(createdBody.encounterExcluded, false);
     assert.equal('typeId' in createdBody, false);
+    assert.deepEqual(createdBody.combatFlavor, {
+      Grenadier: {
+        description: 'A bombardier that saturates the field.',
+        specialAbilities: [
+          {
+            name: 'Rime Grenade',
+            description: 'A frost charge that detonates on impact.',
+            damageType: 'Cold',
+            targetType: 'Multiple',
+            saveAbility: 'dexterity',
+            saveEffect: 'half',
+          },
+        ],
+      },
+    });
 
     await executeMcpTool(
       'update_monster_subtype',
@@ -712,9 +852,18 @@ describe('monster catalog MCP tools', () => {
       {
         typeId: 'type-1',
         subtypeId: 'sub-9',
-        template: 'Brute',
-        description: 'A frost-rimed hulk.',
-        attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+        template: 'Grenadier',
+        description: 'A bombardier that saturates the field.',
+        specialAbilities: [
+          {
+            name: 'Rime Grenade',
+            description: 'A frost charge that detonates on impact.',
+            damageType: 'Cold',
+            targetType: 'Multiple',
+            saveAbility: 'dexterity',
+            saveEffect: 'half',
+          },
+        ],
       },
       {
         fetchRpgAdmin: async (path, init) => {
@@ -729,9 +878,18 @@ describe('monster catalog MCP tools', () => {
     const flavorBody = JSON.parse(String(calls[2].init?.body));
     assert.deepEqual(flavorBody, {
       combatFlavor: {
-        Brute: {
-          description: 'A frost-rimed hulk.',
-          attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+        Grenadier: {
+          description: 'A bombardier that saturates the field.',
+          specialAbilities: [
+            {
+              name: 'Rime Grenade',
+              description: 'A frost charge that detonates on impact.',
+              damageType: 'Cold',
+              targetType: 'Multiple',
+              saveAbility: 'dexterity',
+              saveEffect: 'half',
+            },
+          ],
         },
       },
     });

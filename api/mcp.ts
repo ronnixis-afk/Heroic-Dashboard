@@ -296,6 +296,68 @@ const COMBAT_FLAVOR_TEMPLATE_NAMES = [
 
 const COMBAT_FLAVOR_TEMPLATE_SET = new Set<string>(COMBAT_FLAVOR_TEMPLATE_NAMES);
 
+const COMBAT_FLAVOR_DAMAGE_TYPES = [
+  'Piercing',
+  'Slashing',
+  'Bludgeoning',
+  'Fire',
+  'Cold',
+  'Electric',
+  'Acid',
+  'Necrotic',
+  'Radiant',
+  'Force',
+  'Poison',
+  'Psychic',
+  'Thunder',
+] as const;
+
+const COMBAT_FLAVOR_TARGET_TYPES = ['Single', 'Multiple'] as const;
+const COMBAT_FLAVOR_SAVE_ABILITIES = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+] as const;
+const COMBAT_FLAVOR_SAVE_EFFECTS = ['half', 'negate'] as const;
+
+const COMBAT_FLAVOR_SLOT_KEYS = new Set([
+  'name',
+  'description',
+  'damageType',
+  'targetType',
+  'saveAbility',
+  'saveEffect',
+]);
+
+const COMBAT_FLAVOR_SLOT_PROPERTIES = {
+  name: { type: 'string', description: 'Slot display name.' },
+  description: { type: 'string', description: 'Slot flavor blurb.' },
+  damageType: {
+    type: 'string',
+    description:
+      'Optional. Piercing|Slashing|Bludgeoning|Fire|Cold|Electric|Acid|Necrotic|Radiant|Force|Poison|Psychic|Thunder. Unset = template default.',
+  },
+  targetType: {
+    type: 'string',
+    description: 'Optional. Single|Multiple. Write targetType, not target.',
+  },
+  saveAbility: {
+    type: 'string',
+    description:
+      'Optional. strength|dexterity|constitution|intelligence|wisdom|charisma. Write saveAbility, not save.',
+  },
+  saveEffect: {
+    type: 'string',
+    description: 'Optional. half|negate.',
+  },
+} as const;
+
+const COMBAT_FLAVOR_SLOT_ARRAY_DESCRIPTION =
+  'Index-matched slots. When present, full-replace the kit array — resend the full array. Optional: damageType, targetType, saveAbility, saveEffect.';
+
 export function requireCatalogId(value: unknown, field: string): string {
   const id = requireTrimmed(value, field);
   if (/[/?#]/.test(id)) {
@@ -373,17 +435,51 @@ function optionalMaturityPrefixes(value: unknown): MonsterMaturityPrefix[] | und
   });
 }
 
-function optionalCombatFlavorSlot(
-  value: unknown,
+function requireEnumValue<T extends string>(
+  value: string,
+  allowed: readonly T[],
   field: string
-): { name: string; description: string } {
+): T {
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw new Error(`${field} Must Be One Of ${allowed.join(', ')}.`);
+  }
+  return value as T;
+}
+
+function optionalCombatFlavorSlot(value: unknown, field: string): Record<string, unknown> {
   const record = asRecord(value);
+  for (const key of Object.keys(record)) {
+    if (!COMBAT_FLAVOR_SLOT_KEYS.has(key)) {
+      throw new Error(
+        `${field} Has Unknown Key: ${key}. Allowed: name, description, damageType, targetType, saveAbility, saveEffect.`
+      );
+    }
+  }
+
   const name = optionalTrimmedString(record.name, `${field}.name`);
   const description = optionalTrimmedString(record.description, `${field}.description`);
   if (!name || !description) {
     throw new Error(`${field} Requires name And description.`);
   }
-  return { name, description };
+
+  const slot: Record<string, unknown> = { name, description };
+  const damageType = optionalTrimmedString(record.damageType, `${field}.damageType`);
+  if (damageType) {
+    slot.damageType = requireEnumValue(damageType, COMBAT_FLAVOR_DAMAGE_TYPES, `${field}.damageType`);
+  }
+  const targetType = optionalTrimmedString(record.targetType, `${field}.targetType`);
+  if (targetType) {
+    slot.targetType = requireEnumValue(targetType, COMBAT_FLAVOR_TARGET_TYPES, `${field}.targetType`);
+  }
+  const saveAbility = optionalTrimmedString(record.saveAbility, `${field}.saveAbility`);
+  if (saveAbility) {
+    slot.saveAbility = requireEnumValue(saveAbility, COMBAT_FLAVOR_SAVE_ABILITIES, `${field}.saveAbility`);
+  }
+  const saveEffect = optionalTrimmedString(record.saveEffect, `${field}.saveEffect`);
+  if (saveEffect) {
+    slot.saveEffect = requireEnumValue(saveEffect, COMBAT_FLAVOR_SAVE_EFFECTS, `${field}.saveEffect`);
+  }
+  return slot;
 }
 
 function optionalCombatFlavorKit(value: unknown, field: string): Record<string, unknown> {
@@ -410,7 +506,10 @@ function optionalCombatFlavorKit(value: unknown, field: string): Record<string, 
     );
   }
 
-  if (!kit.description && !kit.attacks && !kit.specialAbilities) {
+  const hasAttacks = Array.isArray(kit.attacks) && (kit.attacks as unknown[]).length > 0;
+  const hasAbilities =
+    Array.isArray(kit.specialAbilities) && (kit.specialAbilities as unknown[]).length > 0;
+  if (!kit.description && !hasAttacks && !hasAbilities) {
     throw new Error(
       `${field} Must Include description, attacks, Or specialAbilities.`
     );
@@ -762,7 +861,7 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
   combatFlavor: {
     type: ['object', 'null'],
     description:
-      'Partial map of combat-template flavor kits keyed by Agile/Brute/Tank/Brawler/Sniper/Grenadier/Caster/Healer/Controller/Skirmisher. Each kit may include description, attacks[{name,description}], specialAbilities[{name,description}]. Set a template key to null to delete that kit. Null for the whole field clears all kits. PATCH deep-merges by template key.',
+      'Partial kit map by template (Agile, Brute, Tank, Brawler, Sniper, Grenadier, Caster, Healer, Controller, Skirmisher; not Custom). Kit: description, attacks[], specialAbilities[]. Slots need name+description; optional damageType, targetType, saveAbility, saveEffect (not target/save). attacks/specialAbilities full-replace. Null key deletes that kit; null field clears all. PATCH merges by template key. Dice/DC are not flavor fields.',
   },
   enabled: { type: 'boolean', description: 'Whether the subtype is enabled.' },
 };
@@ -892,7 +991,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_combat_flavor',
     description:
-      'Update one combat-template flavor kit on a subtype via PATCH (deep-merges by template key). Use for incremental Grok edits of description / attack / special-ability names and blurbs without replacing the whole combatFlavor map.',
+      'Patch one flavorable template kit (Agile–Skirmisher; not Custom) on a subtype. Deep-merges by template key. Optional slot mechanics: damageType, targetType, saveAbility, saveEffect. attacks/specialAbilities full-replace — resend the full array. Dice/DC stay on the CR pipeline.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -901,37 +1000,31 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         template: {
           type: 'string',
           description:
-            'Combat template key: Agile, Brute, Tank, Brawler, Sniper, Grenadier, Caster, Healer, Controller, or Skirmisher.',
+            'Agile, Brute, Tank, Brawler, Sniper, Grenadier, Caster, Healer, Controller, or Skirmisher. Not Custom.',
         },
         description: {
           type: 'string',
-          description: 'Combatant description for this template kit.',
+          description: 'Combatant description for this kit.',
         },
         attacks: {
           type: 'array',
           items: {
             type: 'object',
-            properties: {
-              name: { type: 'string' },
-              description: { type: 'string' },
-            },
+            properties: COMBAT_FLAVOR_SLOT_PROPERTIES,
             required: ['name', 'description'],
             additionalProperties: false,
           },
-          description: 'Index-matched attack flavor slots.',
+          description: COMBAT_FLAVOR_SLOT_ARRAY_DESCRIPTION,
         },
         specialAbilities: {
           type: 'array',
           items: {
             type: 'object',
-            properties: {
-              name: { type: 'string' },
-              description: { type: 'string' },
-            },
+            properties: COMBAT_FLAVOR_SLOT_PROPERTIES,
             required: ['name', 'description'],
             additionalProperties: false,
           },
-          description: 'Index-matched special-ability flavor slots.',
+          description: COMBAT_FLAVOR_SLOT_ARRAY_DESCRIPTION,
         },
       },
       required: ['typeId', 'subtypeId', 'template'],
@@ -1175,7 +1268,7 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live game analytics, list_patch_notes / publish_patch_note for published notes (never set is_popup), and list_monster_types / get_monster_type / create_monster_type / update_monster_type / create_monster_subtype / update_monster_subtype / update_monster_combat_flavor to manage the game CMS monster catalog (including per-template combat flavor). Do not invent a local bestiary.',
+            'Use get_insights for live analytics; list_patch_notes / publish_patch_note for notes (never is_popup); list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});

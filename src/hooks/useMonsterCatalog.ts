@@ -42,9 +42,44 @@ export interface MonsterType {
   _count?: { subtypes: number };
 }
 
+export const COMBAT_FLAVOR_DAMAGE_TYPES = [
+  'Piercing',
+  'Slashing',
+  'Bludgeoning',
+  'Fire',
+  'Cold',
+  'Electric',
+  'Acid',
+  'Necrotic',
+  'Radiant',
+  'Force',
+  'Poison',
+  'Psychic',
+  'Thunder',
+] as const;
+export const COMBAT_FLAVOR_TARGET_TYPES = ['Single', 'Multiple'] as const;
+export const COMBAT_FLAVOR_SAVE_ABILITIES = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+] as const;
+export const COMBAT_FLAVOR_SAVE_EFFECTS = ['half', 'negate'] as const;
+
+export type CombatFlavorDamageType = (typeof COMBAT_FLAVOR_DAMAGE_TYPES)[number];
+export type CombatFlavorTargetType = (typeof COMBAT_FLAVOR_TARGET_TYPES)[number];
+export type CombatFlavorSaveAbility = (typeof COMBAT_FLAVOR_SAVE_ABILITIES)[number];
+export type CombatFlavorSaveEffect = (typeof COMBAT_FLAVOR_SAVE_EFFECTS)[number];
+
 export interface MonsterCombatFlavorSlot {
   name: string;
   description: string;
+  damageType?: CombatFlavorDamageType;
+  targetType?: CombatFlavorTargetType;
+  saveAbility?: CombatFlavorSaveAbility;
+  saveEffect?: CombatFlavorSaveEffect;
 }
 
 export interface MonsterCombatTemplateFlavorKit {
