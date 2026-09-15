@@ -23,6 +23,10 @@ import { cn } from '../../lib/utils';
 import {
   useMonsterCatalog,
   useMonsterTypeDetails,
+  COMBAT_FLAVOR_TEMPLATE_NAMES,
+  type CombatFlavorTemplateName,
+  type MonsterCombatFlavorMap,
+  type MonsterCombatTemplateFlavorKit,
   type MonsterGenre,
   type MonsterSubtype,
   type MonsterType,
@@ -35,6 +39,8 @@ type SubtypeDraft = {
   size: string;
   allowedTerrains: string[];
   enabled: boolean;
+  combatFlavor: MonsterCombatFlavorMap;
+  flavorTemplate: CombatFlavorTemplateName;
 };
 
 const GENRES: MonsterGenre[] = ['Fantasy', 'Modern', 'Sci-Fi'];
@@ -55,6 +61,60 @@ const TERRAINS = [
   'Nebula Core',
   'Warp Rift',
 ] as const;
+
+function kitFromDraftMap(
+  map: MonsterCombatFlavorMap,
+  template: CombatFlavorTemplateName
+): MonsterCombatTemplateFlavorKit {
+  const kit = map[template];
+  return {
+    description: kit?.description || '',
+    attacks: [
+      {
+        name: kit?.attacks?.[0]?.name || '',
+        description: kit?.attacks?.[0]?.description || '',
+      },
+    ],
+    specialAbilities: [
+      {
+        name: kit?.specialAbilities?.[0]?.name || '',
+        description: kit?.specialAbilities?.[0]?.description || '',
+      },
+    ],
+  };
+}
+
+/** Drop empty kits; emit null for previously authored kits that were cleared. */
+function compactCombatFlavor(
+  map: MonsterCombatFlavorMap,
+  previous?: MonsterCombatFlavorMap | null
+): Record<string, MonsterCombatTemplateFlavorKit | null> | null {
+  const out: Record<string, MonsterCombatTemplateFlavorKit | null> = {};
+  for (const [template, kit] of Object.entries(map)) {
+    if (!kit) continue;
+    const description = (kit.description || '').trim();
+    const attacks = (kit.attacks || [])
+      .map((a) => ({ name: (a.name || '').trim(), description: (a.description || '').trim() }))
+      .filter((a) => a.name && a.description);
+    const specialAbilities = (kit.specialAbilities || [])
+      .map((a) => ({ name: (a.name || '').trim(), description: (a.description || '').trim() }))
+      .filter((a) => a.name && a.description);
+    if (!description && attacks.length === 0 && specialAbilities.length === 0) continue;
+    out[template] = {
+      ...(description ? { description } : {}),
+      ...(attacks.length ? { attacks } : {}),
+      ...(specialAbilities.length ? { specialAbilities } : {}),
+    };
+  }
+
+  for (const key of Object.keys(previous || {})) {
+    if (!(key in out)) out[key] = null;
+  }
+
+  if (Object.keys(out).length === 0) return null;
+  if (Object.values(out).every((value) => value === null)) return null;
+  return out;
+}
 
 const EMPTY_TYPE_FORM = {
   description: '',
@@ -424,6 +484,8 @@ export default function AdminMonsters() {
           size: subtype.size || 'Medium',
           allowedTerrains: subtype.allowedTerrains?.length ? subtype.allowedTerrains : ['Plains'],
           enabled: Boolean(subtype.enabled),
+          combatFlavor: { ...(subtype.combatFlavor || {}) },
+          flavorTemplate: 'Brute',
         },
       };
     });
@@ -434,6 +496,29 @@ export default function AdminMonsters() {
       ...prev,
       [subtypeId]: { ...prev[subtypeId], ...patch },
     }));
+  };
+
+  const updateFlavorKit = (
+    subtypeId: string,
+    template: CombatFlavorTemplateName,
+    patch: Partial<MonsterCombatTemplateFlavorKit>
+  ) => {
+    setSubtypeDrafts((prev) => {
+      const draft = prev[subtypeId];
+      if (!draft) return prev;
+      const currentKit = kitFromDraftMap(draft.combatFlavor, template);
+      const nextKit = { ...currentKit, ...patch };
+      return {
+        ...prev,
+        [subtypeId]: {
+          ...draft,
+          combatFlavor: {
+            ...draft.combatFlavor,
+            [template]: nextKit,
+          },
+        },
+      };
+    });
   };
 
   const handleSaveSubtype = async (subtype: MonsterSubtype) => {
@@ -456,6 +541,12 @@ export default function AdminMonsters() {
         size: draft.size,
         allowedTerrains: draft.allowedTerrains,
         enabled: draft.enabled,
+        combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
+      });
+      setSubtypeDrafts((prev) => {
+        const next = { ...prev };
+        delete next[subtype.id];
+        return next;
       });
       setStatus({ type: 'success', msg: 'Monster Subtype Updated.' });
     } catch (e: unknown) {
@@ -522,7 +613,7 @@ export default function AdminMonsters() {
     <div className="page">
       <PageHeader
         title="Monsters"
-        description="Edit monster type and subtype identity for procedural encounters. Combat templates stay unchanged."
+        description="Edit monster type and subtype identity for procedural encounters. Combat kit mechanics stay in code; flavor (description, attack and ability names) is CMS-authored per subtype and template."
         actions={
           isCreating ? (
             <button type="button" onClick={() => setIsCreating(false)} className="btn-secondary">
@@ -1036,6 +1127,157 @@ export default function AdminMonsters() {
                                             })
                                           }
                                         />
+                                      </div>
+                                      <div className="space-y-3 border-t border-brand-border/40 pt-3">
+                                        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                          <div>
+                                            <p className="section-title">Combat Flavor</p>
+                                            <p className="help-text">
+                                              Per Template Names And Descriptions Used When This Subtype Rolls That Combat Kit.
+                                            </p>
+                                          </div>
+                                          <div className="min-w-[160px]">
+                                            <label className="input-label" htmlFor={`flavor-template-${subtype.id}`}>
+                                              Template
+                                            </label>
+                                            <select
+                                              id={`flavor-template-${subtype.id}`}
+                                              className="input-field cursor-pointer"
+                                              value={draft.flavorTemplate}
+                                              disabled={subtype.isProtected}
+                                              onChange={(e) =>
+                                                updateDraft(subtype.id, {
+                                                  flavorTemplate: e.target.value as CombatFlavorTemplateName,
+                                                })
+                                              }
+                                            >
+                                              {COMBAT_FLAVOR_TEMPLATE_NAMES.map((name) => (
+                                                <option key={name} value={name}>
+                                                  {name}
+                                                  {draft.combatFlavor[name] ? ' · Authored' : ''}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        </div>
+                                        {(() => {
+                                          const kit = kitFromDraftMap(draft.combatFlavor, draft.flavorTemplate);
+                                          const attack = kit.attacks?.[0] || { name: '', description: '' };
+                                          const ability = kit.specialAbilities?.[0] || { name: '', description: '' };
+                                          return (
+                                            <div className="space-y-3">
+                                              <div>
+                                                <label
+                                                  className="input-label"
+                                                  htmlFor={`flavor-desc-${subtype.id}`}
+                                                >
+                                                  Combatant Description
+                                                </label>
+                                                <textarea
+                                                  id={`flavor-desc-${subtype.id}`}
+                                                  className="input-field !h-auto py-2 leading-relaxed"
+                                                  rows={2}
+                                                  placeholder="Falls back to Visual Description when empty."
+                                                  value={kit.description || ''}
+                                                  disabled={subtype.isProtected}
+                                                  onChange={(e) =>
+                                                    updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                      description: e.target.value,
+                                                    })
+                                                  }
+                                                />
+                                              </div>
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                  <label
+                                                    className="input-label"
+                                                    htmlFor={`atk-name-${subtype.id}`}
+                                                  >
+                                                    Attack Name
+                                                  </label>
+                                                  <input
+                                                    id={`atk-name-${subtype.id}`}
+                                                    className="input-field"
+                                                    value={attack.name}
+                                                    disabled={subtype.isProtected}
+                                                    onChange={(e) =>
+                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                        attacks: [
+                                                          { name: e.target.value, description: attack.description },
+                                                        ],
+                                                      })
+                                                    }
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label
+                                                    className="input-label"
+                                                    htmlFor={`atk-desc-${subtype.id}`}
+                                                  >
+                                                    Attack Description
+                                                  </label>
+                                                  <input
+                                                    id={`atk-desc-${subtype.id}`}
+                                                    className="input-field"
+                                                    value={attack.description}
+                                                    disabled={subtype.isProtected}
+                                                    onChange={(e) =>
+                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                        attacks: [
+                                                          { name: attack.name, description: e.target.value },
+                                                        ],
+                                                      })
+                                                    }
+                                                  />
+                                                </div>
+                                              </div>
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                  <label
+                                                    className="input-label"
+                                                    htmlFor={`abil-name-${subtype.id}`}
+                                                  >
+                                                    Special Ability Name
+                                                  </label>
+                                                  <input
+                                                    id={`abil-name-${subtype.id}`}
+                                                    className="input-field"
+                                                    value={ability.name}
+                                                    disabled={subtype.isProtected}
+                                                    onChange={(e) =>
+                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                        specialAbilities: [
+                                                          { name: e.target.value, description: ability.description },
+                                                        ],
+                                                      })
+                                                    }
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label
+                                                    className="input-label"
+                                                    htmlFor={`abil-desc-${subtype.id}`}
+                                                  >
+                                                    Special Ability Description
+                                                  </label>
+                                                  <input
+                                                    id={`abil-desc-${subtype.id}`}
+                                                    className="input-field"
+                                                    value={ability.description}
+                                                    disabled={subtype.isProtected}
+                                                    onChange={(e) =>
+                                                      updateFlavorKit(subtype.id, draft.flavorTemplate, {
+                                                        specialAbilities: [
+                                                          { name: ability.name, description: e.target.value },
+                                                        ],
+                                                      })
+                                                    }
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                       {!subtype.isProtected && (
                                         <div className="flex items-center justify-between">

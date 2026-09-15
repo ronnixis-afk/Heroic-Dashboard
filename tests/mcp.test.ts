@@ -5,6 +5,7 @@ import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import handler, {
+  buildMonsterCombatFlavorUpdatePayload,
   buildMonsterSubtypeCreatePayload,
   buildMonsterSubtypeUpdatePayload,
   buildMonsterTypeCreatePayload,
@@ -30,6 +31,7 @@ const EXPECTED_TOOL_NAMES = [
   'update_monster_type',
   'create_monster_subtype',
   'update_monster_subtype',
+  'update_monster_combat_flavor',
 ];
 
 const KEY = 'test-mcp-key-please-ignore';
@@ -473,6 +475,58 @@ describe('monster catalog payloads', () => {
     assert.throws(() => buildMonsterSubtypeUpdatePayload({}), /At Least One Subtype Attribute/);
   });
 
+  it('builds combatFlavor on subtype update and incremental flavor patches', () => {
+    assert.deepEqual(
+      buildMonsterSubtypeUpdatePayload({
+        combatFlavor: {
+          Brute: {
+            description: 'A frost-rimed hulk.',
+            attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+          },
+        },
+      }),
+      {
+        combatFlavor: {
+          Brute: {
+            description: 'A frost-rimed hulk.',
+            attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+          },
+        },
+      }
+    );
+    assert.throws(
+      () =>
+        buildMonsterSubtypeUpdatePayload({
+          combatFlavor: { Custom: { description: 'Nope' } },
+        }),
+      /Unknown Combat Template Key/
+    );
+    assert.deepEqual(
+      buildMonsterCombatFlavorUpdatePayload({
+        template: 'Brute',
+        description: 'A frost-rimed hulk.',
+        attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+      }),
+      {
+        combatFlavor: {
+          Brute: {
+            description: 'A frost-rimed hulk.',
+            attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+          },
+        },
+      }
+    );
+    assert.throws(() => buildMonsterCombatFlavorUpdatePayload({ template: 'Custom' }), /Unknown Combat Template/);
+    assert.deepEqual(
+      buildMonsterSubtypeUpdatePayload({
+        combatFlavor: { Brute: null },
+      }),
+      {
+        combatFlavor: { Brute: null },
+      }
+    );
+  });
+
   it('normalizes list responses to { types }', () => {
     assert.deepEqual(normalizeMonsterTypesList({ types: [{ id: '1' }] }), { types: [{ id: '1' }] });
     assert.deepEqual(normalizeMonsterTypesList([{ id: '2' }]), { types: [{ id: '2' }] });
@@ -652,6 +706,35 @@ describe('monster catalog MCP tools', () => {
     assert.deepEqual(updatedBody, { visualDescription: 'Updated look', rideable: true });
     assert.equal('typeId' in updatedBody, false);
     assert.equal('subtypeId' in updatedBody, false);
+
+    await executeMcpTool(
+      'update_monster_combat_flavor',
+      {
+        typeId: 'type-1',
+        subtypeId: 'sub-9',
+        template: 'Brute',
+        description: 'A frost-rimed hulk.',
+        attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+      },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+
+    assert.equal(calls[2].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
+    assert.equal(calls[2].init?.method, 'PATCH');
+    const flavorBody = JSON.parse(String(calls[2].init?.body));
+    assert.deepEqual(flavorBody, {
+      combatFlavor: {
+        Brute: {
+          description: 'A frost-rimed hulk.',
+          attacks: [{ name: 'Rime Slam', description: 'Ice fists.' }],
+        },
+      },
+    });
   });
 
   it('surfaces game admin auth/config errors without live credentials', async () => {

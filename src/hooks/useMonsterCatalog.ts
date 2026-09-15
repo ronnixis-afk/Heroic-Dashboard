@@ -42,6 +42,37 @@ export interface MonsterType {
   _count?: { subtypes: number };
 }
 
+export interface MonsterCombatFlavorSlot {
+  name: string;
+  description: string;
+}
+
+export interface MonsterCombatTemplateFlavorKit {
+  description?: string;
+  attacks?: MonsterCombatFlavorSlot[];
+  specialAbilities?: MonsterCombatFlavorSlot[];
+}
+
+/** Per combat-template flavor map (Agile, Brute, Caster, …). */
+export type MonsterCombatFlavorMap = Partial<
+  Record<string, MonsterCombatTemplateFlavorKit>
+>;
+
+export const COMBAT_FLAVOR_TEMPLATE_NAMES = [
+  'Agile',
+  'Brute',
+  'Tank',
+  'Brawler',
+  'Sniper',
+  'Grenadier',
+  'Caster',
+  'Healer',
+  'Controller',
+  'Skirmisher',
+] as const;
+
+export type CombatFlavorTemplateName = (typeof COMBAT_FLAVOR_TEMPLATE_NAMES)[number];
+
 export interface MonsterSubtype {
   id: string;
   name: string;
@@ -53,6 +84,7 @@ export interface MonsterSubtype {
   rideable: boolean;
   affinityOverride: string | null;
   acquisition: unknown | null;
+  combatFlavor?: MonsterCombatFlavorMap | null;
   enabled: boolean;
   isProtected: boolean;
 }
@@ -182,16 +214,20 @@ export function useMonsterCatalog() {
         { method: 'POST', body: JSON.stringify(payload) }
       );
       await refresh();
+      await queryClient.invalidateQueries({ queryKey: ['monster-types', 'detail', typeId] });
       return data;
     },
-    [getToken, refresh]
+    [getToken, refresh, queryClient]
   );
 
   const updateSubtype = useCallback(
     async (
       typeId: string,
       subtypeId: string,
-      payload: Partial<MonsterSubtype> & { allowedTerrains?: string[] }
+      payload: Partial<Omit<MonsterSubtype, 'combatFlavor'>> & {
+        allowedTerrains?: string[];
+        combatFlavor?: Record<string, MonsterCombatTemplateFlavorKit | null> | null;
+      }
     ) => {
       const data = await fetchRpgAdmin(
         `/api/admin/monster-types/${typeId}/subtypes/${subtypeId}`,
@@ -199,9 +235,10 @@ export function useMonsterCatalog() {
         { method: 'PATCH', body: JSON.stringify(payload) }
       );
       await refresh();
+      await queryClient.invalidateQueries({ queryKey: ['monster-types', 'detail', typeId] });
       return data;
     },
-    [getToken, refresh]
+    [getToken, refresh, queryClient]
   );
 
   const deleteSubtype = useCallback(

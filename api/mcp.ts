@@ -277,8 +277,24 @@ export interface MonsterSubtypeAttributes {
   rideable?: boolean;
   affinityOverride?: string | null;
   acquisition?: unknown;
+  combatFlavor?: unknown;
   enabled?: boolean;
 }
+
+const COMBAT_FLAVOR_TEMPLATE_NAMES = [
+  'Agile',
+  'Brute',
+  'Tank',
+  'Brawler',
+  'Sniper',
+  'Grenadier',
+  'Caster',
+  'Healer',
+  'Controller',
+  'Skirmisher',
+] as const;
+
+const COMBAT_FLAVOR_TEMPLATE_SET = new Set<string>(COMBAT_FLAVOR_TEMPLATE_NAMES);
 
 export function requireCatalogId(value: unknown, field: string): string {
   const id = requireTrimmed(value, field);
@@ -357,6 +373,97 @@ function optionalMaturityPrefixes(value: unknown): MonsterMaturityPrefix[] | und
   });
 }
 
+function optionalCombatFlavorSlot(
+  value: unknown,
+  field: string
+): { name: string; description: string } {
+  const record = asRecord(value);
+  const name = optionalTrimmedString(record.name, `${field}.name`);
+  const description = optionalTrimmedString(record.description, `${field}.description`);
+  if (!name || !description) {
+    throw new Error(`${field} Requires name And description.`);
+  }
+  return { name, description };
+}
+
+function optionalCombatFlavorKit(value: unknown, field: string): Record<string, unknown> {
+  const record = asRecord(value);
+  const kit: Record<string, unknown> = {};
+  const description = optionalTrimmedString(record.description, `${field}.description`);
+  if (description) kit.description = description;
+
+  if (record.attacks !== undefined) {
+    if (!Array.isArray(record.attacks)) {
+      throw new Error(`${field}.attacks Must Be An Array.`);
+    }
+    kit.attacks = record.attacks.map((slot, index) =>
+      optionalCombatFlavorSlot(slot, `${field}.attacks[${index}]`)
+    );
+  }
+
+  if (record.specialAbilities !== undefined) {
+    if (!Array.isArray(record.specialAbilities)) {
+      throw new Error(`${field}.specialAbilities Must Be An Array.`);
+    }
+    kit.specialAbilities = record.specialAbilities.map((slot, index) =>
+      optionalCombatFlavorSlot(slot, `${field}.specialAbilities[${index}]`)
+    );
+  }
+
+  if (!kit.description && !kit.attacks && !kit.specialAbilities) {
+    throw new Error(
+      `${field} Must Include description, attacks, Or specialAbilities.`
+    );
+  }
+  return kit;
+}
+
+/** Full or partial combatFlavor map keyed by combat template name. Null kit deletes that key. */
+export function optionalCombatFlavorMap(value: unknown): Record<string, unknown> | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Combat Flavor Must Be An Object Or Null.');
+  }
+  const out: Record<string, unknown> = {};
+  for (const [template, kit] of Object.entries(value as Record<string, unknown>)) {
+    if (!COMBAT_FLAVOR_TEMPLATE_SET.has(template)) {
+      throw new Error(
+        `Unknown Combat Template Key: ${template}. Allowed: ${COMBAT_FLAVOR_TEMPLATE_NAMES.join(', ')}.`
+      );
+    }
+    if (kit === null) {
+      out[template] = null;
+      continue;
+    }
+    out[template] = optionalCombatFlavorKit(kit, `combatFlavor.${template}`);
+  }
+  return out;
+}
+
+export function buildMonsterCombatFlavorUpdatePayload(input: unknown): Record<string, unknown> {
+  const record = asRecord(input);
+  const template = optionalTrimmedString(record.template, 'Template');
+  if (!template) throw new Error('Template Is Required.');
+  if (!COMBAT_FLAVOR_TEMPLATE_SET.has(template)) {
+    throw new Error(
+      `Unknown Combat Template Key: ${template}. Allowed: ${COMBAT_FLAVOR_TEMPLATE_NAMES.join(', ')}.`
+    );
+  }
+
+  const kitInput: Record<string, unknown> = {};
+  if (record.description !== undefined) kitInput.description = record.description;
+  if (record.attacks !== undefined) kitInput.attacks = record.attacks;
+  if (record.specialAbilities !== undefined) kitInput.specialAbilities = record.specialAbilities;
+
+  const kit = optionalCombatFlavorKit(kitInput, template);
+  return {
+    combatFlavor: {
+      [template]: kit,
+    },
+  };
+}
+
 function assignDefined<T extends object>(
   target: T,
   entries: Record<string, unknown>
@@ -401,6 +508,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     rideable: optionalBoolean(record.rideable, 'Rideable'),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
     acquisition: record.acquisition === undefined ? undefined : record.acquisition,
+    combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
     enabled: optionalBoolean(record.enabled, 'Enabled'),
   });
 }
@@ -462,6 +570,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       archetype: attributes.archetype ?? null,
       affinityOverride: attributes.affinityOverride,
       acquisition: attributes.acquisition,
+      combatFlavor: attributes.combatFlavor,
     }
   );
 }
@@ -650,6 +759,11 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
   rideable: { type: 'boolean', description: 'Whether this subtype is rideable.' },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
+  combatFlavor: {
+    type: ['object', 'null'],
+    description:
+      'Partial map of combat-template flavor kits keyed by Agile/Brute/Tank/Brawler/Sniper/Grenadier/Caster/Healer/Controller/Skirmisher. Each kit may include description, attacks[{name,description}], specialAbilities[{name,description}]. Set a template key to null to delete that kit. Null for the whole field clears all kits. PATCH deep-merges by template key.',
+  },
   enabled: { type: 'boolean', description: 'Whether the subtype is enabled.' },
 };
 
@@ -772,6 +886,55 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         ...MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES,
       },
       required: ['typeId', 'subtypeId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_monster_combat_flavor',
+    description:
+      'Update one combat-template flavor kit on a subtype via PATCH (deep-merges by template key). Use for incremental Grok edits of description / attack / special-ability names and blurbs without replacing the whole combatFlavor map.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        typeId: { type: 'string', description: 'Parent monster type id.' },
+        subtypeId: { type: 'string', description: 'Monster subtype id.' },
+        template: {
+          type: 'string',
+          description:
+            'Combat template key: Agile, Brute, Tank, Brawler, Sniper, Grenadier, Caster, Healer, Controller, or Skirmisher.',
+        },
+        description: {
+          type: 'string',
+          description: 'Combatant description for this template kit.',
+        },
+        attacks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              description: { type: 'string' },
+            },
+            required: ['name', 'description'],
+            additionalProperties: false,
+          },
+          description: 'Index-matched attack flavor slots.',
+        },
+        specialAbilities: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              description: { type: 'string' },
+            },
+            required: ['name', 'description'],
+            additionalProperties: false,
+          },
+          description: 'Index-matched special-ability flavor slots.',
+        },
+      },
+      required: ['typeId', 'subtypeId', 'template'],
       additionalProperties: false,
     },
   },
@@ -899,6 +1062,21 @@ export async function executeMcpTool(
     return { ok: true, typeId, subtypeId, payload, result: updated };
   }
 
+  if (name === 'update_monster_combat_flavor') {
+    const record = asRecord(args);
+    const typeId = requireCatalogId(record.typeId, 'Type Id');
+    const subtypeId = requireCatalogId(record.subtypeId, 'Subtype Id');
+    const payload = buildMonsterCombatFlavorUpdatePayload(args);
+    const updated = await fetchRpgAdmin(
+      `/api/admin/monster-types/${encodeURIComponent(typeId)}/subtypes/${encodeURIComponent(subtypeId)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }
+    );
+    return { ok: true, typeId, subtypeId, payload, result: updated };
+  }
+
   throw new Error(`Unknown Tool: ${name}`);
 }
 
@@ -997,7 +1175,7 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live game analytics, list_patch_notes / publish_patch_note for published notes (never set is_popup), and list_monster_types / get_monster_type / create_monster_type / update_monster_type / create_monster_subtype / update_monster_subtype to manage the game CMS monster catalog. Do not invent a local bestiary.',
+            'Use get_insights for live game analytics, list_patch_notes / publish_patch_note for published notes (never set is_popup), and list_monster_types / get_monster_type / create_monster_type / update_monster_type / create_monster_subtype / update_monster_subtype / update_monster_combat_flavor to manage the game CMS monster catalog (including per-template combat flavor). Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});
