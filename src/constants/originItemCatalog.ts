@@ -7,7 +7,7 @@
  * Regenerate:
  *   npm run sync:origin-item-catalog
  *
- * Last synced: 2026-09-15
+ * Last synced: 2026-09-16
  *
  * One picture per origin keepsake. The live game looks up keepsake art with:
  *   GET /api/image-assets/origin-item-defaults?startingStoryId=<id>
