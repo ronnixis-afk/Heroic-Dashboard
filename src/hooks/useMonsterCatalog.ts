@@ -179,7 +179,7 @@ async function fetchMonsterTypeDetails(
   getToken: (options?: any) => Promise<string | null>
 ) {
   const data = await fetchRpgAdmin<{ type?: MonsterTypeDetails }>(
-    `/api/admin/monster-types/${id}`,
+    `/api/admin/monster-types/${encodeURIComponent(id)}`,
     getToken
   );
   return data.type || null;
@@ -282,8 +282,9 @@ export function useMonsterCatalog() {
         method: 'DELETE',
       });
       await refresh();
+      await queryClient.invalidateQueries({ queryKey: ['monster-types', 'detail', typeId] });
     },
-    [getToken, refresh]
+    [getToken, refresh, queryClient]
   );
 
   return {

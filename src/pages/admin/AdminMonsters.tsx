@@ -418,14 +418,20 @@ export default function AdminMonsters() {
   const [newTypeForm, setNewTypeForm] = useState(EMPTY_NEW_TYPE);
   const [subForm, setSubForm] = useState(EMPTY_SUB_FORM);
 
-  const { data: selectedType = null, isLoading: detailsLoading } = useMonsterTypeDetails(
-    isCreating ? null : selectedTypeId
-  );
+  const {
+    data: typeDetails = null,
+    isLoading: detailsLoading,
+    isError: detailsFailed,
+    error: detailsError,
+    refetch: refetchDetails,
+  } = useMonsterTypeDetails(isCreating ? null : selectedTypeId);
 
-  const templateType = useMemo(
-    () => types.find((type) => type.id === selectedTypeId) || types[0] || null,
+  const catalogType = useMemo(
+    () => types.find((type) => type.id === selectedTypeId) || null,
     [types, selectedTypeId]
   );
+  const selectedType = typeDetails ?? catalogType;
+  const templateType = catalogType || types[0] || null;
 
   const stats = useMemo(() => {
     const enabled = types.filter((type) => type.enabled).length;
@@ -455,7 +461,7 @@ export default function AdminMonsters() {
     });
   }, [types, catalogQuery, catalogFilter, genreFilter]);
 
-  const subtypeList = selectedType?.subtypes || [];
+  const subtypeList = typeDetails?.subtypes || [];
   const filteredSubtypes = useMemo(() => {
     const query = subtypeQuery.trim().toLowerCase();
     if (!query) return subtypeList;
@@ -949,14 +955,7 @@ export default function AdminMonsters() {
                 </button>
               </div>
             </section>
-          ) : !selectedType && detailsLoading ? (
-            <section className="card p-3.5">
-              <div className="flex items-center gap-2 py-8 justify-center text-brand-text-muted">
-                <Loader2 size={14} className="animate-spin text-brand-accent" />
-                <span className="text-xs">Loading Type</span>
-              </div>
-            </section>
-          ) : !selectedType ? (
+          ) : !selectedTypeId || !selectedType ? (
             <section className="card p-3.5">
               <EmptyState title="Select a Monster Type" description="Choose a type from the catalog to edit identity and subtypes." />
             </section>
@@ -1163,7 +1162,24 @@ export default function AdminMonsters() {
                   </div>
                 )}
 
-                {filteredSubtypes.length === 0 ? (
+                {detailsLoading && !typeDetails ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-brand-text-muted">
+                    <Loader2 size={14} className="animate-spin text-brand-accent" />
+                    <span className="text-xs">Loading Subtypes</span>
+                  </div>
+                ) : detailsFailed && !typeDetails ? (
+                  <div className="space-y-3">
+                    <StatusBanner
+                      type="error"
+                      message={`Failed To Load Subtypes: ${detailsError instanceof Error ? detailsError.message : 'Unknown Error.'}`}
+                    />
+                    <div className="flex justify-center">
+                      <button type="button" className="btn-secondary" onClick={() => void refetchDetails()}>
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : filteredSubtypes.length === 0 ? (
                   <EmptyState
                     compact
                     title={subtypeList.length === 0 ? 'No Subtypes' : 'No Subtypes Match'}
