@@ -18,7 +18,10 @@ const rpgRoot = process.env.HEROIC_RPG_ROOT
   ? path.resolve(process.env.HEROIC_RPG_ROOT)
   : defaultRpgRoot;
 
-const sourcePath = path.join(rpgRoot, 'src', 'constants', 'monsterTypes.ts');
+const defaultsCandidate = path.join(rpgRoot, 'src', 'constants', 'monsterTypes.defaults.ts');
+const sourcePath = fs.existsSync(defaultsCandidate)
+  ? defaultsCandidate
+  : path.join(rpgRoot, 'src', 'constants', 'monsterTypes.ts');
 const outPath = path.join(dashboardRoot, 'src', 'constants', 'monsterPortraitCatalog.ts');
 
 const failSoft = process.argv.includes('--optional');
@@ -118,9 +121,12 @@ const typeCount = types.length;
 const subtypeCount = types.reduce((n, t) => n + t.subtypes.length, 0);
 
 if (typeCount === 0 || subtypeCount === 0) {
-  console.error(
-    `[sync:monster-catalog] Parsed empty catalog (types=${typeCount}, subtypes=${subtypeCount}). Aborting.`
-  );
+  const message = `[sync:monster-catalog] Parsed empty catalog (types=${typeCount}, subtypes=${subtypeCount}).`;
+  if (failSoft) {
+    console.warn(`Skipped — ${message}`);
+    process.exit(0);
+  }
+  console.error(`${message} Aborting.`);
   process.exit(1);
 }
 

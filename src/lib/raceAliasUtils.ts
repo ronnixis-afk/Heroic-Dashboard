@@ -184,8 +184,8 @@ export interface RaceGenreFilterInput {
 }
 
 /** Genres a catalog race should be listed under; empty rows fall back to Fantasy (never every genre). */
-export function getRaceGenresForFilter(race: Pick<RaceGenreFilterInput, 'genres'>): string[] {
-  return race.genres && race.genres.length > 0 ? [...race.genres] : [DEFAULT_RACE_GENRE];
+export function getRaceGenresForFilter(race?: Pick<RaceGenreFilterInput, 'genres'> | null): string[] {
+  return race?.genres && race.genres.length > 0 ? [...race.genres] : [DEFAULT_RACE_GENRE];
 }
 
 /**
@@ -198,11 +198,12 @@ export function getDbRaceNamesForGenre(
   races: readonly RaceGenreFilterInput[],
   genre: string | undefined | null
 ): string[] {
+  if (!Array.isArray(races)) return [];
   const scopedGenre = (genre || '').trim();
   if (!scopedGenre || scopedGenre === 'Any Genre') {
-    return races.map((race) => race.name);
+    return races.filter((race) => Boolean(race?.name)).map((race) => race.name);
   }
   return races
-    .filter((race) => getRaceGenresForFilter(race).includes(scopedGenre))
+    .filter((race) => Boolean(race?.name) && getRaceGenresForFilter(race).includes(scopedGenre))
     .map((race) => race.name);
 }

@@ -4,6 +4,8 @@ import {
   normalizeRaceKey,
   getRaceAliases,
   getRacePortraitCount,
+  getRaceGenresForFilter,
+  getDbRaceNamesForGenre,
 } from '../src/lib/raceAliasUtils.js';
 
 describe('raceAliasUtils', () => {
@@ -77,5 +79,25 @@ describe('raceAliasUtils', () => {
     assert.equal(getRacePortraitCount(counts, 'Any Race'), 0);
     assert.equal(getRacePortraitCount(counts, null), 0);
     assert.equal(getRacePortraitCount(counts, undefined), 0);
+  });
+
+  it('resolves race genres falling back to Fantasy when empty or undefined', () => {
+    assert.deepEqual(getRaceGenresForFilter({ genres: ['Sci-Fi'] }), ['Sci-Fi']);
+    assert.deepEqual(getRaceGenresForFilter({ genres: [] }), ['Fantasy']);
+    assert.deepEqual(getRaceGenresForFilter({ genres: null }), ['Fantasy']);
+    assert.deepEqual(getRaceGenresForFilter(undefined), ['Fantasy']);
+  });
+
+  it('filters db catalog race names by genre and Any Genre union', () => {
+    const catalog = [
+      { name: 'Elf', genres: ['Fantasy'] },
+      { name: 'Cyborg', genres: ['Sci-Fi'] },
+      { name: 'Human', genres: ['Fantasy', 'Modern', 'Sci-Fi'] },
+      { name: 'Gnome', genres: [] },
+    ];
+    assert.deepEqual(getDbRaceNamesForGenre(catalog, 'Any Genre'), ['Elf', 'Cyborg', 'Human', 'Gnome']);
+    assert.deepEqual(getDbRaceNamesForGenre(catalog, ''), ['Elf', 'Cyborg', 'Human', 'Gnome']);
+    assert.deepEqual(getDbRaceNamesForGenre(catalog, 'Sci-Fi'), ['Cyborg', 'Human']);
+    assert.deepEqual(getDbRaceNamesForGenre(catalog, 'Fantasy'), ['Elf', 'Human', 'Gnome']);
   });
 });
