@@ -10,7 +10,7 @@ const IRREGULAR_RACE_STEMS: Array<{ pattern: RegExp; singular: string }> = [
   { pattern: /(werewolves|werewolf)$/i, singular: 'werewolf' },
   { pattern: /(homunculi|homunculus)$/i, singular: 'homunculus' },
   { pattern: /(djinn|djinni|djinns)$/i, singular: 'djinn' },
-  { pattern: /(nephilim)$/i, singular: 'nephilim' },
+  { pattern: /(nephilim|nephilims)$/i, singular: 'nephilim' },
 ];
 
 /** Normalize race string to a comparable canonical lowercase key */
@@ -123,7 +123,6 @@ export function getRacePortraitCount(
     const keyLower = keyTrimmed.toLowerCase();
     return {
       count,
-      trimmed: keyTrimmed,
       lower: keyLower,
       normalized: normalizeRaceKey(keyTrimmed),
       clean: keyLower.replace(/[\s-_]+/g, ' '),
@@ -136,7 +135,6 @@ export function getRacePortraitCount(
 
   for (const entry of entries) {
     if (
-      entry.trimmed === trimmed ||
       entry.lower === raceLower ||
       entry.normalized === raceNormalized ||
       entry.clean === raceClean

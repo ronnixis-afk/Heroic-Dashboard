@@ -4,9 +4,9 @@
  * disabled to preserve transform quota when browsing Admin Media. CSS handles thumbnail sizing.
  */
 export function getOptimizedThumbnailUrl(
-  url: string,
+  url: string | null | undefined,
   _options: { width?: number; height?: number; quality?: number } = {}
 ): string {
-  if (!url) return '';
-  return url;
+  if (!url || typeof url !== 'string') return '';
+  return url.trim();
 }

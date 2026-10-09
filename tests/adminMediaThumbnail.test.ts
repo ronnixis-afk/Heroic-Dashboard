@@ -22,8 +22,9 @@ describe('Admin Media Thumbnail URL Generation', () => {
 
   it('handles empty or missing URLs gracefully', () => {
     assert.equal(getOptimizedThumbnailUrl(''), '');
-    assert.equal(getOptimizedThumbnailUrl(null as unknown as string), '');
-    assert.equal(getOptimizedThumbnailUrl(undefined as unknown as string), '');
+    assert.equal(getOptimizedThumbnailUrl('   '), '');
+    assert.equal(getOptimizedThumbnailUrl(null), '');
+    assert.equal(getOptimizedThumbnailUrl(undefined), '');
   });
 
   it('leaves non-storage URLs untouched', () => {

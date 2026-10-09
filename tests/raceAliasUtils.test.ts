@@ -6,7 +6,7 @@ import {
   getRacePortraitCount,
   getRaceGenresForFilter,
   getDbRaceNamesForGenre,
-} from '../src/lib/raceAliasUtils.js';
+} from '../src/lib/raceAliasUtils';
 
 describe('raceAliasUtils', () => {
   it('normalizes race strings to singular lowercase keys', () => {
@@ -15,6 +15,7 @@ describe('raceAliasUtils', () => {
     assert.equal(normalizeRaceKey('Dwarves'), 'dwarf');
     assert.equal(normalizeRaceKey('Humans'), 'human');
     assert.equal(normalizeRaceKey('Dark-Elf'), 'dark-elf');
+    assert.equal(normalizeRaceKey('Nephilims'), 'nephilim');
   });
 
   it('provides aliases for Werewolf <-> Lycanthrope', () => {

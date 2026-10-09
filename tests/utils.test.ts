@@ -26,6 +26,12 @@ describe('utils formatBytes', () => {
   it('handles fractional byte sizes safely without negative index', () => {
     assert.equal(formatBytes(0.5), '0.5 B');
   });
+
+  it('handles invalid or non-integer decimal precision safely', () => {
+    assert.equal(formatBytes(1536, NaN), '2 KB');
+    assert.equal(formatBytes(1536, -2), '2 KB');
+    assert.equal(formatBytes(1536, 1.9), '1.5 KB');
+  });
 });
 
 describe('utils cn', () => {
