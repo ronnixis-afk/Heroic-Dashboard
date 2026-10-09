@@ -22,6 +22,10 @@ describe('utils formatBytes', () => {
     const huge = 1024 * 1024 * 1024 * 1024 * 5;
     assert.equal(formatBytes(huge), '5 TB');
   });
+
+  it('handles fractional byte sizes safely without negative index', () => {
+    assert.equal(formatBytes(0.5), '0.5 B');
+  });
 });
 
 describe('utils cn', () => {

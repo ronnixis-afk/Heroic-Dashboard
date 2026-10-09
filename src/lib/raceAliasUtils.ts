@@ -118,23 +118,30 @@ export function getRacePortraitCount(
   const raceNormalized = normalizeRaceKey(trimmed);
   const raceClean = raceLower.replace(/[\s-_]+/g, ' ');
 
+  const entries = Object.entries(counts).map(([key, count]) => {
+    const keyTrimmed = key.trim();
+    const keyLower = keyTrimmed.toLowerCase();
+    return {
+      count,
+      trimmed: keyTrimmed,
+      lower: keyLower,
+      normalized: normalizeRaceKey(keyTrimmed),
+      clean: keyLower.replace(/[\s-_]+/g, ' '),
+    };
+  });
+
   // 1. Direct case-insensitive, normalized, and clean hyphen/space match
   let directSum = 0;
   let hasDirectMatch = false;
 
-  for (const [key, count] of Object.entries(counts)) {
-    const keyTrimmed = key.trim();
-    const keyLower = keyTrimmed.toLowerCase();
-    const keyNormalized = normalizeRaceKey(keyTrimmed);
-    const keyClean = keyLower.replace(/[\s-_]+/g, ' ');
-
+  for (const entry of entries) {
     if (
-      keyTrimmed === trimmed ||
-      keyLower === raceLower ||
-      keyNormalized === raceNormalized ||
-      keyClean === raceClean
+      entry.trimmed === trimmed ||
+      entry.lower === raceLower ||
+      entry.normalized === raceNormalized ||
+      entry.clean === raceClean
     ) {
-      directSum += count;
+      directSum += entry.count;
       hasDirectMatch = true;
     }
   }
@@ -151,18 +158,13 @@ export function getRacePortraitCount(
     const aliasClean = aliasLower.replace(/[\s-_]+/g, ' ');
 
     let aliasSum = 0;
-    for (const [key, count] of Object.entries(counts)) {
-      const keyTrimmed = key.trim();
-      const keyLower = keyTrimmed.toLowerCase();
-      const keyNormalized = normalizeRaceKey(keyTrimmed);
-      const keyClean = keyLower.replace(/[\s-_]+/g, ' ');
-
+    for (const entry of entries) {
       if (
-        keyLower === aliasLower ||
-        keyNormalized === aliasNormalized ||
-        keyClean === aliasClean
+        entry.lower === aliasLower ||
+        entry.normalized === aliasNormalized ||
+        entry.clean === aliasClean
       ) {
-        aliasSum += count;
+        aliasSum += entry.count;
       }
     }
 
