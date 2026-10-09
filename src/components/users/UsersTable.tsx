@@ -1,8 +1,8 @@
-import React from 'react';
-import { Mail, ShieldCheck, Calendar, MoreHorizontal } from 'lucide-react';
+import { Mail, ShieldCheck, Calendar, MoreHorizontal, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatBytes } from '../../lib/utils';
 import { Skeleton, SkeletonText } from '../Skeleton';
+import { EmptyState } from '../ui';
 
 interface UsersTableProps {
   filteredUsers: any[];
@@ -186,9 +186,12 @@ export default function UsersTable({
           </table>
         </div>
         {!isLoading && filteredUsers.length === 0 && (
-          <div className="py-12 text-center text-xs text-brand-text-muted italic">
-            No users found matching your search.
-          </div>
+          <EmptyState
+            compact
+            icon={Users}
+            title="No Users Found"
+            description="Try Adjusting Your Filters Or Search Terms."
+          />
         )}
       </div>
     </div>

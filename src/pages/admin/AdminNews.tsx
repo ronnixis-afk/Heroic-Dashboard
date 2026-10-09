@@ -458,7 +458,7 @@ export default function AdminNews() {
               <div className="space-y-4 max-w-md mx-auto rounded-2xl border border-brand-primary/30 bg-brand-primary/5 p-4">
                 <div className="flex items-center justify-center gap-2">
                   <span className="badge-success text-xs font-mono">{popupFormData.version || 'v0.51'}</span>
-                  <h3 className="text-base font-bold text-brand-text">
+                  <h3 className="text-title font-semibold text-brand-text">
                     {popupFormData.title || 'Early Access Patch Notes'}
                   </h3>
                 </div>
@@ -497,11 +497,11 @@ export default function AdminNews() {
                 )}
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button type="button" disabled className="btn-primary btn-md w-full rounded-xl">
+                  <button type="button" disabled className="btn-primary w-full rounded-xl">
                     Close
                   </button>
                   {popupFormData.cta_label && (
-                    <button type="button" disabled className="btn-secondary btn-md w-full rounded-xl truncate">
+                    <button type="button" disabled className="btn-secondary w-full rounded-xl truncate">
                       {popupFormData.cta_label}
                     </button>
                   )}
@@ -543,14 +543,14 @@ export default function AdminNews() {
                                   {item.version}
                                 </span>
                               )}
-                              <h4 className="truncate text-sm font-semibold">{item.title}</h4>
+                              <h4 className="truncate text-title font-semibold">{item.title}</h4>
                               {item.active && (
                                 <span className="badge-success flex items-center gap-1 text-[10px]">
                                   <Radio size={10} className="animate-pulse" /> Active Popup
                                 </span>
                               )}
                               {item.is_patch_note && (
-                                <span className="badge-secondary text-[10px]">Public Patch Note</span>
+                                <span className="badge-muted">Public Patch Note</span>
                               )}
                             </div>
                             <p className="text-xs text-brand-text-muted line-clamp-2">

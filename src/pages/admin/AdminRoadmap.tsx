@@ -9,6 +9,7 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
+  Loader2,
 } from 'lucide-react';
 import {
   useRoadmap,
@@ -317,10 +318,11 @@ export default function AdminRoadmap() {
 
             <div className="flex items-center gap-2 pt-1">
               <button type="submit" disabled={saving} className="btn-primary text-xs gap-1">
-                {editingId ? 'Save Changes' : 'Add Item'}
+                {saving && <Loader2 size={12} className="animate-spin" />}
+                {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Item'}
               </button>
               {editingId && (
-                <button type="button" onClick={resetForm} className="btn-secondary text-xs">
+                <button type="button" onClick={resetForm} disabled={saving} className="btn-secondary text-xs">
                   Cancel
                 </button>
               )}
