@@ -1,7 +1,7 @@
 /**
  * Analytics aggregation used by AdminAnalytics.
- * The MCP serverless function uses a copy at api/lib/mcpInsights.ts so Vercel
- * does not have to bundle src/ into /api/mcp.
+ * The standalone MCP serverless function (api/mcp.ts) inlines its own
+ * analytics formatter to keep the Vercel function dependency-free.
  */
 export type RpgGet = <T>(path: string) => Promise<T>;
 

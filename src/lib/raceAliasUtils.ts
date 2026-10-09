@@ -129,45 +129,36 @@ export function getRacePortraitCount(
     };
   });
 
-  // 1. Direct case-insensitive, normalized, and clean hyphen/space match
-  let directSum = 0;
-  let hasDirectMatch = false;
-
-  for (const entry of entries) {
-    if (
-      entry.lower === raceLower ||
-      entry.normalized === raceNormalized ||
-      entry.clean === raceClean
-    ) {
-      directSum += entry.count;
-      hasDirectMatch = true;
+  const matchEntries = (targetLower: string, targetNormalized: string, targetClean: string) => {
+    let sum = 0;
+    let hasMatch = false;
+    for (const entry of entries) {
+      if (
+        entry.lower === targetLower ||
+        entry.normalized === targetNormalized ||
+        entry.clean === targetClean
+      ) {
+        sum += entry.count;
+        hasMatch = true;
+      }
     }
-  }
+    return { sum, hasMatch };
+  };
 
-  if (hasDirectMatch && directSum > 0) {
-    return directSum;
+  // 1. Direct case-insensitive, normalized, and clean hyphen/space match
+  const direct = matchEntries(raceLower, raceNormalized, raceClean);
+  if (direct.hasMatch && direct.sum > 0) {
+    return direct.sum;
   }
 
   // 2. Alias / Parent race matching
   const aliases = getRaceAliases(trimmed);
   for (const alias of aliases) {
-    const aliasLower = alias.trim().toLowerCase();
     const aliasNormalized = normalizeRaceKey(alias);
-    const aliasClean = aliasLower.replace(/[\s-_]+/g, ' ');
-
-    let aliasSum = 0;
-    for (const entry of entries) {
-      if (
-        entry.lower === aliasLower ||
-        entry.normalized === aliasNormalized ||
-        entry.clean === aliasClean
-      ) {
-        aliasSum += entry.count;
-      }
-    }
-
-    if (aliasSum > 0) {
-      return aliasSum;
+    const aliasClean = alias.replace(/[\s-_]+/g, ' ');
+    const aliasMatch = matchEntries(alias, aliasNormalized, aliasClean);
+    if (aliasMatch.sum > 0) {
+      return aliasMatch.sum;
     }
   }
 

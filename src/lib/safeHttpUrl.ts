@@ -12,8 +12,3 @@ export function isSafeHttpUrl(value: string | null | undefined): boolean {
     return false;
   }
 }
-
-export function safeHttpUrlOrNull(value: string | null | undefined): string | null {
-  if (!isSafeHttpUrl(value)) return null;
-  return value!.trim();
-}
