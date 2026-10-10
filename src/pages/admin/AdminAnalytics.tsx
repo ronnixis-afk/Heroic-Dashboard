@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -110,7 +108,6 @@ export default function AdminAnalytics() {
     modelDistribution, 
     topUsers,
     activeSessionsCount,
-    avgSessionLength,
     sessionTrends,
     totalCost,
     realTimeTrends,

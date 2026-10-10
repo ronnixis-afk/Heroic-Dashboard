@@ -21,10 +21,6 @@ export default function UserConsumptionChart({ userId }: UserConsumptionChartPro
       default: return dailyData;
     }
   }, [filter, dailyData, weeklyData, monthlyData]);
-  
-  const currentTotalCost = useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.cost, 0);
-  }, [chartData]);
 
   const currentTotalTokens = useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.tokens, 0);

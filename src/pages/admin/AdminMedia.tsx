@@ -687,16 +687,6 @@ const ALL_MONSTER_PORTRAIT_TAG_OPTIONS = (() => {
   return options;
 })();
 
-const ALL_ITEM_SUBTYPES = (() => {
-  const options = new Set<string>();
-  for (const category of ITEM_CATEGORY_OPTIONS) {
-    for (const subtype of getItemPortraitSubtypes(category)) {
-      options.add(subtype);
-    }
-  }
-  return options;
-})();
-
 const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> => {
   if (assetType === 'Character Portrait') {
     return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
