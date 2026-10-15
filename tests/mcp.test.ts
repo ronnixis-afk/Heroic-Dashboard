@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createHash } from 'node:crypto';
 import handler, {
   buildMonsterCombatFlavorUpdatePayload,
   buildMonsterSubtypeCreatePayload,
@@ -15,10 +16,17 @@ import handler, {
   executeMcpTool,
   extractBearerToken,
   formatAnalyticsOverview,
+  insertMcpAuditLog,
   isAuthorizedMcpRequest,
   MCP_TOOLS,
   normalizeMonsterTypesList,
+  normalizePatchNotesList,
+  resetMcpWriteRateLimits,
+  resolveMcpPrincipal,
+  sha256Hex,
   sortPatchNotesNewestFirst,
+  type McpAuditEvent,
+  type McpPrincipal,
 } from '../api/mcp';
 
 const EXPECTED_TOOL_NAMES = [
@@ -38,6 +46,12 @@ const KEY = 'test-mcp-key-please-ignore';
 
 afterEach(() => {
   delete process.env.MCP_API_KEY;
+  delete process.env.MCP_API_KEYS;
+  delete process.env.MCP_WRITE_LIMIT_PER_MIN;
+  delete process.env.SUPABASE_URL;
+  delete process.env.VITE_SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  resetMcpWriteRateLimits();
 });
 
 function mockRequest(overrides: Partial<VercelRequest> & { body?: unknown } = {}): VercelRequest {
@@ -136,7 +150,7 @@ describe('MCP bearer auth', () => {
 });
 
 describe('publish_patch_note payload', () => {
-  it('matches createNews fields with published patch-note flags and is_popup false', () => {
+  it('matches createNews fields with an unpublished draft and is_popup false', () => {
     const payload = buildPatchNotePayload({
       title: '  Early Access v0.62  ',
       content: '<p>Fixes</p>',
@@ -147,7 +161,7 @@ describe('publish_patch_note payload', () => {
       title: 'Early Access v0.62',
       content: '<p>Fixes</p>',
       imageUrl: null,
-      published: true,
+      published: false,
       is_popup: false,
       active: false,
       highlights: [],
@@ -158,7 +172,12 @@ describe('publish_patch_note payload', () => {
     });
     assert.equal(payload.is_popup, false);
     assert.equal(payload.is_patch_note, true);
-    assert.equal(payload.published, true);
+    assert.equal(payload.published, false);
+
+    const tool = MCP_TOOLS.find((entry) => entry.name === 'publish_patch_note');
+    assert.ok(tool);
+    assert.match(tool.description, /unpublished/i);
+    assert.match(tool.description, /published false/);
   });
 
   it('rejects a blank title', () => {
@@ -246,7 +265,7 @@ describe('MCP JSON-RPC tools', () => {
     const record = posted as { is_popup: boolean; is_patch_note: boolean; published: boolean };
     assert.equal(record.is_popup, false);
     assert.equal(record.is_patch_note, true);
-    assert.equal(record.published, true);
+    assert.equal(record.published, false);
     assert.deepEqual((output as { result: { id: string } }).result, { id: 'news-1' });
   });
 
@@ -959,5 +978,386 @@ describe('monster catalog MCP tools', () => {
     const parsed = JSON.parse(payload.content[0].text);
     assert.equal(parsed.types[0].name, 'Beast');
     assert.equal(parsed.types[0].subtypes[0].name, 'Grassland Prowler');
+  });
+});
+
+describe('MCP key scopes', { concurrency: 1 }, () => {
+  const readSecret = 'read-scope-secret-not-real';
+  const monsterSecret = 'monster-scope-secret-not-real';
+  const notesSecret = 'notes-scope-secret-not-real';
+  const legacySecret = 'legacy-scope-secret-not-real';
+
+  function scopedEnv() {
+    process.env.MCP_API_KEY = legacySecret;
+    process.env.MCP_API_KEYS = JSON.stringify({
+      reader: { sha256: createHash('sha256').update(readSecret).digest('hex'), scopes: ['read'] },
+      bestiary: { key: monsterSecret, scopes: ['monsters'] },
+      notes: {
+        sha256: createHash('sha256').update(notesSecret).digest('hex'),
+        key: 'ignored-because-sha256-wins',
+        scopes: ['patch_notes'],
+      },
+    });
+  }
+
+  it('hashes bearer keys with the same SHA-256 hex as node:crypto', async () => {
+    const sample = 'abc-key-sample';
+    assert.equal(await sha256Hex(sample), createHash('sha256').update(sample).digest('hex'));
+  });
+
+  it('accepts a hashed read key and the legacy full-scope key', async () => {
+    scopedEnv();
+    const reader = await resolveMcpPrincipal(`Bearer ${readSecret}`);
+    assert.deepEqual(reader, { name: 'reader', scopes: ['read'] });
+
+    const legacy = await resolveMcpPrincipal(`Bearer ${legacySecret}`);
+    assert.equal(legacy?.name, 'legacy');
+    assert.deepEqual(legacy?.scopes, ['read', 'monsters', 'patch_notes']);
+
+    const notes = await resolveMcpPrincipal(`Bearer ${notesSecret}`);
+    assert.deepEqual(notes, { name: 'notes', scopes: ['patch_notes'] });
+    assert.equal(await resolveMcpPrincipal('Bearer ignored-because-sha256-wins'), null);
+  });
+
+  it('prefers a named key when the same secret is also MCP_API_KEY', async () => {
+    process.env.MCP_API_KEY = readSecret;
+    process.env.MCP_API_KEYS = JSON.stringify({
+      reader: { key: readSecret, scopes: ['read'] },
+    });
+    const principal = await resolveMcpPrincipal(`Bearer ${readSecret}`);
+    assert.equal(principal?.name, 'reader');
+    assert.deepEqual(principal?.scopes, ['read']);
+  });
+
+  it('returns 401 for a wrong key when only MCP_API_KEYS is set', async () => {
+    delete process.env.MCP_API_KEY;
+    process.env.MCP_API_KEYS = JSON.stringify({
+      reader: { key: readSecret, scopes: ['read'] },
+    });
+    const res = mockResponse();
+    await handler(
+      mockRequest({ headers: { authorization: 'Bearer nope' }, body: { jsonrpc: '2.0', id: 1, method: 'ping' } }),
+      res.response
+    );
+    assert.equal(res.state.statusCode, 401);
+    assert.equal(JSON.stringify(res.state.body).includes(readSecret), false);
+  });
+
+  it('returns HTTP 500 for invalid MCP_API_KEYS without echoing the secret', async () => {
+    process.env.MCP_API_KEY = legacySecret;
+    process.env.MCP_API_KEYS = '{"broken" secret-value-do-not-echo';
+    const res = mockResponse();
+    await handler(
+      mockRequest({
+        headers: { authorization: `Bearer ${legacySecret}` },
+        body: { jsonrpc: '2.0', id: 1, method: 'ping' },
+      }),
+      res.response
+    );
+    assert.equal(res.state.statusCode, 500);
+    assert.deepEqual(res.state.body, { error: 'MCP_API_KEYS Is Invalid JSON.' });
+    assert.equal(JSON.stringify(res.state.body).includes('secret-value-do-not-echo'), false);
+  });
+
+  it('lists only read tools for a read key and rejects monster writes', async () => {
+    scopedEnv();
+    const listed = mockResponse();
+    await handler(
+      mockRequest({
+        headers: { authorization: `Bearer ${readSecret}`, accept: 'application/json' },
+        body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+      }),
+      listed.response
+    );
+    assert.equal(listed.state.statusCode, 200);
+    const names = (
+      listed.state.body as { result: { tools: { name: string }[] } }
+    ).result.tools.map((tool) => tool.name);
+    assert.deepEqual(names, [
+      'get_insights',
+      'list_patch_notes',
+      'list_monster_types',
+      'get_monster_type',
+    ]);
+
+    const denied = mockResponse();
+    await handler(
+      mockRequest({
+        headers: { authorization: `Bearer ${readSecret}` },
+        body: {
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/call',
+          params: { name: 'create_monster_type', arguments: { name: 'Drake', description: 'Wings' } },
+        },
+      }),
+      denied.response
+    );
+    assert.equal(denied.state.statusCode, 200);
+    const payload = denied.state.body as { result: { isError: boolean; content: { text: string }[] } };
+    assert.equal(payload.result.isError, true);
+    assert.match(payload.result.content[0].text, /Missing Scope: monsters/);
+    assert.equal(payload.result.content[0].text.includes(readSecret), false);
+  });
+
+  it('lets a monsters key create and blocks patch notes', async () => {
+    const principal: McpPrincipal = { name: 'bestiary', scopes: ['monsters'] };
+    let posted = false;
+    const created = await executeMcpTool(
+      'create_monster_type',
+      { name: 'Drake', description: 'Wings' },
+      {
+        principal,
+        recordAudit: async () => {},
+        fetchRpgAdmin: async () => {
+          posted = true;
+          return { id: 'type-1' };
+        },
+      }
+    );
+    assert.equal(posted, true);
+    assert.equal((created as { result: { id: string } }).result.id, 'type-1');
+
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'publish_patch_note',
+          { title: 'Draft', content: 'Body' },
+          { principal, publishPatchNote: async () => ({ id: 'should-not-run' }) }
+        ),
+      /Missing Scope: patch_notes/
+    );
+  });
+
+  it('lets the legacy key call a patch-note write', async () => {
+    scopedEnv();
+    const principal = await resolveMcpPrincipal(`Bearer ${legacySecret}`);
+    assert.ok(principal);
+    const output = await executeMcpTool(
+      'publish_patch_note',
+      { title: 'Legacy draft', content: 'Body', version: 'v9' },
+      {
+        principal: principal ?? undefined,
+        recordAudit: async () => {},
+        publishPatchNote: async (payload) => {
+          assert.equal(payload.published, false);
+          return { id: 'news-legacy' };
+        },
+      }
+    );
+    assert.equal((output as { result: { id: string } }).result.id, 'news-legacy');
+  });
+});
+
+describe('MCP write audit', { concurrency: 1 }, () => {
+  const principal: McpPrincipal = { name: 'notes', scopes: ['patch_notes', 'monsters'] };
+  const now = Date.parse('2026-10-15T12:00:00.000Z');
+
+  it('records key name, tool, target id, diff summary, and timestamp', async () => {
+    const events: McpAuditEvent[] = [];
+    const output = await executeMcpTool(
+      'publish_patch_note',
+      { title: 'Early Access v0.70', content: '<p>secret body</p>', version: 'v0.70' },
+      {
+        principal,
+        now: () => now,
+        recordAudit: async (event) => {
+          events.push(event);
+        },
+        publishPatchNote: async (payload) => {
+          assert.equal(payload.published, false);
+          return { id: 'news-70' };
+        },
+      }
+    );
+    assert.equal((output as { ok: boolean }).ok, true);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].keyName, 'notes');
+    assert.equal(events[0].tool, 'publish_patch_note');
+    assert.equal(events[0].targetId, 'news-70');
+    assert.equal(events[0].createdAt, '2026-10-15T12:00:00.000Z');
+    assert.match(events[0].diffSummary, /published=false/);
+    assert.match(events[0].diffSummary, /title="Early Access v0.70"/);
+    assert.equal(events[0].diffSummary.includes('secret body'), false);
+  });
+
+  it('records monster update ids from the arguments', async () => {
+    const events: McpAuditEvent[] = [];
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', visualDescription: 'Updated look' },
+      {
+        principal,
+        now: () => now,
+        recordAudit: async (event) => {
+          events.push(event);
+        },
+        fetchRpgAdmin: async () => ({ id: 'sub-9' }),
+      }
+    );
+    assert.equal(events[0].tool, 'update_monster_subtype');
+    assert.equal(events[0].targetId, 'sub-9');
+    assert.match(events[0].diffSummary, /fields=visualDescription/);
+  });
+
+  it('still returns the write when the audit insert fails', async () => {
+    const lines: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      lines.push(args.map((part) => String(part)).join(' '));
+    };
+    try {
+      const output = await executeMcpTool(
+        'publish_patch_note',
+        { title: 'Draft', content: 'Body' },
+        {
+          principal,
+          now: () => now,
+          recordAudit: async () => {
+            throw new Error('insert failed');
+          },
+          publishPatchNote: async () => ({ id: 'news-ok' }),
+        }
+      );
+      assert.equal((output as { result: { id: string } }).result.id, 'news-ok');
+      assert.match(lines.join('\n'), /audit log insert failed for key "notes" tool "publish_patch_note": insert failed/);
+      assert.equal(lines.join('\n').includes('notes-scope-secret-not-real'), false);
+      assert.equal(lines.join('\n').includes('service-role'), false);
+    } finally {
+      console.error = original;
+    }
+  });
+
+  it('posts an audit row to Supabase and logs when service role is missing', async () => {
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-fake';
+    const originalFetch = globalThis.fetch;
+    const calls: { url: string; init?: RequestInit }[] = [];
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response(null, { status: 201 });
+    }) as typeof fetch;
+    try {
+      await insertMcpAuditLog({
+        keyName: 'notes',
+        tool: 'publish_patch_note',
+        targetId: 'news-1',
+        diffSummary: 'draft published=false',
+        createdAt: '2026-10-15T12:00:00.000Z',
+      });
+      assert.equal(calls[0].url, 'https://example.supabase.co/rest/v1/mcp_audit_log');
+      const headers = calls[0].init?.headers as Record<string, string>;
+      assert.equal(headers.apikey, 'service-role-fake');
+      assert.equal(headers.Authorization, 'Bearer service-role-fake');
+      const body = JSON.parse(String(calls[0].init?.body));
+      assert.deepEqual(body, {
+        key_name: 'notes',
+        tool: 'publish_patch_note',
+        target_id: 'news-1',
+        diff_summary: 'draft published=false',
+        created_at: '2026-10-15T12:00:00.000Z',
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const lines: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      lines.push(args.map((part) => String(part)).join(' '));
+    };
+    try {
+      const output = await executeMcpTool(
+        'create_monster_type',
+        { name: 'Ooze', description: 'Amorphous' },
+        {
+          principal: { name: 'bestiary', scopes: ['monsters'] },
+          now: () => now,
+          fetchRpgAdmin: async () => ({ id: 'type-2' }),
+        }
+      );
+      assert.equal((output as { result: { id: string } }).result.id, 'type-2');
+      assert.match(lines.join('\n'), /Supabase service role is not configured/);
+    } finally {
+      console.error = original;
+    }
+  });
+});
+
+describe('MCP write rate limit', { concurrency: 1 }, () => {
+  const now = 1_700_000_000_000;
+
+  it('caps writes per key per minute and resets on the next window', async () => {
+    const principal: McpPrincipal = { name: 'bestiary', scopes: ['monsters'] };
+    let calls = 0;
+    const runtime = {
+      principal,
+      writeLimitPerMin: 2,
+      now: () => now,
+      recordAudit: async () => {},
+      fetchRpgAdmin: async () => {
+        calls += 1;
+        return { id: 'type-1' };
+      },
+    };
+    await executeMcpTool('create_monster_type', { name: 'One', description: 'A' }, runtime);
+    await executeMcpTool('create_monster_type', { name: 'Two', description: 'B' }, runtime);
+    await assert.rejects(
+      () => executeMcpTool('create_monster_type', { name: 'Three', description: 'C' }, runtime),
+      /Write Rate Limit Exceeded\. Key "bestiary" Is Limited To 2 Writes Per Minute\./
+    );
+    assert.equal(calls, 2);
+
+    const other: McpPrincipal = { name: 'other-bot', scopes: ['monsters'] };
+    await executeMcpTool('create_monster_type', { name: 'Four', description: 'D' }, {
+      ...runtime,
+      principal: other,
+    });
+    assert.equal(calls, 3);
+
+    await executeMcpTool(
+      'create_monster_type',
+      { name: 'Five', description: 'E' },
+      { ...runtime, now: () => now + 60_000 }
+    );
+    assert.equal(calls, 4);
+  });
+
+  it('does not count read tools toward the write cap', async () => {
+    const principal: McpPrincipal = { name: 'reader', scopes: ['read', 'patch_notes'] };
+    await executeMcpTool('get_insights', {}, { principal, writeLimitPerMin: 1, getInsights: async () => ({ ok: true }) });
+    await executeMcpTool('get_insights', {}, { principal, writeLimitPerMin: 1, getInsights: async () => ({ ok: true }) });
+    const output = await executeMcpTool(
+      'publish_patch_note',
+      { title: 'Draft', content: 'Body' },
+      {
+        principal,
+        writeLimitPerMin: 1,
+        recordAudit: async () => {},
+        publishPatchNote: async (payload) => {
+          assert.equal(payload.published, false);
+          return { id: 'news-draft' };
+        },
+      }
+    );
+    assert.equal((output as { result: { id: string } }).result.id, 'news-draft');
+  });
+});
+
+describe('public patch notes stay published-only', () => {
+  it('drops explicit drafts and keeps live rows that omit published', () => {
+    const items = normalizePatchNotesList({
+      patchNotes: [
+        { id: 'live', title: 'v0.66', version: 'v0.66' },
+        { id: 'draft', title: 'v0.67', published: false },
+        { id: 'public', title: 'v0.65', published: true },
+      ],
+    });
+    assert.deepEqual(
+      items.map((item) => item.id),
+      ['live', 'public']
+    );
   });
 });
