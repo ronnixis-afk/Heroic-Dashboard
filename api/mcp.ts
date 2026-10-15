@@ -5,6 +5,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * type-only @vercel/node import, no local runtime imports, no Node crypto builtin.
  * Files under api/lib were being treated as extra functions and ESM imports
  * crashed cold start (FUNCTION_INVOCATION_FAILED on OPTIONS and POST).
+ * Key hashing uses global Web Crypto (`crypto.subtle`), not `node:crypto`.
  */
 export const config = {
   runtime: 'nodejs',
@@ -45,12 +46,15 @@ export default async function handler(request: VercelRequest, response: VercelRe
 }
 
 async function handleMcpRequest(request: VercelRequest, response: VercelResponse) {
-  const mcpApiKey = process.env.MCP_API_KEY;
-  if (!mcpApiKey) {
-    return sendJson(response, 500, { error: 'MCP Server Is Not Configured.' });
+  const authConfig = loadMcpAuthConfig();
+  if (!authConfig.configured) {
+    return sendJson(response, 500, {
+      error: authConfig.error || 'MCP Server Is Not Configured.',
+    });
   }
 
-  if (!isAuthorizedMcpRequest(request.headers.authorization, mcpApiKey)) {
+  const principal = await resolveMcpPrincipal(request.headers.authorization, authConfig);
+  if (!principal) {
     response.setHeader('WWW-Authenticate', 'Bearer realm="mcp"');
     return sendJson(response, 401, { error: 'Unauthorized.' });
   }
@@ -76,7 +80,7 @@ async function handleMcpRequest(request: VercelRequest, response: VercelResponse
     });
   }
 
-  const result = await dispatchMcpMessage(body);
+  const result = await dispatchMcpMessage(body, { principal });
   if (result.kind === 'empty') {
     return response.status(202).end();
   }
@@ -160,6 +164,350 @@ export function isAuthorizedMcpRequest(
   return timingSafeEqualString(token, expectedKey);
 }
 
+export const MCP_SCOPES = ['read', 'monsters', 'patch_notes'] as const;
+export type McpScope = (typeof MCP_SCOPES)[number];
+
+export type McpPrincipal = {
+  name: string;
+  scopes: McpScope[];
+};
+
+export type McpAuditEvent = {
+  keyName: string;
+  tool: string;
+  targetId: string | null;
+  diffSummary: string;
+  createdAt: string;
+};
+
+const READ_TOOLS = new Set([
+  'get_insights',
+  'list_patch_notes',
+  'list_monster_types',
+  'get_monster_type',
+]);
+
+const MONSTER_WRITE_TOOLS = new Set([
+  'create_monster_type',
+  'update_monster_type',
+  'create_monster_subtype',
+  'update_monster_subtype',
+  'update_monster_combat_flavor',
+]);
+
+const LEGACY_KEY_NAME = 'legacy';
+const DEFAULT_WRITE_LIMIT_PER_MIN = 30;
+const WRITE_WINDOW_MS = 60_000;
+const AUDIT_DIFF_MAX = 500;
+
+/**
+ * Per-isolate write counter. This repo has no Redis/KV rate-limit store
+ * (api/clerk-proxy.ts uses the same in-memory pattern). On Vercel each
+ * isolate has its own map, cold starts reset it, and the cap is not global.
+ */
+const writeBuckets = new Map<string, { count: number; windowStart: number }>();
+const ignoredKeyWarnings = new Set<string>();
+
+export function requiredScopeForTool(name: string): McpScope | null {
+  if (READ_TOOLS.has(name)) return 'read';
+  if (MONSTER_WRITE_TOOLS.has(name)) return 'monsters';
+  if (name === 'publish_patch_note') return 'patch_notes';
+  return null;
+}
+
+export function isMcpWriteTool(name: string): boolean {
+  return MONSTER_WRITE_TOOLS.has(name) || name === 'publish_patch_note';
+}
+
+export async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (const byte of bytes) {
+    hex += byte.toString(16).padStart(2, '0');
+  }
+  return hex;
+}
+
+type StoredMcpKey = {
+  name: string;
+  scopes: McpScope[];
+} & ({ kind: 'sha256'; sha256: string } | { kind: 'key'; key: string });
+
+export type McpAuthConfig = {
+  configured: boolean;
+  error?: string;
+  legacyKey?: string;
+  keys: StoredMcpKey[];
+};
+
+function parseScopes(value: unknown): McpScope[] {
+  if (!Array.isArray(value)) return [];
+  const scopes: McpScope[] = [];
+  for (const item of value) {
+    if (
+      typeof item === 'string' &&
+      (MCP_SCOPES as readonly string[]).includes(item) &&
+      !scopes.includes(item as McpScope)
+    ) {
+      scopes.push(item as McpScope);
+    }
+  }
+  return scopes;
+}
+
+function parseStoredKey(name: string, value: unknown): StoredMcpKey | null {
+  if (!name.trim() || !value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const scopes = parseScopes(record.scopes);
+  if (scopes.length === 0) return null;
+  const sha = typeof record.sha256 === 'string' ? record.sha256.trim().toLowerCase() : '';
+  if (sha) {
+    if (!/^[0-9a-f]{64}$/.test(sha)) return null;
+    return { name, kind: 'sha256', sha256: sha, scopes };
+  }
+  const key = typeof record.key === 'string' ? record.key : '';
+  if (!key) return null;
+  return { name, kind: 'key', key, scopes };
+}
+
+function warnIgnoredKey(name: string) {
+  if (ignoredKeyWarnings.has(name)) return;
+  ignoredKeyWarnings.add(name);
+  console.error(
+    `[mcp] Ignoring MCP_API_KEYS entry "${name}" because it has no usable sha256 or key, or no valid scopes.`
+  );
+}
+
+export function loadMcpAuthConfig(
+  env: { MCP_API_KEY?: string; MCP_API_KEYS?: string } = process.env
+): McpAuthConfig {
+  const legacyKey = env.MCP_API_KEY?.trim() || undefined;
+  const raw = env.MCP_API_KEYS?.trim() || '';
+  if (!raw) {
+    if (!legacyKey) {
+      return { configured: false, error: 'MCP Server Is Not Configured.', keys: [] };
+    }
+    return { configured: true, legacyKey, keys: [] };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { configured: false, error: 'MCP_API_KEYS Is Invalid JSON.', keys: [] };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { configured: false, error: 'MCP_API_KEYS Must Be A JSON Object.', keys: [] };
+  }
+
+  const keys: StoredMcpKey[] = [];
+  for (const [name, value] of Object.entries(parsed as Record<string, unknown>)) {
+    const stored = parseStoredKey(name, value);
+    if (stored) keys.push(stored);
+    else warnIgnoredKey(name);
+  }
+
+  if (!legacyKey && keys.length === 0) {
+    return { configured: false, error: 'MCP Server Is Not Configured.', keys: [] };
+  }
+  return { configured: true, legacyKey, keys };
+}
+
+export async function resolveMcpPrincipal(
+  authorization: string | string[] | undefined,
+  config: McpAuthConfig = loadMcpAuthConfig()
+): Promise<McpPrincipal | null> {
+  const token = extractBearerToken(authorization);
+  if (!token) return null;
+
+  const tokenHash = await sha256Hex(token);
+  let matched: McpPrincipal | null = null;
+  for (const entry of config.keys) {
+    const ok =
+      entry.kind === 'sha256'
+        ? timingSafeEqualString(tokenHash, entry.sha256)
+        : timingSafeEqualString(token, entry.key);
+    if (ok && !matched) {
+      matched = { name: entry.name, scopes: entry.scopes };
+    }
+  }
+
+  if (config.legacyKey) {
+    const legacyOk = timingSafeEqualString(token, config.legacyKey);
+    if (legacyOk && !matched) {
+      matched = { name: LEGACY_KEY_NAME, scopes: [...MCP_SCOPES] };
+    }
+  }
+
+  return matched;
+}
+
+export function readMcpWriteLimitPerMin(raw = process.env.MCP_WRITE_LIMIT_PER_MIN): number {
+  if (raw === undefined || raw.trim() === '') return DEFAULT_WRITE_LIMIT_PER_MIN;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) return DEFAULT_WRITE_LIMIT_PER_MIN;
+  return parsed;
+}
+
+export function resetMcpWriteRateLimits(): void {
+  writeBuckets.clear();
+}
+
+export function consumeMcpWriteBudget(keyName: string, now: number, limit: number): boolean {
+  const existing = writeBuckets.get(keyName);
+  if (!existing || now - existing.windowStart >= WRITE_WINDOW_MS) {
+    writeBuckets.set(keyName, { count: 1, windowStart: now });
+    return true;
+  }
+  if (existing.count >= limit) return false;
+  existing.count += 1;
+  return true;
+}
+
+function enforceMcpPrincipal(name: string, runtime: McpToolRuntime): void {
+  const principal = runtime.principal;
+  if (!principal) return;
+  const scope = requiredScopeForTool(name);
+  if (!scope) return;
+  if (!principal.scopes.includes(scope)) {
+    throw new Error(`Missing Scope: ${scope}. Key "${principal.name}" Cannot Call ${name}.`);
+  }
+  if (!isMcpWriteTool(name)) return;
+  const limit = runtime.writeLimitPerMin ?? readMcpWriteLimitPerMin();
+  const now = runtime.now?.() ?? Date.now();
+  if (!consumeMcpWriteBudget(principal.name, now, limit)) {
+    throw new Error(
+      `Write Rate Limit Exceeded. Key "${principal.name}" Is Limited To ${limit} Writes Per Minute.`
+    );
+  }
+}
+
+function clipText(value: string, max = 80): string {
+  const flat = value.replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  return `${flat.slice(0, max - 1)}…`;
+}
+
+function extractEntityId(value: unknown, depth = 0): string | null {
+  if (depth > 4 || !value || typeof value !== 'object') return null;
+  if (Array.isArray(value)) return extractEntityId(value[0], depth + 1);
+  const record = value as Record<string, unknown>;
+  if (typeof record.id === 'string' && record.id.trim()) return record.id.trim();
+  for (const key of ['news', 'item', 'result', 'type', 'subtype', 'data']) {
+    if (key in record) {
+      const found = extractEntityId(record[key], depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export function summarizeMcpWrite(
+  tool: string,
+  args: unknown,
+  output: unknown
+): { targetId: string | null; diffSummary: string } {
+  const record = asRecord(args);
+  const argId = typeof record.id === 'string' ? record.id.trim() : '';
+  const typeId = typeof record.typeId === 'string' ? record.typeId.trim() : '';
+  const subtypeId = typeof record.subtypeId === 'string' ? record.subtypeId.trim() : '';
+  const resultId = extractEntityId(output);
+
+  let targetId: string | null = null;
+  if (tool === 'update_monster_type') targetId = argId || resultId;
+  else if (tool === 'update_monster_subtype' || tool === 'update_monster_combat_flavor') {
+    targetId = subtypeId || resultId;
+  } else if (tool === 'create_monster_subtype') targetId = resultId || typeId || null;
+  else targetId = resultId;
+
+  const changed = Object.keys(record).filter(
+    (key) => record[key] !== undefined && !['id', 'typeId', 'subtypeId'].includes(key)
+  );
+  const bits: string[] = [];
+  if (tool === 'publish_patch_note') {
+    bits.push('draft', 'published=false', 'is_popup=false');
+    if (typeof record.title === 'string' && record.title.trim()) {
+      bits.push(`title="${clipText(record.title)}"`);
+    }
+    if (typeof record.version === 'string' && record.version.trim()) {
+      bits.push(`version=${clipText(record.version)}`);
+    }
+  } else if (tool.startsWith('create_')) {
+    bits.push('create');
+    if (typeof record.name === 'string' && record.name.trim()) {
+      bits.push(`name="${clipText(record.name)}"`);
+    }
+    if (typeId) bits.push(`typeId=${typeId}`);
+  } else {
+    bits.push('update');
+    if (argId) bits.push(`id=${argId}`);
+    if (typeId) bits.push(`typeId=${typeId}`);
+    if (subtypeId) bits.push(`subtypeId=${subtypeId}`);
+    if (typeof record.template === 'string' && record.template.trim()) {
+      bits.push(`template=${clipText(record.template)}`);
+    }
+  }
+  if (changed.length) bits.push(`fields=${changed.join(',')}`);
+
+  let diffSummary = bits.join(' ');
+  if (diffSummary.length > AUDIT_DIFF_MAX) {
+    diffSummary = `${diffSummary.slice(0, AUDIT_DIFF_MAX - 1)}…`;
+  }
+  return { targetId, diffSummary };
+}
+
+/**
+ * Audit inserts are best-effort. The CMS write has already succeeded by the
+ * time this runs. Failing the tool call would invite a retry and a duplicate
+ * monster or draft. Log the error and return the original write result.
+ * Requires SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.
+ * Apply scripts/03_mcp_audit_log.sql before inserts will succeed.
+ */
+export async function insertMcpAuditLog(event: McpAuditEvent): Promise<void> {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!url || !serviceKey) {
+    throw new Error(
+      'Supabase service role is not configured (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY).'
+    );
+  }
+
+  const response = await fetch(`${url}/rest/v1/mcp_audit_log`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      key_name: event.keyName,
+      tool: event.tool,
+      target_id: event.targetId,
+      diff_summary: event.diffSummary,
+      created_at: event.createdAt,
+    }),
+  });
+
+  if (!response.ok) {
+    await response.text().catch(() => '');
+    throw new Error(`mcp_audit_log insert failed with status ${response.status}.`);
+  }
+}
+
+async function recordWriteAudit(runtime: McpToolRuntime, event: McpAuditEvent): Promise<void> {
+  const record = runtime.recordAudit || insertMcpAuditLog;
+  try {
+    await record(event);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'unknown error';
+    console.error(
+      `[mcp] audit log insert failed for key "${event.keyName}" tool "${event.tool}": ${detail}`
+    );
+  }
+}
+
 export interface PublishPatchNoteInput {
   title: string;
   content: string;
@@ -170,7 +518,7 @@ export interface PatchNotePayload {
   title: string;
   content: string;
   imageUrl: null;
-  published: true;
+  published: false;
   is_popup: false;
   active: false;
   highlights: [];
@@ -212,7 +560,7 @@ export function buildPatchNotePayload(input: PublishPatchNoteInput): PatchNotePa
     title,
     content,
     imageUrl: null,
-    published: true,
+    published: false,
     is_popup: false,
     active: false,
     highlights: [],
@@ -224,14 +572,16 @@ export function buildPatchNotePayload(input: PublishPatchNoteInput): PatchNotePa
 }
 
 export function normalizePatchNotesList(data: unknown): PatchNoteListItem[] {
-  if (Array.isArray(data)) return data as PatchNoteListItem[];
-  if (data && typeof data === 'object') {
+  let items: PatchNoteListItem[] = [];
+  if (Array.isArray(data)) items = data as PatchNoteListItem[];
+  else if (data && typeof data === 'object') {
     const record = data as { patchNotes?: unknown; news?: unknown; items?: unknown };
-    if (Array.isArray(record.patchNotes)) return record.patchNotes as PatchNoteListItem[];
-    if (Array.isArray(record.news)) return record.news as PatchNoteListItem[];
-    if (Array.isArray(record.items)) return record.items as PatchNoteListItem[];
+    if (Array.isArray(record.patchNotes)) items = record.patchNotes as PatchNoteListItem[];
+    else if (Array.isArray(record.news)) items = record.news as PatchNoteListItem[];
+    else if (Array.isArray(record.items)) items = record.items as PatchNoteListItem[];
   }
-  return [];
+  // Live GET /api/patch-notes omits `published`. Drop a row that is explicitly unpublished.
+  return items.filter((item) => item.published !== false);
 }
 
 export function sortPatchNotesNewestFirst(items: PatchNoteListItem[]): PatchNoteListItem[] {
@@ -938,7 +1288,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'publish_patch_note',
     description:
-      'Create a published patch note via POST /api/admin/news. Sets is_patch_note true and published true. Does not enable is_popup.',
+      'Create an unpublished patch-note draft via POST /api/admin/news. Sets is_patch_note true and published false. Does not enable is_popup. The draft stays off the public GET /api/patch-notes list until an admin publishes it in the CMS.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -962,7 +1312,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'list_patch_notes',
     description:
-      'List published patch notes from the public GET /api/patch-notes endpoint, newest first.',
+      'List published patch notes from the public GET /api/patch-notes endpoint, newest first. Rows with published false are omitted. Unpublished drafts created by publish_patch_note do not appear here.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -1098,6 +1448,10 @@ export type McpToolRuntime = {
   publishPatchNote?: (payload: PatchNotePayload) => Promise<unknown>;
   listPatchNotes?: () => Promise<unknown>;
   fetchRpgAdmin?: RpgAdminFetch;
+  principal?: McpPrincipal;
+  recordAudit?: (event: McpAuditEvent) => Promise<void>;
+  now?: () => number;
+  writeLimitPerMin?: number;
 };
 
 async function defaultGetInsights() {
@@ -1120,7 +1474,7 @@ function rpgAdminFetch(runtime: McpToolRuntime): RpgAdminFetch {
   return runtime.fetchRpgAdmin || ((path, init) => fetchRpgAdminServer(path, init));
 }
 
-export async function executeMcpTool(
+async function executeMcpToolBody(
   name: string,
   args: unknown,
   runtime: McpToolRuntime = {}
@@ -1231,6 +1585,28 @@ export async function executeMcpTool(
   throw new Error(`Unknown Tool: ${name}`);
 }
 
+export async function executeMcpTool(
+  name: string,
+  args: unknown,
+  runtime: McpToolRuntime = {}
+): Promise<unknown> {
+  enforceMcpPrincipal(name, runtime);
+  const output = await executeMcpToolBody(name, args, runtime);
+  const principal = runtime.principal;
+  if (principal && isMcpWriteTool(name)) {
+    const { targetId, diffSummary } = summarizeMcpWrite(name, args, output);
+    const createdAt = new Date(runtime.now?.() ?? Date.now()).toISOString();
+    await recordWriteAudit(runtime, {
+      keyName: principal.name,
+      tool: name,
+      targetId,
+      diffSummary,
+      createdAt,
+    });
+  }
+  return output;
+}
+
 export function negotiateProtocolVersion(requested: unknown): string {
   if (
     typeof requested === 'string' &&
@@ -1300,6 +1676,14 @@ function toolTextResult(payload: unknown, isError = false) {
   };
 }
 
+function toolsForPrincipal(principal?: McpPrincipal): McpToolDefinition[] {
+  if (!principal) return MCP_TOOLS;
+  return MCP_TOOLS.filter((tool) => {
+    const scope = requiredScopeForTool(tool.name);
+    return scope !== null && principal.scopes.includes(scope);
+  });
+}
+
 async function handleSingle(
   message: JsonRpcRequest,
   runtime: McpToolRuntime
@@ -1326,12 +1710,12 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live analytics; list_patch_notes / publish_patch_note for notes (never is_popup); list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Do not invent a local bestiary.',
+            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});
       case 'tools/list':
-        return rpcResult(id, { tools: MCP_TOOLS });
+        return rpcResult(id, { tools: toolsForPrincipal(runtime.principal) });
       case 'tools/call': {
         const name = params.name;
         if (typeof name !== 'string' || !name) {
