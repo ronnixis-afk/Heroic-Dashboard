@@ -961,3 +961,93 @@ describe('monster catalog MCP tools', () => {
     assert.equal(parsed.types[0].subtypes[0].name, 'Grassland Prowler');
   });
 });
+
+describe('MCP subtype movement modes', () => {
+  const subtypeSchema = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('lists movementModes and primaryMovementMode on create and update tools', () => {
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      const props = subtypeSchema(toolName);
+      assert.deepEqual(props.movementModes.items.enum, ['ground', 'fly', 'climb', 'swim']);
+      assert.equal(props.movementModes.minItems, 1);
+      assert.equal(props.movementModes.uniqueItems, true);
+      assert.deepEqual(props.primaryMovementMode.enum, ['ground', 'fly', 'climb', 'swim', null]);
+    }
+    const create = MCP_TOOLS.find((entry) => entry.name === 'create_monster_subtype');
+    assert.match(create?.description || '', /AI assign/);
+  });
+
+  it('normalises, dedupes, and keeps the order of movement modes', () => {
+    const payload = buildMonsterSubtypeUpdatePayload({
+      movementModes: [' Fly', 'climb', 'FLY'],
+      primaryMovementMode: 'Fly',
+    });
+    assert.deepEqual(payload, { movementModes: ['fly', 'climb'], primaryMovementMode: 'fly' });
+  });
+
+  it('rejects unknown movement modes and empty lists without a write', async () => {
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ movementModes: ['hover'] }),
+      /Movement Modes must be ground, fly, climb or swim/
+    );
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ movementModes: [] }),
+      /Movement Modes must be ground, fly, climb or swim/
+    );
+    let called = false;
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'update_monster_subtype',
+          { typeId: 'type-1', subtypeId: 'sub-1', movementModes: ['teleport'] },
+          {
+            fetchRpgAdmin: async () => {
+              called = true;
+              return {};
+            },
+          }
+        ),
+      /Movement Modes must be ground, fly, climb or swim/
+    );
+    assert.equal(called, false);
+  });
+
+  it('rejects a primary mode outside the list', () => {
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ movementModes: ['ground'], primaryMovementMode: 'fly' }),
+      /Primary Movement Mode must be one of movementModes/
+    );
+  });
+
+  it('omits movement modes on create when absent so the server assigns them', () => {
+    const payload = buildMonsterSubtypeCreatePayload({ name: 'Reef Ray', visualDescription: 'A flat ray.' });
+    assert.equal('movementModes' in payload, false);
+    assert.equal('primaryMovementMode' in payload, false);
+
+    const handSet = buildMonsterSubtypeCreatePayload({
+      name: 'Reef Ray',
+      visualDescription: 'A flat ray.',
+      movementModes: ['swim'],
+    });
+    assert.deepEqual(handSet.movementModes, ['swim']);
+  });
+
+  it('update sends only the changed movement modes', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', movementModes: ['fly'] },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+    assert.equal(calls[0].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { movementModes: ['fly'] });
+  });
+});
