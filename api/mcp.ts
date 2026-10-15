@@ -622,6 +622,8 @@ export interface MonsterSubtypeAttributes {
   visualDescription?: string;
   size?: string;
   archetype?: string | null;
+  movementModes?: MovementMode[];
+  primaryMovementMode?: MovementMode | null;
   allowedTerrains?: string[];
   encounterExcluded?: boolean;
   rideable?: boolean;
@@ -629,6 +631,38 @@ export interface MonsterSubtypeAttributes {
   acquisition?: unknown;
   combatFlavor?: unknown;
   enabled?: boolean;
+}
+
+export const MOVEMENT_MODES = ['ground', 'fly', 'climb', 'swim'] as const;
+export type MovementMode = (typeof MOVEMENT_MODES)[number];
+const MOVEMENT_MODES_ERROR = 'Movement Modes must be ground, fly, climb or swim.';
+
+const toMovementMode = (value: unknown): MovementMode => {
+  const mode = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!(MOVEMENT_MODES as readonly string[]).includes(mode)) {
+    throw new Error(MOVEMENT_MODES_ERROR);
+  }
+  return mode as MovementMode;
+};
+
+/** Lowercase + dedupe (order kept). Unknown values and empty lists are rejected. */
+function optionalMovementModes(value: unknown): MovementMode[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(MOVEMENT_MODES_ERROR);
+  }
+  const modes: MovementMode[] = [];
+  for (const raw of value) {
+    const mode = toMovementMode(raw);
+    if (!modes.includes(mode)) modes.push(mode);
+  }
+  return modes;
+}
+
+function optionalPrimaryMovementMode(value: unknown): MovementMode | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return toMovementMode(value);
 }
 
 const COMBAT_FLAVOR_TEMPLATE_NAMES = [
@@ -947,11 +981,18 @@ export function parseMonsterTypeAttributes(input: unknown): MonsterTypeAttribute
 
 export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAttributes {
   const record = asRecord(input);
+  const movementModes = optionalMovementModes(record.movementModes);
+  const primaryMovementMode = optionalPrimaryMovementMode(record.primaryMovementMode);
+  if (primaryMovementMode && movementModes && !movementModes.includes(primaryMovementMode)) {
+    throw new Error('Primary Movement Mode must be one of movementModes.');
+  }
   return assignDefined({} as MonsterSubtypeAttributes, {
     name: optionalTrimmedString(record.name, 'Name'),
     visualDescription: optionalTrimmedString(record.visualDescription, 'Visual Description'),
     size: optionalTrimmedString(record.size, 'Size'),
     archetype: optionalNullableString(record.archetype, 'Archetype'),
+    movementModes,
+    primaryMovementMode,
     allowedTerrains: optionalStringArray(record.allowedTerrains, 'Allowed Terrains'),
     encounterExcluded: optionalBoolean(record.encounterExcluded, 'Encounter Excluded'),
     rideable: optionalBoolean(record.rideable, 'Rideable'),
@@ -1017,6 +1058,8 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
     } as Record<string, unknown>,
     {
       archetype: attributes.archetype ?? null,
+      movementModes: attributes.movementModes,
+      primaryMovementMode: attributes.primaryMovementMode,
       affinityOverride: attributes.affinityOverride,
       acquisition: attributes.acquisition,
       combatFlavor: attributes.combatFlavor,
@@ -1198,7 +1241,22 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
   name: { type: 'string', description: 'Subtype name.' },
   visualDescription: { type: 'string', description: 'Visual description used for portraits and prompts.' },
   size: { type: 'string', description: 'Size class, e.g. Medium, Huge.' },
-  archetype: { type: ['string', 'null'], description: 'Archetype override, or null to inherit the type.' },
+  archetype: {
+    type: ['string', 'null'],
+    description: 'Archetype override (combat archetype and body plan), or null to inherit the type. Does not set movement; use movementModes.',
+  },
+  movementModes: {
+    type: 'array',
+    items: { type: 'string', enum: [...MOVEMENT_MODES] },
+    minItems: 1,
+    uniqueItems: true,
+    description: 'Allowed movement modes for this subtype. Omit on create to let the AI assign them.',
+  },
+  primaryMovementMode: {
+    type: ['string', 'null'],
+    enum: [...MOVEMENT_MODES, null],
+    description: 'Mode the subtype uses most; must be one of movementModes. Defaults to the first mode.',
+  },
   allowedTerrains: {
     type: 'array',
     items: { type: 'string' },
@@ -1312,7 +1370,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required.',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1326,7 +1384,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI.',
     inputSchema: {
       type: 'object',
       properties: {
