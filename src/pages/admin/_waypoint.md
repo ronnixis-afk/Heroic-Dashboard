@@ -65,7 +65,8 @@ System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrato
 
 - **Source of truth:** `heroic-ai-rpg/src/constants/monsterTypes.defaults.ts` (seed names, descriptions, subtypes; falls back to `monsterTypes.ts`). The live catalog is the RPG DB.
 - **Dashboard copy:** `src/constants/monsterPortraitCatalog.ts` — auto-generated; do not edit by hand (used as an offline/stale fallback).
-- **Sync command:** `npm run sync:monster-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present).
+- **Sync command:** `npm run sync:monster-catalog` (also runs optionally on `predev` / `prebuild` when the RPG sibling repo is present). `scripts/extract-monster-catalog.mjs` walks each subtype object and reads `name` / `visualDescription` in any field order. The old regex silently dropped subtypes where another field sat between them.
+- **Spawn Rank:** Monsters shows a `SpawnRankSelect` (Any / Boss Only) beside Can Speak in the subtype create form and edit panel, and a "Spawn Rank: Boss Only" badge in the subtype name cell. MCP `create_monster_subtype` / `update_monster_subtype` accept `spawnRank` (`any` | `boss_only`, case-insensitive; create defaults to `any`, update forwards only when sent). A Boss Only subtype only spawns as an encounter's full-rank boss in the RPG.
 - **Override path:** set `HEROIC_RPG_ROOT` if the RPG repo is not at `../Heroic AI RPG/heroic-ai-rpg`.
 - After changing monster types/subtypes/descriptions in the RPG (or adding new ones), run the sync and commit the regenerated catalog so deploys stay current.
 - Monsters and some portrait dropdowns prefer RPG `/api/admin/monster-types*` live data; the generated catalog remains the non-ideal fallback.

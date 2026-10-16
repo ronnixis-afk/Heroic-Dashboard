@@ -111,6 +111,10 @@ export const COMBAT_FLAVOR_TEMPLATE_NAMES = [
 
 export type CombatFlavorTemplateName = (typeof COMBAT_FLAVOR_TEMPLATE_NAMES)[number];
 
+/** 'boss_only' subtypes only ever spawn as the encounter's full-rank boss. */
+export const MONSTER_SPAWN_RANKS = ['any', 'boss_only'] as const;
+export type MonsterSpawnRank = (typeof MONSTER_SPAWN_RANKS)[number];
+
 export interface MonsterSubtype {
   id: string;
   name: string;
@@ -122,6 +126,8 @@ export interface MonsterSubtype {
   rideable: boolean;
   /** Speech override; null inherits the type's canSpeak. */
   canSpeak: boolean | null;
+  /** Absent on rows read before the column shipped; treat as 'any'. */
+  spawnRank?: MonsterSpawnRank;
   affinityOverride: string | null;
   acquisition: unknown | null;
   combatFlavor?: MonsterCombatFlavorMap | null;

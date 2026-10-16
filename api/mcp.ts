@@ -630,10 +630,23 @@ export interface MonsterSubtypeAttributes {
   rideable?: boolean;
   /** Null inherits the type's canSpeak. */
   canSpeak?: boolean | null;
+  spawnRank?: MonsterSpawnRank;
   affinityOverride?: string | null;
   acquisition?: unknown;
   combatFlavor?: unknown;
   enabled?: boolean;
+}
+
+export const MONSTER_SPAWN_RANKS = ['any', 'boss_only'] as const;
+export type MonsterSpawnRank = (typeof MONSTER_SPAWN_RANKS)[number];
+
+function optionalSpawnRank(value: unknown): MonsterSpawnRank | undefined {
+  if (value === undefined) return undefined;
+  const rank = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!(MONSTER_SPAWN_RANKS as readonly string[]).includes(rank)) {
+    throw new Error('Spawn Rank must be any or boss_only.');
+  }
+  return rank as MonsterSpawnRank;
 }
 
 export const MOVEMENT_MODES = ['ground', 'fly', 'climb', 'swim'] as const;
@@ -1010,6 +1023,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     encounterExcluded: optionalBoolean(record.encounterExcluded, 'Encounter Excluded'),
     rideable: optionalBoolean(record.rideable, 'Rideable'),
     canSpeak: optionalNullableBoolean(record.canSpeak, 'Can Speak'),
+    spawnRank: optionalSpawnRank(record.spawnRank),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
     acquisition: record.acquisition === undefined ? undefined : record.acquisition,
     combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
@@ -1070,6 +1084,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       encounterExcluded: attributes.encounterExcluded ?? false,
       rideable: attributes.rideable ?? false,
       canSpeak: attributes.canSpeak ?? null,
+      spawnRank: attributes.spawnRank ?? 'any',
       enabled: attributes.enabled ?? true,
     } as Record<string, unknown>,
     {
@@ -1302,6 +1317,12 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     description:
       'Speech override for this subtype. true / false overrides the type canSpeak; null inherits the type default. Defaults to null on create.',
   },
+  spawnRank: {
+    type: 'string',
+    enum: [...MONSTER_SPAWN_RANKS],
+    description:
+      'Which ranks this subtype may spawn at. any spawns at every rank. boss_only only ever spawns as the encounter boss at full boss rank: never in groups, never as an escort, never as a boss reinforcement. Defaults to any on create.',
+  },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
   combatFlavor: {
@@ -1408,7 +1429,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default.',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1422,7 +1443,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at.',
     inputSchema: {
       type: 'object',
       properties: {

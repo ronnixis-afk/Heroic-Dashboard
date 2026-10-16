@@ -37,6 +37,7 @@ import {
   type MonsterCombatFlavorSlot,
   type MonsterCombatTemplateFlavorKit,
   type MonsterGenre,
+  type MonsterSpawnRank,
   type MonsterSubtype,
   type MonsterType,
   type MonsterTypePayload,
@@ -48,6 +49,7 @@ type SubtypeDraft = {
   size: string;
   allowedTerrains: string[];
   canSpeak: boolean | null;
+  spawnRank: MonsterSpawnRank;
   enabled: boolean;
   combatFlavor: MonsterCombatFlavorMap;
   flavorTemplate: CombatFlavorTemplateName;
@@ -173,6 +175,7 @@ const EMPTY_SUB_FORM = {
   size: 'Medium',
   allowedTerrains: ['Plains'] as string[],
   canSpeak: null as boolean | null,
+  spawnRank: 'any' as MonsterSpawnRank,
   enabled: true,
 };
 
@@ -212,6 +215,41 @@ function CanSpeakSelect({
         <option value="inherit">Inherit From Type ({typeDefault ? 'Can Speak' : 'Cannot Speak'})</option>
         <option value="speaks">Can Speak</option>
         <option value="mute">Cannot Speak</option>
+      </select>
+    </div>
+  );
+}
+
+const SPAWN_RANK_LABELS: Record<MonsterSpawnRank, string> = {
+  any: 'Any',
+  boss_only: 'Boss Only',
+};
+
+function SpawnRankSelect({
+  id,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: MonsterSpawnRank;
+  disabled?: boolean;
+  onChange: (next: MonsterSpawnRank) => void;
+}) {
+  return (
+    <div>
+      <label className="input-label" htmlFor={id}>
+        Spawn Rank
+      </label>
+      <select
+        id={id}
+        className="input-field cursor-pointer"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value as MonsterSpawnRank)}
+      >
+        <option value="any">{SPAWN_RANK_LABELS.any}</option>
+        <option value="boss_only">{SPAWN_RANK_LABELS.boss_only}</option>
       </select>
     </div>
   );
@@ -669,6 +707,7 @@ export default function AdminMonsters() {
         encounterExcluded: false,
         rideable: false,
         canSpeak: subForm.canSpeak,
+        spawnRank: subForm.spawnRank,
       });
       setSubForm(EMPTY_SUB_FORM);
       setAddingSubtype(false);
@@ -691,6 +730,7 @@ export default function AdminMonsters() {
           size: subtype.size || 'Medium',
           allowedTerrains: subtype.allowedTerrains?.length ? subtype.allowedTerrains : ['Plains'],
           canSpeak: typeof subtype.canSpeak === 'boolean' ? subtype.canSpeak : null,
+          spawnRank: subtype.spawnRank === 'boss_only' ? 'boss_only' : 'any',
           enabled: Boolean(subtype.enabled),
           combatFlavor: { ...(subtype.combatFlavor || {}) },
           flavorTemplate: 'Brute',
@@ -749,6 +789,7 @@ export default function AdminMonsters() {
         size: draft.size,
         allowedTerrains: draft.allowedTerrains,
         canSpeak: draft.canSpeak,
+        spawnRank: draft.spawnRank,
         enabled: draft.enabled,
         combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
       });
@@ -1213,12 +1254,17 @@ export default function AdminMonsters() {
                         }))
                       }
                     />
-                    <div className="sm:max-w-[280px]">
+                    <div className="grid gap-3 sm:grid-cols-2 sm:max-w-[576px]">
                       <CanSpeakSelect
                         id="sub-can-speak"
                         value={subForm.canSpeak}
                         typeDefault={Boolean(selectedType.canSpeak)}
                         onChange={(canSpeak) => setSubForm((prev) => ({ ...prev, canSpeak }))}
+                      />
+                      <SpawnRankSelect
+                        id="sub-spawn-rank"
+                        value={subForm.spawnRank}
+                        onChange={(spawnRank) => setSubForm((prev) => ({ ...prev, spawnRank }))}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -1293,7 +1339,14 @@ export default function AdminMonsters() {
                                 className={cn('cursor-pointer', expanded && 'bg-brand-hover')}
                                 onClick={() => openSubtypeEditor(subtype)}
                               >
-                                <td className="font-medium text-brand-text">{subtype.name}</td>
+                                <td className="font-medium text-brand-text">
+                                  {subtype.name}
+                                  {subtype.spawnRank === 'boss_only' && (
+                                    <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                      Spawn Rank: {SPAWN_RANK_LABELS.boss_only}
+                                    </span>
+                                  )}
+                                </td>
                                 <td className="text-brand-text-muted">{subtype.size}</td>
                                 <td className="text-brand-text-muted max-w-[280px] truncate">
                                   {(subtype.allowedTerrains || []).join(', ') || '—'}
@@ -1382,13 +1435,19 @@ export default function AdminMonsters() {
                                           }
                                         />
                                       </div>
-                                      <div className="sm:max-w-[280px]">
+                                      <div className="grid gap-3 sm:grid-cols-2 sm:max-w-[576px]">
                                         <CanSpeakSelect
                                           id={`can-speak-${subtype.id}`}
                                           value={draft.canSpeak}
                                           typeDefault={Boolean(selectedType.canSpeak)}
                                           disabled={subtype.isProtected}
                                           onChange={(canSpeak) => updateDraft(subtype.id, { canSpeak })}
+                                        />
+                                        <SpawnRankSelect
+                                          id={`spawn-rank-${subtype.id}`}
+                                          value={draft.spawnRank}
+                                          disabled={subtype.isProtected}
+                                          onChange={(spawnRank) => updateDraft(subtype.id, { spawnRank })}
                                         />
                                       </div>
                                       <div className="space-y-3 border-t border-brand-border/40 pt-3">

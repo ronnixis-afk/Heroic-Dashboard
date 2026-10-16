@@ -477,9 +477,26 @@ describe('monster catalog payloads', () => {
       encounterExcluded: false,
       rideable: false,
       canSpeak: null,
+      spawnRank: 'any',
       enabled: true,
       archetype: null,
     });
+  });
+
+  it('passes subtype spawnRank through create / update and rejects unknown ranks', () => {
+    assert.equal(
+      buildMonsterSubtypeCreatePayload({ name: 'Balor', visualDescription: 'A flaming demon.', spawnRank: 'boss_only' })
+        .spawnRank,
+      'boss_only'
+    );
+    assert.deepEqual(buildMonsterSubtypeUpdatePayload({ spawnRank: 'any' }), { spawnRank: 'any' });
+    assert.deepEqual(buildMonsterSubtypeUpdatePayload({ spawnRank: 'BOSS_ONLY' }), { spawnRank: 'boss_only' });
+    for (const spawnRank of ['boss', 'elite_up', null, true]) {
+      assert.throws(
+        () => buildMonsterSubtypeUpdatePayload({ spawnRank }),
+        /Spawn Rank must be any or boss_only/
+      );
+    }
   });
 
   it('passes canSpeak through type create / update', () => {
@@ -1034,6 +1051,38 @@ describe('MCP monster canSpeak', () => {
     );
     assert.equal(calls[0].init?.method, 'PATCH');
     assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { canSpeak: null });
+  });
+});
+
+describe('MCP monster spawnRank', () => {
+  const toolProps = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('exposes spawnRank as an any / boss_only enum on subtype tools only', () => {
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      assert.deepEqual(toolProps(toolName).spawnRank.enum, ['any', 'boss_only']);
+    }
+    for (const toolName of ['create_monster_type', 'update_monster_type']) {
+      assert.equal(toolProps(toolName).spawnRank, undefined);
+    }
+  });
+
+  it('forwards a subtype spawnRank change on update', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', spawnRank: 'boss_only' },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+    assert.equal(calls[0].init?.method, 'PATCH');
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { spawnRank: 'boss_only' });
   });
 });
 

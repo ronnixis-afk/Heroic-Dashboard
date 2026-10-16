@@ -39,6 +39,10 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a desert heat shimmer given a solid body of crystal and glass, eyes flashing disorienting mirage light patterns."
       },
       {
+        "name": "Deep-Sea Beholder",
+        "visualDescription": "Looks like a bloated floating eyeball the size of a wooden barrel, trailing glowing translucent tentacles like long jellyfish arms."
+      },
+      {
         "name": "Storm-Cloud Polyp",
         "visualDescription": "Looks like a living thundercloud balloon crackling with static electricity, dangling tendrils of lightning beneath its swollen gas filled body."
       },
@@ -117,8 +121,16 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a bulky iron golem of corroded plates and ticking gears, clanking loudly with every heavy grinding metal step."
       },
       {
+        "name": "Rune-Oak Automaton",
+        "visualDescription": "Looks like a wooden golem carved from living oak timber, bound tightly by glowing emerald arcane glyphs across its limbs."
+      },
+      {
         "name": "Scrapwork Scavenger",
         "visualDescription": "Looks like a spindly scavenger bot cobbled from junk metal, dangling wires, and mismatched armor plates scavenged from old wrecks."
+      },
+      {
+        "name": "Brass Mariner",
+        "visualDescription": "Looks like an antique bronze diving suit walking on its own power, driven by steam valves and churning water pumps."
       },
       {
         "name": "Aether Skiff",
@@ -135,8 +147,16 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "description": "Powerful, ancient reptilian creatures with innate magic.",
     "subtypes": [
       {
+        "name": "Plains Drake",
+        "visualDescription": "Looks like a hornless dragon built low like a crocodile, emerald scaled with powerful stocky limbs made for plains sprinting."
+      },
+      {
         "name": "Forest Wyrm",
         "visualDescription": "Looks like a long serpentine dragon draped in moss colored scales, crowned with twisting branch like horns of living wood."
+      },
+      {
+        "name": "Cinder Drake",
+        "visualDescription": "Looks like a soot stained mountain dragon with glowing magma seeping between black obsidian scales like cracks in cooling lava."
       },
       {
         "name": "Reef Dragon",
@@ -173,6 +193,10 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a surging wall of ocean water shaped into a semi humanoid form that never fully settles or stills."
       },
       {
+        "name": "Zephyr Spirit",
+        "visualDescription": "Looks like a formless breeze made visible only by glowing vapor clouds swirling restlessly through its restless winding airy path."
+      },
+      {
         "name": "Stellar Flare",
         "visualDescription": "Looks like an unstable cluster of solar plasma and looping magnetic arcs, burning fiercely like a miniature living sun flare."
       }
@@ -185,6 +209,10 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       {
         "name": "Meadow Sprite",
         "visualDescription": "Looks like a tiny glittering humanoid with gossamer insect wings and soft skin the bright color of fresh spring grass."
+      },
+      {
+        "name": "Bramble Stalker",
+        "visualDescription": "Looks like a humanoid wrapped entirely in twisting vines and autumn leaves, with sharp thorns bristling out from every joint."
       },
       {
         "name": "Mirage Pixie",
@@ -209,8 +237,20 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "description": "Evil-aligned entities from lower or abyssal realms (demons and devils).",
     "subtypes": [
       {
+        "name": "Hellspawn Hound",
+        "visualDescription": "Looks like a skeletal wolf wreathed in sulfurous smoke, with eyes burning like hot coals inside a black hell furnace."
+      },
+      {
         "name": "Rot Demon",
         "visualDescription": "Looks like a bloated green skinned humanoid dripping noxious slime, half wrapped in rotting swamp vegetation and thick black mold."
+      },
+      {
+        "name": "Abyssal Ravager",
+        "visualDescription": "Looks like a multi limbed muscular demon with obsidian skin, curving horns, and clawed hands tipped in sharp iron talons."
+      },
+      {
+        "name": "Trench Leviathan",
+        "visualDescription": "Looks like a grotesque scale covered sea serpent with spiked claws and a gaping maw wide enough to swallow boats."
       },
       {
         "name": "Imp Harrier",
@@ -219,6 +259,14 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       {
         "name": "Void Terror",
         "visualDescription": "Looks like a formless shadow body etched with glowing violet runes across dark matter skin that never fully settles still."
+      },
+      {
+        "name": "Balor",
+        "visualDescription": "Looks like a towering horned demon wreathed in roaring flame, with vast smoking bat wings, a flaming whip, and a jagged lightning sword."
+      },
+      {
+        "name": "Pit Fiend",
+        "visualDescription": "Looks like a massive crimson scaled devil with leathery wings, a crown of curling horns, a barbed tail, and a heavy iron mace."
       }
     ]
   },
@@ -349,6 +397,14 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a stitched rotting beast with mismatched animal heads and exposed ribs where rotting flesh has already failed away."
       },
       {
+        "name": "Gorgon Centaur",
+        "visualDescription": "Looks like a half serpent half horse horror bristling with petrifying crystal spikes along its scaled flanks and long mane."
+      },
+      {
+        "name": "Siren Lurker",
+        "visualDescription": "Looks like a pale scale coated crawler with eerily human features and long clawed appendages for grasping struggling living prey."
+      },
+      {
         "name": "Manticore Skimmer",
         "visualDescription": "Looks like a bat winged lion beast with a whip tail made of organic needle launchers instead of a lash."
       },
@@ -435,6 +491,14 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a cloaked featureless desert nomad wearing a blank mask forged from shimmering pure force fields and void light."
       },
       {
+        "name": "Astral Angler",
+        "visualDescription": "Looks like a shimmering jellyfish like flyer trailing luminous energy fishing filaments that phase harmlessly through any nearby solid matter."
+      },
+      {
+        "name": "Void Glider",
+        "visualDescription": "Looks like a manta ray shaped entity of pure starlight that swims through air currents like warm deep ocean water."
+      },
+      {
         "name": "Stellar Sentinel",
         "visualDescription": "Looks like a silent geometric crystalline structure rotating in deep void, facets catching and refracting cold distant starlight beam flashes."
       }
@@ -475,6 +539,10 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
     "description": "Incorporeal entities, psychic echoes, or animistic forces tied to specific concepts or locations (distinct from standard undead).",
     "subtypes": [
       {
+        "name": "Wisp Guide",
+        "visualDescription": "Looks like a flickering blue will o wisp flame that bobs gently just above the waving tall prairie grass blades."
+      },
+      {
         "name": "Weeping Shade",
         "visualDescription": "Looks like a weeping translucent specter half lost in forest mist, its pale face streaked with endless cold ghostly tears."
       },
@@ -485,6 +553,14 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       {
         "name": "Drowned Soul",
         "visualDescription": "Looks like a waterlogged glowing phantom trailing seaweed and cold bubbles as it drifts slowly through the dark ocean depths."
+      },
+      {
+        "name": "Phantasm Gale",
+        "visualDescription": "Looks like a screaming face sculpted from wind currents and sparkling vapor, howling loudly as it races swiftly past travelers."
+      },
+      {
+        "name": "Cosmic Echo",
+        "visualDescription": "Looks like a fading light reflection of a lost astronaut, floating silently forever in the cold and empty vacuum beyond."
       }
     ]
   },
@@ -531,8 +607,16 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a moss covered skeleton bound together by dark energy and parasitic vines wrapping tightly around the old bones."
       },
       {
+        "name": "Dust Mummy",
+        "visualDescription": "Looks like a desiccated desert corpse wrapped in decaying linen bandages, constantly shedding fine sand and dry desert dust clouds."
+      },
+      {
         "name": "Drowned Sailor",
         "visualDescription": "Looks like a bloated waterlogged zombie dripping seawater, still clad loosely in the rotted torn rags of a dead sailor."
+      },
+      {
+        "name": "Phantom Wraith",
+        "visualDescription": "Looks like a dark hovering specter draped in tattered black cloaks, with hollow eyes burning a deep angry blood red."
       },
       {
         "name": "Star-Husk",

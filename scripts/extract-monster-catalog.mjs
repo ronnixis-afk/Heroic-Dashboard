@@ -96,15 +96,37 @@ while (i < body.length) {
   const subtypes = [];
 
   if (subtypesIdx >= 0) {
-    const fromSub = obj.slice(subtypesIdx);
-    const re =
-      /\{\s*name:\s*"((?:\\.|[^"\\])*)",\s*visualDescription:\s*"((?:\\.|[^"\\])*)",[\s\S]*?allowedTerrains:/g;
-    let m;
-    while ((m = re.exec(fromSub))) {
-      subtypes.push({
-        name: JSON.parse(`"${m[1]}"`),
-        visualDescription: JSON.parse(`"${m[2]}"`),
-      });
+    const fromSub = obj.slice(obj.indexOf('[', subtypesIdx));
+    // Walk each top-level subtype object; field order varies (canSpeak, spawnRank, ...).
+    let depthInList = 0;
+    let objStart = -1;
+    for (let j = 0; j < fromSub.length; j++) {
+      const ch = fromSub[j];
+      if (ch === '"') {
+        for (j++; j < fromSub.length && fromSub[j] !== '"'; j++) {
+          if (fromSub[j] === '\\') j++;
+        }
+        continue;
+      }
+      if (ch === '[' || ch === '{') {
+        depthInList++;
+        if (ch === '{' && depthInList === 2) objStart = j;
+      } else if (ch === ']' || ch === '}') {
+        if (ch === '}' && depthInList === 2 && objStart >= 0) {
+          const subObj = fromSub.slice(objStart, j + 1);
+          const subName = (subObj.match(/\bname:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+          const visual = (subObj.match(/\bvisualDescription:\s*"((?:\\.|[^"\\])*)"/) || [])[1];
+          if (subName && visual) {
+            subtypes.push({
+              name: JSON.parse(`"${subName}"`),
+              visualDescription: JSON.parse(`"${visual}"`),
+            });
+          }
+          objStart = -1;
+        }
+        depthInList--;
+        if (depthInList === 0) break;
+      }
     }
   }
 
