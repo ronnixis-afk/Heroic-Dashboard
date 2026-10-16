@@ -19,6 +19,7 @@ export interface MonsterTypePayload {
   statusImmunities: string[];
   defaultAffinity: string | null;
   poiTags: string[];
+  canSpeak?: boolean;
   enabled?: boolean;
 }
 
@@ -37,6 +38,8 @@ export interface MonsterType {
   statusImmunities: string[];
   defaultAffinity: string | null;
   poiTags: string[];
+  /** Type default for speech; subtypes may override. */
+  canSpeak: boolean;
   enabled: boolean;
   isProtected: boolean;
   _count?: { subtypes: number };
@@ -117,6 +120,8 @@ export interface MonsterSubtype {
   allowedTerrains: string[];
   encounterExcluded: boolean;
   rideable: boolean;
+  /** Speech override; null inherits the type's canSpeak. */
+  canSpeak: boolean | null;
   affinityOverride: string | null;
   acquisition: unknown | null;
   combatFlavor?: MonsterCombatFlavorMap | null;

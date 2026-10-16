@@ -406,6 +406,7 @@ describe('monster catalog payloads', () => {
       defaultArchetype: 'Brute',
       immunities: ['Fire'],
       defaultAffinity: 'Fire',
+      canSpeak: false,
       enabled: true,
     });
   });
@@ -456,9 +457,32 @@ describe('monster catalog payloads', () => {
       allowedTerrains: ['Plains'],
       encounterExcluded: false,
       rideable: false,
+      canSpeak: null,
       enabled: true,
       archetype: null,
     });
+  });
+
+  it('passes canSpeak through type create / update', () => {
+    assert.equal(
+      buildMonsterTypeCreatePayload({ name: 'Wyrm', description: 'Old dragons.', canSpeak: true }).canSpeak,
+      true
+    );
+    assert.deepEqual(buildMonsterTypeUpdatePayload({ canSpeak: false }), { canSpeak: false });
+    assert.throws(() => buildMonsterTypeUpdatePayload({ canSpeak: null }), /Can Speak Must Be A Boolean/);
+  });
+
+  it('round-trips subtype canSpeak overrides and null inherit', () => {
+    assert.equal(
+      buildMonsterSubtypeCreatePayload({ name: 'Imp', visualDescription: 'A small devil.', canSpeak: true }).canSpeak,
+      true
+    );
+    assert.deepEqual(buildMonsterSubtypeUpdatePayload({ canSpeak: false }), { canSpeak: false });
+    assert.deepEqual(buildMonsterSubtypeUpdatePayload({ canSpeak: null }), { canSpeak: null });
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ canSpeak: 'yes' }),
+      /Can Speak Must Be A Boolean Or Null/
+    );
   });
 
   it('builds a partial subtype update and rejects an empty patch', () => {
@@ -959,6 +983,38 @@ describe('monster catalog MCP tools', () => {
     const parsed = JSON.parse(payload.content[0].text);
     assert.equal(parsed.types[0].name, 'Beast');
     assert.equal(parsed.types[0].subtypes[0].name, 'Grassland Prowler');
+  });
+});
+
+describe('MCP monster canSpeak', () => {
+  const toolProps = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('exposes canSpeak as a boolean on type tools and nullable boolean on subtype tools', () => {
+    for (const toolName of ['create_monster_type', 'update_monster_type']) {
+      assert.equal(toolProps(toolName).canSpeak.type, 'boolean');
+    }
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      assert.deepEqual(toolProps(toolName).canSpeak.type, ['boolean', 'null']);
+    }
+  });
+
+  it('forwards a subtype canSpeak reset to inherit on update', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', canSpeak: null },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+    assert.equal(calls[0].init?.method, 'PATCH');
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { canSpeak: null });
   });
 });
 

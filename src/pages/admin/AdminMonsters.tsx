@@ -47,6 +47,7 @@ type SubtypeDraft = {
   visualDescription: string;
   size: string;
   allowedTerrains: string[];
+  canSpeak: boolean | null;
   enabled: boolean;
   combatFlavor: MonsterCombatFlavorMap;
   flavorTemplate: CombatFlavorTemplateName;
@@ -155,6 +156,7 @@ const EMPTY_TYPE_FORM = {
   enabled: true,
   minEncounterLevel: 1,
   genres: ['Fantasy'] as MonsterGenre[],
+  canSpeak: false,
 };
 
 const EMPTY_NEW_TYPE = {
@@ -162,6 +164,7 @@ const EMPTY_NEW_TYPE = {
   description: '',
   genres: ['Fantasy'] as MonsterGenre[],
   minEncounterLevel: 1,
+  canSpeak: false,
 };
 
 const EMPTY_SUB_FORM = {
@@ -169,8 +172,50 @@ const EMPTY_SUB_FORM = {
   visualDescription: '',
   size: 'Medium',
   allowedTerrains: ['Plains'] as string[],
+  canSpeak: null as boolean | null,
   enabled: true,
 };
+
+type CanSpeakChoice = 'inherit' | 'speaks' | 'mute';
+
+const canSpeakToChoice = (value: boolean | null): CanSpeakChoice =>
+  value === null ? 'inherit' : value ? 'speaks' : 'mute';
+
+const choiceToCanSpeak = (choice: CanSpeakChoice): boolean | null =>
+  choice === 'inherit' ? null : choice === 'speaks';
+
+function CanSpeakSelect({
+  id,
+  value,
+  typeDefault,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: boolean | null;
+  typeDefault: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean | null) => void;
+}) {
+  return (
+    <div>
+      <label className="input-label" htmlFor={id}>
+        Can Speak
+      </label>
+      <select
+        id={id}
+        className="input-field cursor-pointer"
+        value={canSpeakToChoice(value)}
+        disabled={disabled}
+        onChange={(e) => onChange(choiceToCanSpeak(e.target.value as CanSpeakChoice))}
+      >
+        <option value="inherit">Inherit From Type ({typeDefault ? 'Can Speak' : 'Cannot Speak'})</option>
+        <option value="speaks">Can Speak</option>
+        <option value="mute">Cannot Speak</option>
+      </select>
+    </div>
+  );
+}
 
 function titleCaseAbility(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -479,6 +524,7 @@ export default function AdminMonsters() {
       typeForm.description !== (selectedType.description || '') ||
       typeForm.enabled !== selectedType.enabled ||
       typeForm.minEncounterLevel !== (selectedType.minEncounterLevel ?? 1) ||
+      typeForm.canSpeak !== Boolean(selectedType.canSpeak) ||
       !sameStringList(typeForm.genres, selectedType.genres || [])
     );
   }, [selectedType, typeForm]);
@@ -502,6 +548,7 @@ export default function AdminMonsters() {
       enabled: selectedType.enabled,
       minEncounterLevel: selectedType.minEncounterLevel ?? 1,
       genres: (selectedType.genres?.length ? selectedType.genres : ['Fantasy']) as MonsterGenre[],
+      canSpeak: Boolean(selectedType.canSpeak),
     });
     // Hydrate when the selected type changes, not on background refetches of the same type.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedType.id is the load signal
@@ -529,6 +576,7 @@ export default function AdminMonsters() {
         enabled: typeForm.enabled,
         minEncounterLevel: Number(typeForm.minEncounterLevel),
         genres: typeForm.genres,
+        canSpeak: typeForm.canSpeak,
       });
       setStatus({ type: 'success', msg: 'Monster Type Updated.' });
     } catch (e: unknown) {
@@ -565,6 +613,7 @@ export default function AdminMonsters() {
         statusImmunities: templateType.statusImmunities,
         defaultAffinity: templateType.defaultAffinity,
         poiTags: templateType.poiTags,
+        canSpeak: newTypeForm.canSpeak,
         enabled: true,
       };
 
@@ -619,6 +668,7 @@ export default function AdminMonsters() {
         enabled: subForm.enabled,
         encounterExcluded: false,
         rideable: false,
+        canSpeak: subForm.canSpeak,
       });
       setSubForm(EMPTY_SUB_FORM);
       setAddingSubtype(false);
@@ -640,6 +690,7 @@ export default function AdminMonsters() {
           visualDescription: subtype.visualDescription || '',
           size: subtype.size || 'Medium',
           allowedTerrains: subtype.allowedTerrains?.length ? subtype.allowedTerrains : ['Plains'],
+          canSpeak: typeof subtype.canSpeak === 'boolean' ? subtype.canSpeak : null,
           enabled: Boolean(subtype.enabled),
           combatFlavor: { ...(subtype.combatFlavor || {}) },
           flavorTemplate: 'Brute',
@@ -697,6 +748,7 @@ export default function AdminMonsters() {
         visualDescription: draft.visualDescription.trim(),
         size: draft.size,
         allowedTerrains: draft.allowedTerrains,
+        canSpeak: draft.canSpeak,
         enabled: draft.enabled,
         combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
       });
@@ -941,6 +993,12 @@ export default function AdminMonsters() {
                 }
               />
 
+              <ToggleSwitch
+                checked={newTypeForm.canSpeak}
+                label={newTypeForm.canSpeak ? 'Can Speak' : 'Cannot Speak'}
+                onChange={() => setNewTypeForm((prev) => ({ ...prev, canSpeak: !prev.canSpeak }))}
+              />
+
               <div className="callout">
                 New types inherit archetype, immunities, resistances, and POI tags from the selected catalog type so combat templates stay intact.
               </div>
@@ -1040,6 +1098,18 @@ export default function AdminMonsters() {
                       }))
                     }
                   />
+                </div>
+
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <ToggleSwitch
+                    checked={typeForm.canSpeak}
+                    disabled={selectedType.isProtected || saving}
+                    label={typeForm.canSpeak ? 'Can Speak' : 'Cannot Speak'}
+                    onChange={() => setTypeForm((prev) => ({ ...prev, canSpeak: !prev.canSpeak }))}
+                  />
+                  <p className="help-text">
+                    Speaking Monsters Talk In Dialogue And Can Demand Tolls Or Take Bribes As Guards. Subtypes Inherit This Unless Overridden.
+                  </p>
                 </div>
 
                 {!selectedType.isProtected && (
@@ -1143,6 +1213,14 @@ export default function AdminMonsters() {
                         }))
                       }
                     />
+                    <div className="sm:max-w-[280px]">
+                      <CanSpeakSelect
+                        id="sub-can-speak"
+                        value={subForm.canSpeak}
+                        typeDefault={Boolean(selectedType.canSpeak)}
+                        onChange={(canSpeak) => setSubForm((prev) => ({ ...prev, canSpeak }))}
+                      />
+                    </div>
                     <div className="flex items-center justify-between">
                       <ToggleSwitch
                         checked={subForm.enabled}
@@ -1197,6 +1275,7 @@ export default function AdminMonsters() {
                           <th>Name</th>
                           <th>Size</th>
                           <th>Terrains</th>
+                          <th>Speech</th>
                           <th>Status</th>
                           <th className="text-right">Actions</th>
                         </tr>
@@ -1206,6 +1285,8 @@ export default function AdminMonsters() {
                           const expanded = expandedSubtypeId === subtype.id;
                           const draft = subtypeDrafts[subtype.id];
                           const badge = typeStatusBadge(subtype);
+                          const inheritsSpeech = typeof subtype.canSpeak !== 'boolean';
+                          const speaks = inheritsSpeech ? Boolean(selectedType.canSpeak) : subtype.canSpeak;
                           return (
                             <React.Fragment key={subtype.id}>
                               <tr
@@ -1216,6 +1297,12 @@ export default function AdminMonsters() {
                                 <td className="text-brand-text-muted">{subtype.size}</td>
                                 <td className="text-brand-text-muted max-w-[280px] truncate">
                                   {(subtype.allowedTerrains || []).join(', ') || '—'}
+                                </td>
+                                <td className="whitespace-nowrap">
+                                  <span className={speaks ? 'badge-success' : 'badge-muted'}>
+                                    {speaks ? 'Speaks' : 'Mute'}
+                                  </span>
+                                  {inheritsSpeech && <span className="help-text ml-1.5">Inherited</span>}
                                 </td>
                                 <td>
                                   <span className={badge.className}>{badge.label}</span>
@@ -1244,7 +1331,7 @@ export default function AdminMonsters() {
                               </tr>
                               {expanded && draft && (
                                 <tr>
-                                  <td colSpan={5} className="bg-brand-bg">
+                                  <td colSpan={6} className="bg-brand-bg">
                                     <div className="py-2 space-y-3">
                                       {subtype.isProtected && (
                                         <p className="help-text">Protected subtypes are read-only.</p>
@@ -1293,6 +1380,15 @@ export default function AdminMonsters() {
                                               allowedTerrains: toggleValue(draft.allowedTerrains, terrain),
                                             })
                                           }
+                                        />
+                                      </div>
+                                      <div className="sm:max-w-[280px]">
+                                        <CanSpeakSelect
+                                          id={`can-speak-${subtype.id}`}
+                                          value={draft.canSpeak}
+                                          typeDefault={Boolean(selectedType.canSpeak)}
+                                          disabled={subtype.isProtected}
+                                          onChange={(canSpeak) => updateDraft(subtype.id, { canSpeak })}
                                         />
                                       </div>
                                       <div className="space-y-3 border-t border-brand-border/40 pt-3">

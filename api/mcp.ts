@@ -264,6 +264,7 @@ export interface MonsterTypeAttributes {
   statusImmunities?: string[];
   defaultAffinity?: string | null;
   poiTags?: string[];
+  canSpeak?: boolean;
   enabled?: boolean;
 }
 
@@ -277,6 +278,8 @@ export interface MonsterSubtypeAttributes {
   allowedTerrains?: string[];
   encounterExcluded?: boolean;
   rideable?: boolean;
+  /** Null inherits the type's canSpeak. */
+  canSpeak?: boolean | null;
   affinityOverride?: string | null;
   acquisition?: unknown;
   combatFlavor?: unknown;
@@ -423,6 +426,15 @@ function optionalBoolean(value: unknown, field: string): boolean | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== 'boolean') {
     throw new Error(`${field} Must Be A Boolean.`);
+  }
+  return value;
+}
+
+function optionalNullableBoolean(value: unknown, field: string): boolean | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'boolean') {
+    throw new Error(`${field} Must Be A Boolean Or Null.`);
   }
   return value;
 }
@@ -625,6 +637,7 @@ export function parseMonsterTypeAttributes(input: unknown): MonsterTypeAttribute
     statusImmunities: optionalStringArray(record.statusImmunities, 'Status Immunities'),
     defaultAffinity: optionalNullableString(record.defaultAffinity, 'Default Affinity'),
     poiTags: optionalStringArray(record.poiTags, 'POI Tags'),
+    canSpeak: optionalBoolean(record.canSpeak, 'Can Speak'),
     enabled: optionalBoolean(record.enabled, 'Enabled'),
   });
 }
@@ -646,6 +659,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     allowedTerrains: optionalStringArray(record.allowedTerrains, 'Allowed Terrains'),
     encounterExcluded: optionalBoolean(record.encounterExcluded, 'Encounter Excluded'),
     rideable: optionalBoolean(record.rideable, 'Rideable'),
+    canSpeak: optionalNullableBoolean(record.canSpeak, 'Can Speak'),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
     acquisition: record.acquisition === undefined ? undefined : record.acquisition,
     combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
@@ -677,6 +691,7 @@ export function buildMonsterTypeCreatePayload(input: unknown): Record<string, un
       statusImmunities: attributes.statusImmunities,
       defaultAffinity: attributes.defaultAffinity,
       poiTags: attributes.poiTags,
+      canSpeak: attributes.canSpeak ?? false,
       enabled: attributes.enabled ?? true,
     }
   );
@@ -704,6 +719,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       allowedTerrains: attributes.allowedTerrains?.length ? attributes.allowedTerrains : ['Plains'],
       encounterExcluded: attributes.encounterExcluded ?? false,
       rideable: attributes.rideable ?? false,
+      canSpeak: attributes.canSpeak ?? null,
       enabled: attributes.enabled ?? true,
     } as Record<string, unknown>,
     {
@@ -884,6 +900,11 @@ const MONSTER_TYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     description: 'Default elemental affinity, or null.',
   },
   poiTags: { type: 'array', items: { type: 'string' }, description: 'POI / biome tags.' },
+  canSpeak: {
+    type: 'boolean',
+    description:
+      'Type default for speech. Speaking monsters talk in dialogue and can demand tolls or take bribes as guards; mute ones only growl and warn. Subtypes may override. Defaults to false on create.',
+  },
   enabled: { type: 'boolean', description: 'Whether the type is enabled.' },
 };
 
@@ -914,6 +935,11 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
   },
   encounterExcluded: { type: 'boolean', description: 'Exclude from random encounters.' },
   rideable: { type: 'boolean', description: 'Whether this subtype is rideable.' },
+  canSpeak: {
+    type: ['boolean', 'null'],
+    description:
+      'Speech override for this subtype. true / false overrides the type canSpeak; null inherits the type default. Defaults to null on create.',
+  },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
   combatFlavor: {
@@ -995,7 +1021,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_type',
     description:
-      'Create a monster type via POST /api/admin/monster-types. Name and description are required. Copy combat identity (archetypes, immunities, POI tags) from list_monster_types when adding a sibling type.',
+      'Create a monster type via POST /api/admin/monster-types. Name and description are required. Copy combat identity (archetypes, immunities, POI tags) from list_monster_types when adding a sibling type. Set canSpeak when the type can talk (defaults to false).',
     inputSchema: {
       type: 'object',
       properties: MONSTER_TYPE_ATTRIBUTE_PROPERTIES,
@@ -1006,7 +1032,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_type',
     description:
-      'Update an existing monster type via PATCH /api/admin/monster-types/:id. Send only the attributes to change.',
+      'Update an existing monster type via PATCH /api/admin/monster-types/:id. Send only the attributes to change. canSpeak changes the speech default for every subtype that inherits it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1020,7 +1046,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI.',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1034,7 +1060,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again.',
     inputSchema: {
       type: 'object',
       properties: {
