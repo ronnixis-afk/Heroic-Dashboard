@@ -1037,6 +1037,72 @@ describe('MCP monster canSpeak', () => {
   });
 });
 
+describe('MCP RPG failure reporting', { concurrency: 1 }, () => {
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+    delete process.env.RPG_API_URL;
+    delete process.env.ADMIN_API_KEY;
+  });
+
+  it('names method, path, status, and RPG error code when the game fails', async () => {
+    process.env.RPG_API_URL = 'https://rpg.example.test/';
+    process.env.ADMIN_API_KEY = 'admin-key-test';
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          error: 'Monster Catalog Database Is Out Of Date. Apply Pending Migrations.',
+          code: 'P2022',
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )) as typeof fetch;
+
+    await assert.rejects(
+      () => executeMcpTool('list_monster_types', {}),
+      (error: Error) => {
+        assert.equal(
+          error.message,
+          'RPG API GET /api/admin/monster-types?includeSubtypes=1 Returned 503: Monster Catalog Database Is Out Of Date. Apply Pending Migrations. (code P2022)'
+        );
+        return true;
+      }
+    );
+  });
+
+  it('logs a failing tools/call with key and tool name and returns isError', async () => {
+    const logged: string[] = [];
+    console.error = (...args: unknown[]) => {
+      logged.push(args.map(String).join(' '));
+    };
+
+    const result = await dispatchMcpMessage(
+      {
+        jsonrpc: '2.0',
+        id: 21,
+        method: 'tools/call',
+        params: { name: 'get_monster_type', arguments: { id: 'missing-type' } },
+      },
+      {
+        principal: { name: 'monster-bot', scopes: ['read', 'monsters'] },
+        fetchRpgAdmin: async () => {
+          throw new Error('RPG API GET /api/admin/monster-types/missing-type Returned 404: Not Found');
+        },
+      }
+    );
+
+    assert.equal(result.kind, 'response');
+    if (result.kind !== 'response') return;
+    const payload = result.response.result as { isError: boolean; content: { text: string }[] };
+    assert.equal(payload.isError, true);
+    assert.match(payload.content[0].text, /Returned 404: Not Found/);
+    assert.equal(logged.length, 1);
+    assert.match(logged[0], /\[mcp\] tool "get_monster_type" failed for key "monster-bot": RPG API GET/);
+  });
+});
+
 describe('MCP key scopes', { concurrency: 1 }, () => {
   const readSecret = 'read-scope-secret-not-real';
   const monsterSecret = 'monster-scope-secret-not-real';

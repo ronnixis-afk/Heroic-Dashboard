@@ -1119,6 +1119,13 @@ function errorFromPayload(status: number, data: unknown): Error {
   return new Error(detail || `Server Returned Status ${status}`);
 }
 
+function rpgAdminHttpError(method: string, path: string, status: number, data: unknown): Error {
+  const payload = data as { error?: string; message?: string; code?: string };
+  const detail = [payload.error, payload.message].filter(Boolean).join(' — ') || 'No Error Message';
+  const code = typeof payload.code === 'string' && payload.code ? ` (code ${payload.code})` : '';
+  return new Error(`RPG API ${method} ${path} Returned ${status}: ${detail}${code}`);
+}
+
 async function fetchRpgAdminServer<T>(path: string, init?: RequestInit): Promise<T> {
   const apiUrl = getRpgApiUrl();
   if (!apiUrl) {
@@ -1153,7 +1160,12 @@ async function fetchRpgAdminServer<T>(path: string, init?: RequestInit): Promise
   const payload = data as { error?: string };
 
   if (!response.ok) {
-    throw errorFromPayload(response.status, data);
+    throw rpgAdminHttpError(
+      (init?.method || 'GET').toUpperCase(),
+      normalizedPath,
+      response.status,
+      data
+    );
   }
 
   if (payload.error) {
@@ -1752,6 +1764,9 @@ async function handleSingle(
           return rpcResult(id, toolTextResult(output, false));
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error);
+          console.error(
+            `[mcp] tool "${name}" failed for key "${runtime.principal?.name ?? 'unknown'}": ${detail}`
+          );
           if (detail.startsWith('Unknown Tool:')) {
             return rpcError(id, JSONRPC_INVALID_PARAMS, detail);
           }

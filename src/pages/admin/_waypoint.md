@@ -134,6 +134,11 @@ Churn rows deep-link to `/admin/users?userId=` (opens `UserDetailModal`). AdminM
 - The suite requires `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and optionally `E2E_ADMIN_EMAIL` (defaults to the configured super admin).
 - Coverage includes all analytics/report pages, admin data pages, RPG API status/payload checks, unauthenticated rejection, and production CORS preflight.
 
+## MCP Tool Failures
+
+- `api/mcp.ts` logs every failing `tools/call` as `[mcp] tool "<name>" failed for key "<key name>": <detail>` (Vercel runtime logs) and returns the same detail to the bot with `isError: true`.
+- Admin RPG calls (`fetchRpgAdminServer`) fail with `RPG API <METHOD> <path> Returned <status>: <game error> (code <Prisma code>)`. A 503 with `P2021` / `P2022` means the RPG database is missing a migration, not a dashboard env problem.
+
 ## Email Templates
 
 - Templates, low-credit threshold, test send, and recent send logs
