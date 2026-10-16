@@ -262,11 +262,11 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
       },
       {
         "name": "Balor",
-        "visualDescription": "Looks like a towering horned demon wreathed in roaring flame, with vast smoking bat wings, a flaming whip, and a jagged lightning sword."
+        "visualDescription": "A colossal demon wreathed in flame and black smoke, with charred hide split by glowing magma seams. A horned bull-like skull with one forge-bright eye, vast ember-trailing wings, scorching cloven hooves and a spiked tail."
       },
       {
-        "name": "Pit Fiend",
-        "visualDescription": "Looks like a massive crimson scaled devil with leathery wings, a crown of curling horns, a barbed tail, and a heavy iron mace."
+        "name": "Pit Lord",
+        "visualDescription": "A towering, muscular devil lord with crimson scaled hide, tattered membranous wings and a crown of jagged ram horns. Fanged maw, burning yellow eyes, a venom-dripping barbed tail and hellfire glowing through cracks in its hide."
       }
     ]
   },
