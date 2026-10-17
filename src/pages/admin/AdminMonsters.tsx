@@ -21,6 +21,7 @@ import {
 } from '../../components/ui';
 import { cn } from '../../lib/utils';
 import {
+  formatMonsterTypeLevelRange,
   useMonsterCatalog,
   useMonsterTypeDetails,
   COMBAT_FLAVOR_DAMAGE_TYPES,
@@ -50,6 +51,7 @@ type SubtypeDraft = {
   allowedTerrains: string[];
   canSpeak: boolean | null;
   spawnRank: MonsterSpawnRank;
+  minEncounterLevel: number;
   enabled: boolean;
   combatFlavor: MonsterCombatFlavorMap;
   flavorTemplate: CombatFlavorTemplateName;
@@ -156,7 +158,6 @@ function compactCombatFlavor(
 const EMPTY_TYPE_FORM = {
   description: '',
   enabled: true,
-  minEncounterLevel: 1,
   genres: ['Fantasy'] as MonsterGenre[],
   canSpeak: false,
 };
@@ -165,7 +166,6 @@ const EMPTY_NEW_TYPE = {
   name: '',
   description: '',
   genres: ['Fantasy'] as MonsterGenre[],
-  minEncounterLevel: 1,
   canSpeak: false,
 };
 
@@ -176,8 +176,12 @@ const EMPTY_SUB_FORM = {
   allowedTerrains: ['Plains'] as string[],
   canSpeak: null as boolean | null,
   spawnRank: 'any' as MonsterSpawnRank,
+  minEncounterLevel: 1,
   enabled: true,
 };
+
+const subtypeLevel = (subtype: Pick<MonsterSubtype, 'minEncounterLevel'>): number =>
+  Number.isFinite(Number(subtype.minEncounterLevel)) ? Math.max(1, Math.floor(Number(subtype.minEncounterLevel))) : 1;
 
 type CanSpeakChoice = 'inherit' | 'speaks' | 'mute';
 
@@ -251,6 +255,37 @@ function SpawnRankSelect({
         <option value="any">{SPAWN_RANK_LABELS.any}</option>
         <option value="boss_only">{SPAWN_RANK_LABELS.boss_only}</option>
       </select>
+    </div>
+  );
+}
+
+function MinEncounterLevelInput({
+  id,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: number;
+  disabled?: boolean;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div>
+      <label className="input-label" htmlFor={id}>
+        Min Encounter Level
+      </label>
+      <input
+        id={id}
+        className="input-field"
+        type="number"
+        inputMode="numeric"
+        min={1}
+        step={1}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+      />
     </div>
   );
 }
@@ -561,7 +596,6 @@ export default function AdminMonsters() {
     return (
       typeForm.description !== (selectedType.description || '') ||
       typeForm.enabled !== selectedType.enabled ||
-      typeForm.minEncounterLevel !== (selectedType.minEncounterLevel ?? 1) ||
       typeForm.canSpeak !== Boolean(selectedType.canSpeak) ||
       !sameStringList(typeForm.genres, selectedType.genres || [])
     );
@@ -584,7 +618,6 @@ export default function AdminMonsters() {
     setTypeForm({
       description: selectedType.description || '',
       enabled: selectedType.enabled,
-      minEncounterLevel: selectedType.minEncounterLevel ?? 1,
       genres: (selectedType.genres?.length ? selectedType.genres : ['Fantasy']) as MonsterGenre[],
       canSpeak: Boolean(selectedType.canSpeak),
     });
@@ -612,7 +645,6 @@ export default function AdminMonsters() {
       await updateType(selectedTypeId, {
         description: typeForm.description,
         enabled: typeForm.enabled,
-        minEncounterLevel: Number(typeForm.minEncounterLevel),
         genres: typeForm.genres,
         canSpeak: typeForm.canSpeak,
       });
@@ -641,7 +673,6 @@ export default function AdminMonsters() {
         name: newTypeForm.name.trim(),
         description: newTypeForm.description.trim(),
         genres: newTypeForm.genres,
-        minEncounterLevel: Number(newTypeForm.minEncounterLevel),
         defaultArchetype: templateType.defaultArchetype,
         allowedArchetypes: templateType.allowedArchetypes,
         maturityPrefixes: templateType.maturityPrefixes,
@@ -708,6 +739,7 @@ export default function AdminMonsters() {
         rideable: false,
         canSpeak: subForm.canSpeak,
         spawnRank: subForm.spawnRank,
+        minEncounterLevel: subForm.minEncounterLevel,
       });
       setSubForm(EMPTY_SUB_FORM);
       setAddingSubtype(false);
@@ -731,6 +763,7 @@ export default function AdminMonsters() {
           allowedTerrains: subtype.allowedTerrains?.length ? subtype.allowedTerrains : ['Plains'],
           canSpeak: typeof subtype.canSpeak === 'boolean' ? subtype.canSpeak : null,
           spawnRank: subtype.spawnRank === 'boss_only' ? 'boss_only' : 'any',
+          minEncounterLevel: subtypeLevel(subtype),
           enabled: Boolean(subtype.enabled),
           combatFlavor: { ...(subtype.combatFlavor || {}) },
           flavorTemplate: 'Brute',
@@ -790,6 +823,7 @@ export default function AdminMonsters() {
         allowedTerrains: draft.allowedTerrains,
         canSpeak: draft.canSpeak,
         spawnRank: draft.spawnRank,
+        minEncounterLevel: draft.minEncounterLevel,
         enabled: draft.enabled,
         combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
       });
@@ -956,7 +990,7 @@ export default function AdminMonsters() {
                       <span className={badge.className}>{badge.label}</span>
                     </div>
                     <p className="help-text mt-1 truncate">
-                      Level {type.minEncounterLevel} · {type._count?.subtypes ?? 0} Subtypes ·{' '}
+                      {formatMonsterTypeLevelRange(type)} · {type._count?.subtypes ?? 0} Subtypes ·{' '}
                       {(type.genres || []).join(', ') || 'Fantasy'}
                     </p>
                   </button>
@@ -978,34 +1012,17 @@ export default function AdminMonsters() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="input-label" htmlFor="new-type-name">
-                    Type Name
-                  </label>
-                  <input
-                    id="new-type-name"
-                    className="input-field"
-                    placeholder="Beast"
-                    value={newTypeForm.name}
-                    onChange={(e) => setNewTypeForm((prev) => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="input-label" htmlFor="new-type-level">
-                    Min Encounter Level
-                  </label>
-                  <input
-                    id="new-type-level"
-                    className="input-field"
-                    type="number"
-                    min={1}
-                    value={newTypeForm.minEncounterLevel}
-                    onChange={(e) =>
-                      setNewTypeForm((prev) => ({ ...prev, minEncounterLevel: Number(e.target.value) }))
-                    }
-                  />
-                </div>
+              <div>
+                <label className="input-label" htmlFor="new-type-name">
+                  Type Name
+                </label>
+                <input
+                  id="new-type-name"
+                  className="input-field"
+                  placeholder="Beast"
+                  value={newTypeForm.name}
+                  onChange={(e) => setNewTypeForm((prev) => ({ ...prev, name: e.target.value }))}
+                />
               </div>
 
               <div>
@@ -1041,7 +1058,7 @@ export default function AdminMonsters() {
               />
 
               <div className="callout">
-                New types inherit archetype, immunities, resistances, and POI tags from the selected catalog type so combat templates stay intact.
+                New types inherit archetype, immunities, resistances, and POI tags from the selected catalog type so combat templates stay intact. Min Encounter Level is set per subtype.
               </div>
 
               <div className="flex justify-end gap-2">
@@ -1068,7 +1085,7 @@ export default function AdminMonsters() {
                       {selectedBadge && <span className={selectedBadge.className}>{selectedBadge.label}</span>}
                     </div>
                     <p className="card-subtitle">
-                      {subtypeList.length} Subtypes · Level {selectedType.minEncounterLevel}
+                      {subtypeList.length} Subtypes · {formatMonsterTypeLevelRange(selectedType)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1110,36 +1127,18 @@ export default function AdminMonsters() {
                   />
                 </div>
 
-                <div className="grid grid-cols-[160px_minmax(0,1fr)] gap-3 items-start">
-                  <div>
-                    <label className="input-label" htmlFor="type-level">
-                      Min Encounter Level
-                    </label>
-                    <input
-                      id="type-level"
-                      className="input-field"
-                      type="number"
-                      min={1}
-                      value={typeForm.minEncounterLevel}
-                      onChange={(e) =>
-                        setTypeForm((prev) => ({ ...prev, minEncounterLevel: Number(e.target.value) }))
-                      }
-                      disabled={selectedType.isProtected}
-                    />
-                  </div>
-                  <ChoicePills
-                    label="Genres"
-                    options={GENRES}
-                    selected={typeForm.genres}
-                    disabled={selectedType.isProtected}
-                    onToggle={(genre) =>
-                      setTypeForm((prev) => ({
-                        ...prev,
-                        genres: toggleValue(prev.genres, genre as MonsterGenre),
-                      }))
-                    }
-                  />
-                </div>
+                <ChoicePills
+                  label="Genres"
+                  options={GENRES}
+                  selected={typeForm.genres}
+                  disabled={selectedType.isProtected}
+                  onToggle={(genre) =>
+                    setTypeForm((prev) => ({
+                      ...prev,
+                      genres: toggleValue(prev.genres, genre as MonsterGenre),
+                    }))
+                  }
+                />
 
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <ToggleSwitch
@@ -1254,7 +1253,7 @@ export default function AdminMonsters() {
                         }))
                       }
                     />
-                    <div className="grid gap-3 sm:grid-cols-2 sm:max-w-[576px]">
+                    <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
                       <CanSpeakSelect
                         id="sub-can-speak"
                         value={subForm.canSpeak}
@@ -1265,6 +1264,11 @@ export default function AdminMonsters() {
                         id="sub-spawn-rank"
                         value={subForm.spawnRank}
                         onChange={(spawnRank) => setSubForm((prev) => ({ ...prev, spawnRank }))}
+                      />
+                      <MinEncounterLevelInput
+                        id="sub-min-level"
+                        value={subForm.minEncounterLevel}
+                        onChange={(minEncounterLevel) => setSubForm((prev) => ({ ...prev, minEncounterLevel }))}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -1341,6 +1345,9 @@ export default function AdminMonsters() {
                               >
                                 <td className="font-medium text-brand-text">
                                   {subtype.name}
+                                  <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                    Level {subtypeLevel(subtype)}
+                                  </span>
                                   {subtype.spawnRank === 'boss_only' && (
                                     <span className="badge-muted ml-1.5 whitespace-nowrap">
                                       Spawn Rank: {SPAWN_RANK_LABELS.boss_only}
@@ -1435,7 +1442,7 @@ export default function AdminMonsters() {
                                           }
                                         />
                                       </div>
-                                      <div className="grid gap-3 sm:grid-cols-2 sm:max-w-[576px]">
+                                      <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
                                         <CanSpeakSelect
                                           id={`can-speak-${subtype.id}`}
                                           value={draft.canSpeak}
@@ -1448,6 +1455,12 @@ export default function AdminMonsters() {
                                           value={draft.spawnRank}
                                           disabled={subtype.isProtected}
                                           onChange={(spawnRank) => updateDraft(subtype.id, { spawnRank })}
+                                        />
+                                        <MinEncounterLevelInput
+                                          id={`min-level-${subtype.id}`}
+                                          value={draft.minEncounterLevel}
+                                          disabled={subtype.isProtected}
+                                          onChange={(minEncounterLevel) => updateDraft(subtype.id, { minEncounterLevel })}
                                         />
                                       </div>
                                       <div className="space-y-3 border-t border-brand-border/40 pt-3">

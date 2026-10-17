@@ -9,7 +9,6 @@ export interface MonsterTypePayload {
   name: string;
   description: string;
   genres: MonsterGenre[];
-  minEncounterLevel: number;
   defaultArchetype: string;
   allowedArchetypes: string[];
   maturityPrefixes: Array<{ minLevel: number; prefix: string }>;
@@ -28,7 +27,10 @@ export interface MonsterType {
   name: string;
   description: string;
   genres: MonsterGenre[];
+  /** Read-only: lowest Min Encounter Level across the type's encounterable subtypes. */
   minEncounterLevel: number;
+  /** Read-only: highest Min Encounter Level across the type's encounterable subtypes. */
+  maxEncounterLevel?: number;
   defaultArchetype: string;
   allowedArchetypes: string[];
   maturityPrefixes: Array<{ minLevel: number; prefix: string }>;
@@ -111,6 +113,13 @@ export const COMBAT_FLAVOR_TEMPLATE_NAMES = [
 
 export type CombatFlavorTemplateName = (typeof COMBAT_FLAVOR_TEMPLATE_NAMES)[number];
 
+/** "Level 5" or "Level 5–20" from a type's derived subtype range. */
+export function formatMonsterTypeLevelRange(type: Pick<MonsterType, 'minEncounterLevel' | 'maxEncounterLevel'>): string {
+  const min = Number.isFinite(Number(type.minEncounterLevel)) ? Number(type.minEncounterLevel) : 1;
+  const max = Number.isFinite(Number(type.maxEncounterLevel)) ? Number(type.maxEncounterLevel) : min;
+  return max > min ? `Level ${min}–${max}` : `Level ${min}`;
+}
+
 /** 'boss_only' subtypes only ever spawn as the encounter's full-rank boss. */
 export const MONSTER_SPAWN_RANKS = ['any', 'boss_only'] as const;
 export type MonsterSpawnRank = (typeof MONSTER_SPAWN_RANKS)[number];
@@ -128,6 +137,8 @@ export interface MonsterSubtype {
   canSpeak: boolean | null;
   /** Absent on rows read before the column shipped; treat as 'any'. */
   spawnRank?: MonsterSpawnRank;
+  /** Lowest party level at which this subtype appears in random encounters. Absent on old rows; treat as 1. */
+  minEncounterLevel?: number;
   affinityOverride: string | null;
   acquisition: unknown | null;
   combatFlavor?: MonsterCombatFlavorMap | null;

@@ -604,7 +604,6 @@ export interface MonsterTypeAttributes {
   name?: string;
   description?: string;
   genres?: string[];
-  minEncounterLevel?: number;
   defaultArchetype?: string;
   allowedArchetypes?: string[];
   maturityPrefixes?: MonsterMaturityPrefix[];
@@ -631,10 +630,23 @@ export interface MonsterSubtypeAttributes {
   /** Null inherits the type's canSpeak. */
   canSpeak?: boolean | null;
   spawnRank?: MonsterSpawnRank;
+  /** Lowest party level at which the subtype appears in random encounters. */
+  minEncounterLevel?: number;
   affinityOverride?: string | null;
   acquisition?: unknown;
   combatFlavor?: unknown;
   enabled?: boolean;
+}
+
+export const MIN_ENCOUNTER_LEVEL_ON_TYPE_ERROR =
+  'Min Encounter Level Is Set Per Subtype. Use update_monster_subtype.';
+
+function optionalEncounterLevel(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new Error('Min Encounter Level Must Be A Whole Number Of At Least 1.');
+  }
+  return value;
 }
 
 export const MONSTER_SPAWN_RANKS = ['any', 'boss_only'] as const;
@@ -986,11 +998,13 @@ function assignDefined<T extends object>(
 
 export function parseMonsterTypeAttributes(input: unknown): MonsterTypeAttributes {
   const record = asRecord(input);
+  if (record.minEncounterLevel !== undefined) {
+    throw new Error(MIN_ENCOUNTER_LEVEL_ON_TYPE_ERROR);
+  }
   return assignDefined({} as MonsterTypeAttributes, {
     name: optionalTrimmedString(record.name, 'Name'),
     description: optionalTrimmedString(record.description, 'Description'),
     genres: optionalGenres(record.genres),
-    minEncounterLevel: optionalFiniteNumber(record.minEncounterLevel, 'Min Encounter Level'),
     defaultArchetype: optionalTrimmedString(record.defaultArchetype, 'Default Archetype'),
     allowedArchetypes: optionalStringArray(record.allowedArchetypes, 'Allowed Archetypes'),
     maturityPrefixes: optionalMaturityPrefixes(record.maturityPrefixes),
@@ -1024,6 +1038,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     rideable: optionalBoolean(record.rideable, 'Rideable'),
     canSpeak: optionalNullableBoolean(record.canSpeak, 'Can Speak'),
     spawnRank: optionalSpawnRank(record.spawnRank),
+    minEncounterLevel: optionalEncounterLevel(record.minEncounterLevel),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
     acquisition: record.acquisition === undefined ? undefined : record.acquisition,
     combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
@@ -1043,7 +1058,6 @@ export function buildMonsterTypeCreatePayload(input: unknown): Record<string, un
       name,
       description,
       genres: attributes.genres?.length ? attributes.genres : ['Fantasy'],
-      minEncounterLevel: attributes.minEncounterLevel ?? 1,
     } as Record<string, unknown>,
     {
       defaultArchetype: attributes.defaultArchetype,
@@ -1085,6 +1099,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       rideable: attributes.rideable ?? false,
       canSpeak: attributes.canSpeak ?? null,
       spawnRank: attributes.spawnRank ?? 'any',
+      minEncounterLevel: attributes.minEncounterLevel ?? 1,
       enabled: attributes.enabled ?? true,
     } as Record<string, unknown>,
     {
@@ -1248,7 +1263,6 @@ const MONSTER_TYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     items: { type: 'string', enum: [...MONSTER_GENRES] },
     description: 'Genres this type appears in: Fantasy, Modern, Sci-Fi.',
   },
-  minEncounterLevel: { type: 'number', description: 'Minimum encounter level.' },
   defaultArchetype: { type: 'string', description: 'Default combat archetype.' },
   allowedArchetypes: {
     type: 'array',
@@ -1323,6 +1337,12 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     description:
       'Which ranks this subtype may spawn at. any spawns at every rank. boss_only only ever spawns as the encounter boss at full boss rank: never in groups, never as an escort, never as a boss reinforcement. Defaults to any on create.',
   },
+  minEncounterLevel: {
+    type: 'integer',
+    minimum: 1,
+    description:
+      'Lowest party level at which this subtype appears in random encounters. Gates each subtype on its own; the type level range is derived from its subtypes. The world dominant monster type ignores it. Defaults to 1 on create.',
+  },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
   combatFlavor: {
@@ -1381,7 +1401,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'list_monster_types',
     description:
-      'List monster types with subtypes and attributes from the game CMS via GET /api/admin/monster-types?includeSubtypes=1. Does not maintain a local bestiary.',
+      'List monster types with subtypes and attributes from the game CMS via GET /api/admin/monster-types?includeSubtypes=1. Each subtype carries its own minEncounterLevel; the type minEncounterLevel / maxEncounterLevel are a read-only range derived from its subtypes. Does not maintain a local bestiary.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -1391,7 +1411,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'get_monster_type',
     description:
-      'Get one monster type and its subtypes from the game CMS via GET /api/admin/monster-types/:id.',
+      'Get one monster type and its subtypes from the game CMS via GET /api/admin/monster-types/:id. The type minEncounterLevel / maxEncounterLevel are a read-only range derived from its subtypes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1404,7 +1424,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_type',
     description:
-      'Create a monster type via POST /api/admin/monster-types. Name and description are required. Copy combat identity (archetypes, immunities, POI tags) from list_monster_types when adding a sibling type. Set canSpeak when the type can talk (defaults to false).',
+      'Create a monster type via POST /api/admin/monster-types. Name and description are required. Copy combat identity (archetypes, immunities, POI tags) from list_monster_types when adding a sibling type. Set canSpeak when the type can talk (defaults to false). Min encounter level is not a type attribute; set it per subtype.',
     inputSchema: {
       type: 'object',
       properties: MONSTER_TYPE_ATTRIBUTE_PROPERTIES,
@@ -1415,7 +1435,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_type',
     description:
-      'Update an existing monster type via PATCH /api/admin/monster-types/:id. Send only the attributes to change. canSpeak changes the speech default for every subtype that inherits it.',
+      'Update an existing monster type via PATCH /api/admin/monster-types/:id. Send only the attributes to change. canSpeak changes the speech default for every subtype that inherits it. Min encounter level is not a type attribute; use update_monster_subtype.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1429,7 +1449,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any).',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any). Set minEncounterLevel to the lowest party level at which this subtype may appear in random encounters (defaults to 1).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1443,7 +1463,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at. Send minEncounterLevel to change the lowest party level at which this subtype appears in random encounters.',
     inputSchema: {
       type: 'object',
       properties: {

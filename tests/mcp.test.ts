@@ -411,7 +411,6 @@ describe('monster catalog payloads', () => {
       name: '  Drake  ',
       description: '  Winged reptiles.  ',
       genres: ['Fantasy'],
-      minEncounterLevel: 4,
       defaultArchetype: 'Brute',
       immunities: ['Fire'],
       defaultAffinity: 'Fire',
@@ -421,7 +420,6 @@ describe('monster catalog payloads', () => {
       name: 'Drake',
       description: 'Winged reptiles.',
       genres: ['Fantasy'],
-      minEncounterLevel: 4,
       defaultArchetype: 'Brute',
       immunities: ['Fire'],
       defaultAffinity: 'Fire',
@@ -430,14 +428,40 @@ describe('monster catalog payloads', () => {
     });
   });
 
-  it('defaults create-type genres and level when omitted', () => {
+  it('defaults create-type genres when omitted and never sends a type level', () => {
     const payload = buildMonsterTypeCreatePayload({
       name: 'Ooze',
       description: 'Amorphous hunters.',
     });
     assert.deepEqual(payload.genres, ['Fantasy']);
-    assert.equal(payload.minEncounterLevel, 1);
+    assert.equal('minEncounterLevel' in payload, false);
     assert.equal(payload.enabled, true);
+  });
+
+  it('rejects minEncounterLevel on type create / update', () => {
+    assert.throws(
+      () => buildMonsterTypeCreatePayload({ name: 'Ooze', description: 'body', minEncounterLevel: 4 }),
+      /Min Encounter Level Is Set Per Subtype/
+    );
+    assert.throws(
+      () => buildMonsterTypeUpdatePayload({ minEncounterLevel: 4 }),
+      /Min Encounter Level Is Set Per Subtype/
+    );
+  });
+
+  it('passes subtype minEncounterLevel through create / update and rejects invalid levels', () => {
+    assert.equal(
+      buildMonsterSubtypeCreatePayload({ name: 'Wyrmling', visualDescription: 'A young dragon.', minEncounterLevel: 12 })
+        .minEncounterLevel,
+      12
+    );
+    assert.deepEqual(buildMonsterSubtypeUpdatePayload({ minEncounterLevel: 30 }), { minEncounterLevel: 30 });
+    for (const minEncounterLevel of [0, -1, 2.5, '5', null, Number.NaN]) {
+      assert.throws(
+        () => buildMonsterSubtypeUpdatePayload({ minEncounterLevel }),
+        /Min Encounter Level Must Be A Whole Number Of At Least 1/
+      );
+    }
   });
 
   it('rejects a blank type name and unknown genre', () => {
@@ -478,6 +502,7 @@ describe('monster catalog payloads', () => {
       rideable: false,
       canSpeak: null,
       spawnRank: 'any',
+      minEncounterLevel: 1,
       enabled: true,
       archetype: null,
     });
@@ -1083,6 +1108,39 @@ describe('MCP monster spawnRank', () => {
     );
     assert.equal(calls[0].init?.method, 'PATCH');
     assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { spawnRank: 'boss_only' });
+  });
+});
+
+describe('MCP monster minEncounterLevel', () => {
+  const toolProps = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('exposes minEncounterLevel on subtype tools only', () => {
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      assert.equal(toolProps(toolName).minEncounterLevel.type, 'integer');
+      assert.equal(toolProps(toolName).minEncounterLevel.minimum, 1);
+    }
+    for (const toolName of ['create_monster_type', 'update_monster_type']) {
+      assert.equal(toolProps(toolName).minEncounterLevel, undefined);
+    }
+  });
+
+  it('forwards a subtype minEncounterLevel change on update', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', minEncounterLevel: 20 },
+      {
+        fetchRpgAdmin: async (path, init) => {
+          calls.push({ path, init });
+          return { subtype: { id: 'sub-9' } };
+        },
+      }
+    );
+    assert.equal(calls[0].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { minEncounterLevel: 20 });
   });
 });
 
