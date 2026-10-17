@@ -135,6 +135,20 @@ describe('MCP bearer auth', () => {
     assert.equal(wrong.state.statusCode, 401);
   });
 
+  it('marks every response Cache-Control: no-store so tool lists are never cached', async () => {
+    process.env.MCP_API_KEY = KEY;
+    const res = mockResponse();
+    await handler(
+      mockRequest({
+        headers: { authorization: `Bearer ${KEY}` },
+        body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+      }),
+      res.response
+    );
+    assert.equal(res.state.statusCode, 200);
+    assert.equal(res.state.headers['Cache-Control'], 'no-store');
+  });
+
   it('returns HTTP 500 when MCP_API_KEY is not configured', async () => {
     const res = mockResponse();
     await handler(
@@ -232,9 +246,17 @@ describe('MCP JSON-RPC tools', () => {
     });
     assert.equal(init.kind, 'response');
     if (init.kind === 'response') {
-      const info = init.response.result as { protocolVersion: string; serverInfo: { name: string } };
+      const info = init.response.result as {
+        protocolVersion: string;
+        serverInfo: { name: string; version: string };
+        capabilities: { tools: { listChanged: boolean } };
+        instructions: string;
+      };
       assert.equal(info.protocolVersion, '2025-03-26');
       assert.equal(info.serverInfo.name, 'heroic-dashboard');
+      assert.equal(info.serverInfo.version, '1.1.0');
+      assert.equal(info.capabilities.tools.listChanged, true);
+      assert.match(info.instructions, /never null/);
     }
 
     const ping = await dispatchMcpMessage({ jsonrpc: '2.0', id: 2, method: 'ping' });
@@ -1121,6 +1143,7 @@ describe('MCP monster minEncounterLevel', () => {
     for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
       assert.equal(toolProps(toolName).minEncounterLevel.type, 'integer');
       assert.equal(toolProps(toolName).minEncounterLevel.minimum, 1);
+      assert.match(toolProps(toolName).minEncounterLevel.description, /null is rejected/);
     }
     for (const toolName of ['create_monster_type', 'update_monster_type']) {
       assert.equal(toolProps(toolName).minEncounterLevel, undefined);

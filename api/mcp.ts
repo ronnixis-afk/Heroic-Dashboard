@@ -22,6 +22,7 @@ const CORS_HEADERS: Record<string, string> = {
     'Content-Type, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID, Accept',
   'Access-Control-Expose-Headers': 'MCP-Protocol-Version, Mcp-Session-Id',
   'Access-Control-Max-Age': '86400',
+  'Cache-Control': 'no-store',
 };
 
 function applyCors(response: VercelResponse) {
@@ -1238,7 +1239,7 @@ async function fetchRpgPublic<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const MCP_SERVER_INFO = {
   name: 'heroic-dashboard',
-  version: '1.0.0',
+  version: '1.1.0',
   title: 'Heroic Dashboard',
 };
 
@@ -1341,7 +1342,7 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     type: 'integer',
     minimum: 1,
     description:
-      'Lowest party level at which this subtype appears in random encounters. Gates each subtype on its own; the type level range is derived from its subtypes. The world dominant monster type ignores it. Defaults to 1 on create.',
+      'Lowest party level at which this subtype appears in random encounters. A whole number of at least 1; null is rejected because every subtype stores its own level and nothing is inherited from the type. The type level range is read-only and derived from its subtypes. The world dominant monster type ignores it. Defaults to 1 on create; omit on update to keep the current value.',
   },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
@@ -1785,11 +1786,11 @@ async function handleSingle(
         return rpcResult(id, {
           protocolVersion: negotiateProtocolVersion(params.protocolVersion),
           capabilities: {
-            tools: { listChanged: false },
+            tools: { listChanged: true },
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Do not invent a local bestiary.',
+            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Min encounter level is a whole number of at least 1 stored on every subtype (default 1, never null); set it with create_monster_subtype / update_monster_subtype. A type minEncounterLevel / maxEncounterLevel is a read-only range derived from its subtypes. Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});
