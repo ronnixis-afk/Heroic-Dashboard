@@ -18,7 +18,8 @@ export type CatalogModel = {
 
 export type RoleAssignment = {
   primary: string;
-  fallback: string;
+  /** `null` = fallback disabled (primary runs alone with no deadline). */
+  fallback: string | null;
   timeoutMs: number | null;
   thinkingBudget: number;
   label: string;
@@ -42,14 +43,17 @@ export type AiConfigResponse = {
   }>;
   stacks: Record<string, string[]>;
   current: Record<string, RoleAssignment>;
-  overrides?: Record<string, { primary?: string; fallback?: string; timeoutMs?: number | null }>;
+  overrides?: Record<string, { primary?: string; fallback?: string | null; timeoutMs?: number | null }>;
 };
 
 export type RoleOverrideDraft = {
   primary: string;
-  fallback: string;
+  fallback: string | null;
   timeoutMs: number | null;
 };
+
+/** Must match the RPG's `MAX_PRIMARY_TIMEOUT_MS` (90s route cap minus the 20s fallback leg and margin). */
+export const MAX_PRIMARY_TIMEOUT_MS = 65_000;
 
 export async function fetchAiConfig(token: RpgAdminTokenSource): Promise<AiConfigResponse> {
   return fetchRpgAdmin<AiConfigResponse>('/api/admin/ai-config', token);
@@ -72,11 +76,16 @@ export function buildRoleOverridePayload(
     if (draft.primary && draft.primary !== role.defaults.primary) {
       override.primary = draft.primary;
     }
-    if (draft.fallback && draft.fallback !== role.defaults.fallback) {
-      override.fallback = draft.fallback;
-    }
-    if ((draft.timeoutMs ?? null) !== (role.defaults.timeoutMs ?? null)) {
-      override.timeoutMs = draft.timeoutMs ?? null;
+    if (draft.fallback === null) {
+      // Disabled is never a default, and the server ignores timeouts without a fallback.
+      override.fallback = null;
+    } else {
+      if (draft.fallback && draft.fallback !== role.defaults.fallback) {
+        override.fallback = draft.fallback;
+      }
+      if ((draft.timeoutMs ?? null) !== (role.defaults.timeoutMs ?? null)) {
+        override.timeoutMs = draft.timeoutMs ?? null;
+      }
     }
     if (Object.keys(override).length > 0) {
       payload[role.id] = override;

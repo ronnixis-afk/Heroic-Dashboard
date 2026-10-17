@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { fetchRpgAdmin } from '../../lib/rpgAdminApi';
 import {
+  MAX_PRIMARY_TIMEOUT_MS,
   buildRoleOverridePayload,
   fetchAiConfig,
   saveAiConfig,
   type AiConfigResponse,
+  type CatalogModel,
   type RoleOverrideDraft,
 } from '../../hooks/useAiConfig';
 import { setCatalogRatesFromApi } from '../../lib/costCalculator';
@@ -26,6 +28,13 @@ interface SettingsData {
 }
 
 const ROLE_ORDER = ['assessor', 'utility', 'architect', 'narrator', 'world_builder'] as const;
+
+/** Select value for "no fallback"; stored as `fallback: null`. */
+const FALLBACK_DISABLED = 'disabled';
+
+function catalogOptionLabel(m: CatalogModel): string {
+  return `${m.displayName} (${m.creditMultiplier.toFixed(2)}x Credits, $${m.inputUsdPer1M.toFixed(2)} / $${m.outputUsdPer1M.toFixed(2)})`;
+}
 
 export default function AdminSettings() {
   const { getToken } = useAuth();
@@ -120,13 +129,17 @@ export default function AdminSettings() {
     field: keyof RoleOverrideDraft,
     value: string | number | null
   ) => {
-    setRoleDrafts((prev) => ({
-      ...prev,
-      [role]: {
-        ...prev[role],
-        [field]: value,
-      },
-    }));
+    setRoleDrafts((prev) => {
+      const next = { ...prev[role], [field]: value };
+      // The server rejects primary === fallback, so picking the fallback's model as primary disables it.
+      if (field === 'primary' && next.fallback === value) {
+        next.fallback = null;
+      }
+      if (field === 'fallback' && value !== null && prev[role]?.fallback === null && next.timeoutMs == null) {
+        next.timeoutMs = aiConfig?.roles.find((r) => r.id === role)?.defaults.timeoutMs ?? null;
+      }
+      return { ...prev, [role]: next };
+    });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -393,7 +406,7 @@ export default function AdminSettings() {
               AI Model Routing
             </h2>
             <p className="help-text">
-              Assign Primary And Fallback Models Per Role. Timeout Is Wall-Clock Milliseconds For The Primary Provider (Empty = No Deadline).
+              Assign Primary And Fallback Models Per Role. Timeout Is Wall-Clock Milliseconds For The Primary Before It Hands Off To The Fallback (Empty = No Deadline, Max {MAX_PRIMARY_TIMEOUT_MS}). A Disabled Fallback Runs The Primary Alone With No Deadline.
             </p>
           </div>
 
@@ -429,7 +442,7 @@ export default function AdminSettings() {
                         >
                           {aiConfig.catalog.map((m) => (
                             <option key={m.id} value={m.id}>
-                              {m.displayName} ({m.creditMultiplier.toFixed(2)}x Credits)
+                              {catalogOptionLabel(m)}
                             </option>
                           ))}
                         </select>
@@ -437,16 +450,25 @@ export default function AdminSettings() {
                       <div className="md:col-span-5">
                         <label className="input-label">Fallback Model</label>
                         <select
-                          value={draft.fallback}
-                          onChange={(e) => updateRoleDraft(roleId, 'fallback', e.target.value)}
+                          value={draft.fallback ?? FALLBACK_DISABLED}
+                          onChange={(e) =>
+                            updateRoleDraft(
+                              roleId,
+                              'fallback',
+                              e.target.value === FALLBACK_DISABLED ? null : e.target.value
+                            )
+                          }
                           className="input-field cursor-pointer truncate"
-                          title={draft.fallback}
+                          title={draft.fallback ?? 'Disabled'}
                         >
-                          {aiConfig.catalog.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.displayName} (${m.inputUsdPer1M.toFixed(2)} / ${m.outputUsdPer1M.toFixed(2)})
-                            </option>
-                          ))}
+                          <option value={FALLBACK_DISABLED}>Disabled</option>
+                          {aiConfig.catalog
+                            .filter((m) => m.id !== draft.primary)
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {catalogOptionLabel(m)}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       <div className="md:col-span-2">
@@ -454,18 +476,21 @@ export default function AdminSettings() {
                         <input
                           type="number"
                           min={0}
-                          max={120000}
-                          placeholder="None"
-                          value={draft.timeoutMs ?? ''}
+                          max={MAX_PRIMARY_TIMEOUT_MS}
+                          placeholder={draft.fallback === null ? 'No Deadline' : 'None'}
+                          disabled={draft.fallback === null}
+                          value={draft.fallback === null ? '' : draft.timeoutMs ?? ''}
                           onChange={(e) => {
                             const raw = e.target.value;
                             updateRoleDraft(
                               roleId,
                               'timeoutMs',
-                              raw === '' ? null : Math.min(120000, Math.max(0, Number(raw) || 0))
+                              raw === ''
+                                ? null
+                                : Math.min(MAX_PRIMARY_TIMEOUT_MS, Math.max(0, Number(raw) || 0))
                             );
                           }}
-                          className="input-field"
+                          className="input-field disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>

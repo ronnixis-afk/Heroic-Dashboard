@@ -55,9 +55,10 @@ Stay on the three-tier type scale in `Design.md` / `src/index.css` (`text-xs`, `
 System Settings renders a per-role matrix (Assessor, Utility, Architect, Narrator, World Builder) instead of a single text model picker. Hook: `src/hooks/useAiConfig.ts` → RPG `/api/admin/ai-config`.
 
 - `GET` returns the model catalog (with credit multipliers and USD rates), role metadata + code defaults, model stacks, effective assignments, and stored overrides.
-- Each row edits Primary Model, Fallback Model, and Timeout (ms; empty = no deadline). Dropdowns are populated from the catalog — never hardcode model names in the dashboard.
-- `buildRoleOverridePayload` sends **only values that differ from the server defaults**, so untouched roles keep tracking the RPG's code defaults instead of being frozen at today's values. Saving with no deviations clears the overrides (an effective reset).
-- The RPG validates every payload (unknown role, non-catalog or image-only model, or timeout outside 0–120000 ms returns a 400) and invalidates its resolver cache on write.
+- Each row edits Primary Model, Fallback Model, and Timeout (ms; empty = no deadline; max `MAX_PRIMARY_TIMEOUT_MS` 65000, mirrored from the RPG). Dropdowns are populated from the catalog — never hardcode model names in the dashboard. Both dropdowns use one label (`catalogOptionLabel`: name, credits multiplier, USD rates).
+- **Fallback Disabled:** the fallback dropdown starts with **Disabled** (`fallback: null`). The primary then runs alone with no deadline, so the Timeout input is disabled. The primary's own model is never offered as a fallback; switching the primary to the current fallback's model resets the fallback to Disabled. Re-enabling a fallback with an empty timeout restores the role's default timeout.
+- `buildRoleOverridePayload` sends **only values that differ from the server defaults**, so untouched roles keep tracking the RPG's code defaults instead of being frozen at today's values. Disabled is always sent (`fallback: null`, no `timeoutMs`). Saving with no deviations clears the overrides (an effective reset).
+- The RPG validates every payload (unknown role, non-catalog or image-only model, a fallback equal to the effective primary, or timeout outside 0–65000 ms returns a 400) and invalidates its resolver cache on write.
 - `setCatalogRatesFromApi` feeds the same catalog rates into `src/lib/costCalculator.ts` so dashboard cost math matches the server.
 - The legacy `default_model` key is intentionally **not** written by this page; roles own text routing.
 
