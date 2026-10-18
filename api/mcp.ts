@@ -633,6 +633,8 @@ export interface MonsterSubtypeAttributes {
   spawnRank?: MonsterSpawnRank;
   /** Lowest party level at which the subtype appears in random encounters. */
   minEncounterLevel?: number;
+  /** Empty list inherits the type's genres. */
+  genres?: string[];
   affinityOverride?: string | null;
   acquisition?: unknown;
   combatFlavor?: unknown;
@@ -841,6 +843,11 @@ function optionalGenres(value: unknown): string[] | undefined {
   return genres;
 }
 
+function optionalSubtypeGenres(value: unknown): string[] | undefined {
+  const genres = optionalGenres(value);
+  return genres ? Array.from(new Set(genres)) : undefined;
+}
+
 function optionalMaturityPrefixes(value: unknown): MonsterMaturityPrefix[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) {
@@ -1040,6 +1047,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     canSpeak: optionalNullableBoolean(record.canSpeak, 'Can Speak'),
     spawnRank: optionalSpawnRank(record.spawnRank),
     minEncounterLevel: optionalEncounterLevel(record.minEncounterLevel),
+    genres: optionalSubtypeGenres(record.genres),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
     acquisition: record.acquisition === undefined ? undefined : record.acquisition,
     combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
@@ -1107,6 +1115,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       archetype: attributes.archetype ?? null,
       movementModes: attributes.movementModes,
       primaryMovementMode: attributes.primaryMovementMode,
+      genres: attributes.genres,
       affinityOverride: attributes.affinityOverride,
       acquisition: attributes.acquisition,
       combatFlavor: attributes.combatFlavor,
@@ -1239,7 +1248,7 @@ async function fetchRpgPublic<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const MCP_SERVER_INFO = {
   name: 'heroic-dashboard',
-  version: '1.1.0',
+  version: '1.2.0',
   title: 'Heroic Dashboard',
 };
 
@@ -1343,6 +1352,13 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
     minimum: 1,
     description:
       'Lowest party level at which this subtype appears in random encounters. A whole number of at least 1; null is rejected because every subtype stores its own level and nothing is inherited from the type. The type level range is read-only and derived from its subtypes. The world dominant monster type ignores it. Defaults to 1 on create; omit on update to keep the current value.',
+  },
+  genres: {
+    type: 'array',
+    items: { type: 'string', enum: [...MONSTER_GENRES] },
+    uniqueItems: true,
+    description:
+      'Genre tags for this subtype: Fantasy, Modern, Sci-Fi. Multiple genres are allowed. An empty list inherits the type genres. Sending genres replaces the full list; omit on update to keep the current list. Stored only for now; spawning still filters by type genres.',
   },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
   acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
@@ -1450,7 +1466,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any). Set minEncounterLevel to the lowest party level at which this subtype may appear in random encounters (defaults to 1).',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any). Set minEncounterLevel to the lowest party level at which this subtype may appear in random encounters (defaults to 1). Set genres to tag the subtype with one or more genres; omit to inherit the type genres.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1464,7 +1480,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at. Send minEncounterLevel to change the lowest party level at which this subtype appears in random encounters.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at. Send minEncounterLevel to change the lowest party level at which this subtype appears in random encounters. Send genres to replace the subtype genre tags, or [] to inherit the type genres again.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1790,7 +1806,7 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Min encounter level is a whole number of at least 1 stored on every subtype (default 1, never null); set it with create_monster_subtype / update_monster_subtype. A type minEncounterLevel / maxEncounterLevel is a read-only range derived from its subtypes. Do not invent a local bestiary.',
+            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Min encounter level is a whole number of at least 1 stored on every subtype (default 1, never null); set it with create_monster_subtype / update_monster_subtype. A type minEncounterLevel / maxEncounterLevel is a read-only range derived from its subtypes. Subtypes carry their own genres list (Fantasy, Modern, Sci-Fi; several allowed); an empty list inherits the type genres. Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});

@@ -254,7 +254,7 @@ describe('MCP JSON-RPC tools', () => {
       };
       assert.equal(info.protocolVersion, '2025-03-26');
       assert.equal(info.serverInfo.name, 'heroic-dashboard');
-      assert.equal(info.serverInfo.version, '1.1.0');
+      assert.equal(info.serverInfo.version, '1.2.0');
       assert.equal(info.capabilities.tools.listChanged, true);
       assert.match(info.instructions, /never null/);
     }
@@ -1164,6 +1164,76 @@ describe('MCP monster minEncounterLevel', () => {
     );
     assert.equal(calls[0].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
     assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { minEncounterLevel: 20 });
+  });
+});
+
+describe('MCP monster subtype genres', () => {
+  const toolProps = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('exposes genres on subtype tools as a unique genre list', () => {
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      const genres = toolProps(toolName).genres;
+      assert.equal(genres.type, 'array');
+      assert.deepEqual(genres.items.enum, ['Fantasy', 'Modern', 'Sci-Fi']);
+      assert.equal(genres.uniqueItems, true);
+      assert.match(genres.description, /inherits the type genres/);
+    }
+  });
+
+  it('omits genres on create when not sent and dedupes when sent', () => {
+    const omitted = buildMonsterSubtypeCreatePayload({ name: 'Reef Ray', visualDescription: 'A flat ray.' });
+    assert.equal('genres' in omitted, false);
+
+    const tagged = buildMonsterSubtypeCreatePayload({
+      name: 'Reef Ray',
+      visualDescription: 'A flat ray.',
+      genres: ['Modern', 'Sci-Fi', 'Modern'],
+    });
+    assert.deepEqual(tagged.genres, ['Modern', 'Sci-Fi']);
+  });
+
+  it('forwards a genre list and an empty list on update', async () => {
+    for (const genres of [['Modern', 'Sci-Fi'], []]) {
+      const calls: { path: string; init?: RequestInit }[] = [];
+      await executeMcpTool(
+        'update_monster_subtype',
+        { typeId: 'type-1', subtypeId: 'sub-9', genres },
+        {
+          fetchRpgAdmin: async (path, init) => {
+            calls.push({ path, init });
+            return { subtype: { id: 'sub-9' } };
+          },
+        }
+      );
+      assert.equal(calls[0].path, '/api/admin/monster-types/type-1/subtypes/sub-9');
+      assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { genres });
+    }
+  });
+
+  it('rejects unknown genres without a write', async () => {
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ genres: ['Noir'] }),
+      /Genre Must Be One Of Fantasy, Modern, Sci-Fi/
+    );
+    let called = false;
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'update_monster_subtype',
+          { typeId: 'type-1', subtypeId: 'sub-9', genres: ['Steampunk'] },
+          {
+            fetchRpgAdmin: async () => {
+              called = true;
+              return {};
+            },
+          }
+        ),
+      /Genre Must Be One Of/
+    );
+    assert.equal(called, false);
   });
 });
 

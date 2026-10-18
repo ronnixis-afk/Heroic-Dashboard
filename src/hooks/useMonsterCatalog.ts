@@ -139,6 +139,8 @@ export interface MonsterSubtype {
   spawnRank?: MonsterSpawnRank;
   /** Lowest party level at which this subtype appears in random encounters. Absent on old rows; treat as 1. */
   minEncounterLevel?: number;
+  /** Genre tags. Empty or absent inherits the type's genres. */
+  genres?: MonsterGenre[];
   affinityOverride: string | null;
   acquisition: unknown | null;
   combatFlavor?: MonsterCombatFlavorMap | null;

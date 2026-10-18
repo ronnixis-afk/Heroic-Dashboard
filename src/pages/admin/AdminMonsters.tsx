@@ -52,6 +52,7 @@ type SubtypeDraft = {
   canSpeak: boolean | null;
   spawnRank: MonsterSpawnRank;
   minEncounterLevel: number;
+  genres: MonsterGenre[];
   enabled: boolean;
   combatFlavor: MonsterCombatFlavorMap;
   flavorTemplate: CombatFlavorTemplateName;
@@ -177,6 +178,7 @@ const EMPTY_SUB_FORM = {
   canSpeak: null as boolean | null,
   spawnRank: 'any' as MonsterSpawnRank,
   minEncounterLevel: 1,
+  genres: [] as MonsterGenre[],
   enabled: true,
 };
 
@@ -286,6 +288,36 @@ function MinEncounterLevelInput({
         disabled={disabled}
         onChange={(e) => onChange(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
       />
+    </div>
+  );
+}
+
+const subtypeGenres = (subtype: Pick<MonsterSubtype, 'genres'>): MonsterGenre[] =>
+  Array.isArray(subtype.genres) ? subtype.genres : [];
+
+function SubtypeGenresField({
+  value,
+  typeGenres,
+  disabled,
+  onChange,
+}: {
+  value: MonsterGenre[];
+  typeGenres: MonsterGenre[];
+  disabled?: boolean;
+  onChange: (next: MonsterGenre[]) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <ChoicePills
+        label="Genres"
+        options={GENRES}
+        selected={value}
+        disabled={disabled}
+        onToggle={(genre) => onChange(toggleValue(value, genre as MonsterGenre, 0))}
+      />
+      <p className="help-text">
+        None Selected Inherits Type Genres ({typeGenres.length ? typeGenres.join(', ') : 'Fantasy'})
+      </p>
     </div>
   );
 }
@@ -740,6 +772,7 @@ export default function AdminMonsters() {
         canSpeak: subForm.canSpeak,
         spawnRank: subForm.spawnRank,
         minEncounterLevel: subForm.minEncounterLevel,
+        genres: subForm.genres,
       });
       setSubForm(EMPTY_SUB_FORM);
       setAddingSubtype(false);
@@ -764,6 +797,7 @@ export default function AdminMonsters() {
           canSpeak: typeof subtype.canSpeak === 'boolean' ? subtype.canSpeak : null,
           spawnRank: subtype.spawnRank === 'boss_only' ? 'boss_only' : 'any',
           minEncounterLevel: subtypeLevel(subtype),
+          genres: subtypeGenres(subtype),
           enabled: Boolean(subtype.enabled),
           combatFlavor: { ...(subtype.combatFlavor || {}) },
           flavorTemplate: 'Brute',
@@ -824,6 +858,7 @@ export default function AdminMonsters() {
         canSpeak: draft.canSpeak,
         spawnRank: draft.spawnRank,
         minEncounterLevel: draft.minEncounterLevel,
+        genres: draft.genres,
         enabled: draft.enabled,
         combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
       });
@@ -1253,6 +1288,11 @@ export default function AdminMonsters() {
                         }))
                       }
                     />
+                    <SubtypeGenresField
+                      value={subForm.genres}
+                      typeGenres={selectedType.genres || []}
+                      onChange={(genres) => setSubForm((prev) => ({ ...prev, genres }))}
+                    />
                     <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
                       <CanSpeakSelect
                         id="sub-can-speak"
@@ -1353,6 +1393,11 @@ export default function AdminMonsters() {
                                       Spawn Rank: {SPAWN_RANK_LABELS.boss_only}
                                     </span>
                                   )}
+                                  {subtypeGenres(subtype).length > 0 && (
+                                    <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                      Genres: {subtypeGenres(subtype).join(', ')}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="text-brand-text-muted">{subtype.size}</td>
                                 <td className="text-brand-text-muted max-w-[280px] truncate">
@@ -1442,6 +1487,12 @@ export default function AdminMonsters() {
                                           }
                                         />
                                       </div>
+                                      <SubtypeGenresField
+                                        value={draft.genres}
+                                        typeGenres={selectedType.genres || []}
+                                        disabled={subtype.isProtected}
+                                        onChange={(genres) => updateDraft(subtype.id, { genres })}
+                                      />
                                       <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
                                         <CanSpeakSelect
                                           id={`can-speak-${subtype.id}`}
