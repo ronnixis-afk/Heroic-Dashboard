@@ -40,7 +40,13 @@ import {
   usePortraitRaceSecondaryImagery,
   type PortraitRaceSecondaryGenre,
 } from '../../hooks/usePortraitRaceSecondaryImagery';
-import { getDbRaceNamesForGenre, getRacePortraitCount } from '../../lib/raceAliasUtils';
+import {
+  getDbRaceNamesForGenre,
+  getRacePortraitCount,
+  isLookAlikeRaceLabel,
+  normalizeLookAlikeTags,
+} from '../../lib/raceAliasUtils';
+import LookAlikeTagsField from '../../components/races/LookAlikeTagsField';
 import {
   countByAssetType,
   countByGenre,
@@ -507,6 +513,12 @@ const toCatalogRaceSpeeds = (draft: RaceMovementDraft): CatalogRaceSpeeds => ({
 const haveSameCatalogSpeeds = (a: CatalogRaceSpeeds, b: CatalogRaceSpeeds) =>
   a.flySpeed === b.flySpeed && a.climbSpeed === b.climbSpeed && a.swimSpeed === b.swimSpeed;
 
+const haveSameLookAlikeTags = (a: readonly string[], b: readonly string[] | undefined) => {
+  const left = normalizeLookAlikeTags(a);
+  const right = normalizeLookAlikeTags(b);
+  return left.length === right.length && left.every((tag) => right.includes(tag));
+};
+
 const describeCatalogSpeeds = (speeds: CatalogRaceSpeeds): string => {
   const parts: string[] = [];
   if (speeds.flySpeed > 0) parts.push(`Fly ${speeds.flySpeed} Ft`);
@@ -894,6 +906,37 @@ export default function AdminMedia() {
     matchedCatalogRace !== null &&
     !isHumanRaceSelected &&
     !haveSameCatalogSpeeds(toCatalogRaceSpeeds(raceMovement), matchedCatalogRace);
+
+  /** Look-alike tag draft, keyed like the movement draft; new `*-Like` labels pre-tag themselves. */
+  const raceLookAlikeKey = matchedCatalogRace
+    ? `catalog:${matchedCatalogRace.id}`
+    : `new-race:${(formData.metadata.race || '').trim().toLowerCase()}`;
+  const [raceLookAlikeDraft, setRaceLookAlikeDraft] = useState<{ key: string; value: string[] } | null>(null);
+  const raceLookAlikeTags: string[] =
+    raceLookAlikeDraft?.key === raceLookAlikeKey
+      ? raceLookAlikeDraft.value
+      : matchedCatalogRace
+        ? normalizeLookAlikeTags(matchedCatalogRace.lookAlikeTags)
+        : isLookAlikeRaceLabel(formData.metadata.race)
+          ? normalizeLookAlikeTags([formData.metadata.race])
+          : [];
+  const updateRaceLookAlikeTags = (tags: string[]) => {
+    setRaceLookAlikeDraft({ key: raceLookAlikeKey, value: tags });
+  };
+  const hasPendingLookAlikeChange =
+    matchedCatalogRace !== null &&
+    !isHumanRaceSelected &&
+    !haveSameLookAlikeTags(raceLookAlikeTags, matchedCatalogRace.lookAlikeTags);
+  /** Uploading a genre the matched race does not list yet adds it (look-alike imagery is genre-locked). */
+  const missingCatalogGenre: RaceGenre | null =
+    matchedCatalogRace &&
+    !isHumanRaceSelected &&
+    formData.genre !== 'Any Genre' &&
+    !(matchedCatalogRace.genres || []).includes(formData.genre as RaceGenre)
+      ? (formData.genre as RaceGenre)
+      : null;
+  const hasPendingCatalogChange =
+    hasPendingCatalogMovementChange || hasPendingLookAlikeChange || missingCatalogGenre !== null;
 
   const {
     races: dynamicDiscoveredRaces,
@@ -1575,9 +1618,25 @@ export default function AdminMedia() {
           // Only PATCH when speeds actually changed; old realm stamps are never rewritten.
           if (!isHumanRaceLabel(liveRace.name)) {
             const nextSpeeds = toCatalogRaceSpeeds(raceMovement);
-            if (!haveSameCatalogSpeeds(nextSpeeds, liveRace)) {
-              await updateDbRace(liveRace.id, nextSpeeds);
-              catalogMovementNote = `${liveRace.name} Racial Movement Updated In Race Catalog (${describeCatalogSpeeds(nextSpeeds)}).`;
+            const speedsChanged = !haveSameCatalogSpeeds(nextSpeeds, liveRace);
+            const tagsChanged = !haveSameLookAlikeTags(raceLookAlikeTags, liveRace.lookAlikeTags);
+            const liveGenres = liveRace.genres || [];
+            const addGenre =
+              saveData.genre !== 'Any Genre' && !liveGenres.includes(saveData.genre as RaceGenre)
+                ? (saveData.genre as RaceGenre)
+                : null;
+            if (speedsChanged || tagsChanged || addGenre) {
+              await updateDbRace(liveRace.id, {
+                ...(speedsChanged ? nextSpeeds : {}),
+                ...(tagsChanged ? { lookAlikeTags: raceLookAlikeTags } : {}),
+                ...(addGenre ? { genres: [...liveGenres, addGenre] } : {}),
+              });
+              const notes = [
+                speedsChanged ? `Movement (${describeCatalogSpeeds(nextSpeeds)})` : null,
+                tagsChanged ? 'Look-Alike Tags' : null,
+                addGenre ? `Genre ${addGenre}` : null,
+              ].filter(Boolean);
+              catalogMovementNote = `${liveRace.name} Updated In Race Catalog: ${notes.join(', ')}.`;
             }
           }
         } else if (!isHumanRaceLabel(rawRace) && lowerRace !== 'none') {
@@ -1587,6 +1646,7 @@ export default function AdminMedia() {
               name: titleCaseRaceName(rawRace),
               genres: saveData.genre === 'Any Genre' ? ['Fantasy'] : [saveData.genre as RaceGenre],
               ...toCatalogRaceSpeeds(raceMovement),
+              lookAlikeTags: raceLookAlikeTags,
               enabled: true,
             });
             saveData.metadata.raceId = created.id;
@@ -2259,7 +2319,7 @@ export default function AdminMedia() {
                                 </span>
                               ) : (
                                 <>
-                                  {hasPendingCatalogMovementChange ? (
+                                  {hasPendingCatalogChange ? (
                                     <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/40">
                                       Updates Catalog On Save
                                     </span>
@@ -2329,6 +2389,18 @@ export default function AdminMedia() {
                                 )}
                               </div>
                             ))}
+                          </div>
+
+                          <div className="border-t border-brand-primary/40 pt-2">
+                            <LookAlikeTagsField
+                              value={raceLookAlikeTags}
+                              onChange={updateRaceLookAlikeTags}
+                              helpText={
+                                missingCatalogGenre
+                                  ? `Backend Only; Never Shown In Game. Saving Adds ${missingCatalogGenre} To This Race's Genres.`
+                                  : 'Backend Only; Never Shown In Game. World Creation Matches Similar Species To This Race’s Portraits For This Genre.'
+                              }
+                            />
                           </div>
                         </div>
                       )}

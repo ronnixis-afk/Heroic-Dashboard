@@ -28,6 +28,8 @@ import {
   type RaceGenre,
   type RacePayload,
 } from '../../hooks/useRaceCatalog';
+import LookAlikeTagsField from '../../components/races/LookAlikeTagsField';
+import { formatLookAlikeTagLabel, normalizeLookAlikeTags } from '../../lib/raceAliasUtils';
 
 type GenreTab = 'All' | 'Fantasy' | 'Modern' | 'Sci-Fi';
 type StatusTab = 'All' | 'Enabled' | 'Disabled';
@@ -56,6 +58,7 @@ interface RaceFormData {
   hasSwim: boolean;
   swimSpeed: number;
   enabled: boolean;
+  lookAlikeTags: string[];
 }
 
 const EMPTY_FORM: RaceFormData = {
@@ -63,6 +66,7 @@ const EMPTY_FORM: RaceFormData = {
   genres: ['Fantasy'],
   appearance: '',
   archetypeThemes: '',
+  lookAlikeTags: [],
   defaultAbilityBonus: 'strength',
   hasFly: false,
   flySpeed: 30,
@@ -87,6 +91,7 @@ function raceToFormData(race: Race): RaceFormData {
     hasSwim: race.swimSpeed > 0,
     swimSpeed: race.swimSpeed > 0 ? race.swimSpeed : 30,
     enabled: race.enabled,
+    lookAlikeTags: normalizeLookAlikeTags(race.lookAlikeTags),
   };
 }
 
@@ -118,7 +123,8 @@ export default function AdminRaces() {
         const matchesName = race.name.toLowerCase().includes(query);
         const matchesAppearance = race.appearance?.toLowerCase().includes(query);
         const matchesThemes = race.archetypeThemes?.some((t) => t.toLowerCase().includes(query));
-        if (!matchesName && !matchesAppearance && !matchesThemes) return false;
+        const matchesTags = race.lookAlikeTags?.some((t) => t.toLowerCase().includes(query));
+        if (!matchesName && !matchesAppearance && !matchesThemes && !matchesTags) return false;
       }
       return true;
     });
@@ -182,6 +188,7 @@ export default function AdminRaces() {
       climbSpeed: formData.hasClimb ? Math.max(5, Math.min(60, Number(formData.climbSpeed) || 30)) : 0,
       swimSpeed: formData.hasSwim ? Math.max(5, Math.min(60, Number(formData.swimSpeed) || 30)) : 0,
       enabled: formData.enabled,
+      lookAlikeTags: formData.lookAlikeTags,
     };
 
     setIsSubmitting(true);
@@ -277,7 +284,7 @@ export default function AdminRaces() {
             />
             <input
               type="text"
-              placeholder="Search Races Or Themes..."
+              placeholder="Search Races, Themes, Or Look-Alike Tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input-field pl-8 text-xs"
@@ -390,6 +397,20 @@ export default function AdminRaces() {
                       </span>
                     )}
                   </div>
+
+                  {race.lookAlikeTags && race.lookAlikeTags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      {race.lookAlikeTags.map((tag) => (
+                        <span
+                          key={tag}
+                          title="Look-Alike Tag (Backend Only)"
+                          className="rounded-full border border-brand-accent/40 bg-brand-accent/10 px-2 py-0.5 text-[10px] font-medium text-brand-accent"
+                        >
+                          {formatLookAlikeTagLabel(tag)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Appearance Preview */}
                   {race.appearance && (
@@ -513,6 +534,27 @@ export default function AdminRaces() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <LookAlikeTagsField
+                  value={formData.lookAlikeTags}
+                  onChange={(lookAlikeTags) => setFormData({ ...formData, lookAlikeTags })}
+                />
+                {!editingRace && formData.lookAlikeTags.length > 0 && !formData.name.trim() && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        name: formatLookAlikeTagLabel(formData.lookAlikeTags[0]),
+                      })
+                    }
+                    className="btn-secondary mt-2 text-xs"
+                  >
+                    Use {formatLookAlikeTagLabel(formData.lookAlikeTags[0])} As Race Name
+                  </button>
+                )}
               </div>
 
               {/* Multi-select Fly / Climb / Swim checklist */}

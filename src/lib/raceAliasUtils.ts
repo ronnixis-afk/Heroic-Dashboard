@@ -165,6 +165,57 @@ export function getRacePortraitCount(
   return 0;
 }
 
+/**
+ * Look-alike tags are backend-only visual archetypes stored lowercase (`cat-like`).
+ * The RPG normalizes them again on save (`heroic-ai-rpg/src/constants/raceLookAlike.ts`).
+ */
+export const PRESET_LOOK_ALIKE_TAGS = [
+  'bird-like', 'cat-like', 'dragon-like', 'wolf-like', 'fox-like', 'bear-like',
+  'reptile-like', 'snake-like', 'insect-like', 'crustacean-like', 'aquatic-like', 'shark-like',
+  'frog-like', 'ape-like', 'deer-like', 'rabbit-like', 'bat-like', 'plant-like',
+  'stone-like', 'energy-like', 'robot-like', 'construct-like', 'angel-like', 'demon-like',
+  'fairy-like', 'giant-like',
+] as const;
+
+const LIKE_SUFFIX_RE = /[\s_-]*like$/i;
+
+/** True when a race label is a look-alike slot (e.g. `Cat-Like`). */
+export function isLookAlikeRaceLabel(value: string | undefined | null): boolean {
+  const raw = (value || '').trim();
+  return LIKE_SUFFIX_RE.test(raw) && raw.replace(LIKE_SUFFIX_RE, '').trim().length > 0;
+}
+
+/** `Cat-Like` / `cat like` / `cat` → `cat-like`; empty → `''`. */
+export function normalizeLookAlikeTag(value: string | undefined | null): string {
+  const stem = (value || '')
+    .trim()
+    .toLowerCase()
+    .replace(LIKE_SUFFIX_RE, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return stem ? `${stem}-like` : '';
+}
+
+export function normalizeLookAlikeTags(values: readonly (string | undefined | null)[] | undefined | null): string[] {
+  const out: string[] = [];
+  for (const value of values || []) {
+    const tag = normalizeLookAlikeTag(value);
+    if (tag && !out.includes(tag)) out.push(tag);
+  }
+  return out;
+}
+
+/** Title Case chip label (`cat-like` → `Cat-Like`). */
+export function formatLookAlikeTagLabel(tag: string): string {
+  return tag
+    .split('-')
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
+    .join('-');
+}
+
 /** Genre assumed for catalog Race rows with an empty `genres` list (same default as Media create). */
 export const DEFAULT_RACE_GENRE = 'Fantasy';
 

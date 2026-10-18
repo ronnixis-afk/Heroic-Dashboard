@@ -15,6 +15,8 @@ export interface RacePayload {
   defaultKeywords?: string[];
   languageStyle?: string | null;
   portraitLabel?: string | null;
+  /** Backend-only visual archetype tags (`cat-like`); never shown in the game. */
+  lookAlikeTags?: string[];
   flySpeed?: number;
   climbSpeed?: number;
   swimSpeed?: number;
@@ -32,6 +34,7 @@ export interface Race {
   defaultKeywords: string[];
   languageStyle?: string | null;
   portraitLabel?: string | null;
+  lookAlikeTags?: string[];
   flySpeed: number;
   climbSpeed: number;
   swimSpeed: number;
