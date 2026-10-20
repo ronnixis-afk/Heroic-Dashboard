@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useAuth } from '../../lib/AuthContext';
+import { fetchAiConfig } from '../../hooks/useAiConfig';
 
 interface ModelOption {
   name: string;
   blendedRate: number; // per 1M tokens
-  /** Credit weight vs Gemini 3.1 Flash Lite (1 credit ≈ 1,000 tokens). */
+  /** Credit weight vs the fixed $0.875 / 1M anchor (1 credit ≈ 1,000 tokens at 1.00x). */
   creditMultiplier?: number;
 }
 
-const MODELS: ModelOption[] = [
-  { name: 'Gemini 3.1 Flash Lite', blendedRate: 0.875, creditMultiplier: 1 },
+/** Offline fallback; the RPG catalog replaces the routable rows once loaded. */
+const FALLBACK_MODELS: ModelOption[] = [
+  { name: 'Gemini 3.5 Flash Lite', blendedRate: 1.4, creditMultiplier: 1.6 },
+  { name: 'Gemini 3.8 Flash', blendedRate: 2.25, creditMultiplier: 2.57 },
   { name: 'DeepSeek V4.1 Flash', blendedRate: 0.44, creditMultiplier: 0.5 },
   { name: 'DeepSeek V4 Pro', blendedRate: 1.32, creditMultiplier: 1.51 },
+];
+
+const REFERENCE_MODELS: ModelOption[] = [
   { name: 'Gemini 3.5 Flash', blendedRate: 5.25 },
   { name: 'Gemini 3 Flash', blendedRate: 1.75 },
   { name: 'Gemini 3.1 / 3.5 Pro', blendedRate: 7.00 },
@@ -23,9 +30,31 @@ const MODELS: ModelOption[] = [
 ];
 
 export default function TokenEstimator() {
+  const { getToken } = useAuth();
+  const [models, setModels] = useState<ModelOption[]>([...FALLBACK_MODELS, ...REFERENCE_MODELS]);
   const [tokensProcessed, setTokensProcessed] = useState('2,500,000');
-  const [selectedModel, setSelectedModel] = useState<ModelOption>(MODELS[0]);
-  const [estimatedCost, setEstimatedCost] = useState('2.19');
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(FALLBACK_MODELS[0]);
+  const [estimatedCost, setEstimatedCost] = useState('3.50');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAiConfig(getToken)
+      .then((config) => {
+        if (cancelled || !config.catalog?.length) return;
+        const live = config.catalog.map((m) => ({
+          name: m.displayName,
+          blendedRate: (m.inputUsdPer1M + m.outputUsdPer1M) / 2,
+          creditMultiplier: m.creditMultiplier,
+        }));
+        const liveNames = new Set(live.map((m) => m.name));
+        setModels([...live, ...REFERENCE_MODELS.filter((m) => !liveNames.has(m.name))]);
+        setSelectedModel((current) => live.find((m) => m.name === current.name) ?? current);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
   const [showInputDropdown, setShowInputDropdown] = useState(false);
   const [showUsdDropdown, setShowUsdDropdown] = useState(false);
   const [inputType, setInputType] = useState('Tokens');
@@ -63,7 +92,7 @@ export default function TokenEstimator() {
   };
 
   const handleModelChange = (modelName: string) => {
-    const newModel = MODELS.find(m => m.name === modelName) || MODELS[0];
+    const newModel = models.find(m => m.name === modelName) || models[0];
     setSelectedModel(newModel);
     calculateCost(tokensProcessed, newModel, currencyType);
     trackEvent('estimator_model_changed', { model: modelName });
@@ -125,7 +154,7 @@ export default function TokenEstimator() {
               onChange={(e) => handleModelChange(e.target.value)}
               className="bg-transparent text-xs text-brand-text-muted outline-none cursor-pointer hover:text-white transition-colors border-none p-0"
             >
-              {MODELS.map(m => (
+              {models.map(m => (
                 <option key={m.name} value={m.name} className="bg-brand-bg text-brand-text">
                   {m.name}
                 </option>

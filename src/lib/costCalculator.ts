@@ -11,11 +11,19 @@ export type CatalogRateEntry = {
 
 /** Offline defaults aligned with game app catalog (cache miss). */
 const FALLBACK_CATALOG_RATES: Record<string, { input: number; output: number }> = {
-  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
-  'deepseek-v4.1-flash': { input: 0.22, output: 0.66 },
-  // One-release leftover UsageLog / offline default.
-  'deepseek-v4-flash': { input: 0.22, output: 0.66 },
+  'gemini-3.5-flash-lite': { input: 0.3, output: 2.5 },
+  // Introductory rate; the live catalog switches to $1.50 / $7.50 on 2027-01-01.
+  'gemini-3.8-flash': { input: 0.75, output: 3.75 },
+  'deepseek-flash': { input: 0.22, output: 0.66 },
   'deepseek-v4-pro': { input: 0.66, output: 1.98 },
+};
+
+/** Retired ids keep their historical price for old UsageLog rows; the live catalog never overrides them. */
+const HISTORICAL_RATES: Record<string, { input: number; output: number }> = {
+  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.5 },
+  'deepseek-v4.1-flash': { input: 0.22, output: 0.66 },
+  'deepseek-v4-flash': { input: 0.22, output: 0.66 },
 };
 
 let catalogRates: Record<string, { input: number; output: number }> = {
@@ -38,6 +46,7 @@ export function setCatalogRatesFromApi(catalog: CatalogRateEntry[] | null | unde
 
 function resolveRates(modelLower: string): { input: number; output: number } | null {
   const normalized = modelLower.replace(/^models\//, '');
+  if (HISTORICAL_RATES[normalized]) return HISTORICAL_RATES[normalized];
   if (catalogRates[normalized]) return catalogRates[normalized];
   for (const [id, rates] of Object.entries(catalogRates)) {
     if (normalized.includes(id)) return rates;

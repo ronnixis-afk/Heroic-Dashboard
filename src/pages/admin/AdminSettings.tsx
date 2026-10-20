@@ -47,7 +47,7 @@ export default function AdminSettings() {
     currentFreeUsers: 0,
     referralSignupReward: 200,
     referralPremiumReward: 1000,
-    defaultModel: 'gemini-3.1-flash-lite',
+    defaultModel: 'gemini-3.5-flash-lite',
     npcPortraitSource: 'database',
   });
 

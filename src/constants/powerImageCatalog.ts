@@ -8,7 +8,7 @@
  * Regenerate:
  *   npm run sync:power-catalog
  *
- * Last synced: 2026-10-18
+ * Last synced: 2026-10-20
  */
 
 export const POWER_IMAGE_CATEGORIES = [
