@@ -65,6 +65,7 @@ import {
   OptimizedImageResult,
 } from '../../lib/imageOptimizer';
 import {
+  getRideableImageDescription,
   getRideableTypeSuggestions,
   RideablePortraitGenre,
 } from '../../constants/rideablePortraitCatalog';
@@ -77,8 +78,8 @@ import {
   getItemArtFamilyMembers,
   getItemPortraitCategoryNames,
   getItemPortraitSubtypes,
+  getItemVisualDescription,
   getItemWeightCategory,
-  getUtilityVisualDescription,
   resolveItemArtFamily,
 } from '../../constants/itemPortraitCatalog';
 import {
@@ -636,6 +637,12 @@ const PRIMARY_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
   'Zone Image': 'terrainType',
   'Item Image': 'itemCategory',
   'Power Image': 'powerCategory',
+};
+
+const RIDEABLE_TYPE_METADATA_KEY: Partial<Record<ImageAssetType, string>> = {
+  'Mount Portrait': 'mountType',
+  'Vehicle Portrait': 'vehicleType',
+  'Ship Portrait': 'shipType',
 };
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1312,11 +1319,19 @@ export default function AdminMedia() {
     return [...members].sort((a, b) => a.localeCompare(b));
   }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
 
-  const selectedUtilityVisualDescription = useMemo(() => {
+  const selectedItemVisualDescription = useMemo(() => {
     if (formData.assetType !== 'Item Image') return '';
-    if ((formData.metadata.itemCategory || '').trim().toLowerCase() !== 'utilities') return '';
-    return getUtilityVisualDescription(formData.metadata.itemSubtype || '', structuredGenre);
+    const family = formData.metadata.itemSubtype
+      ? resolveItemArtFamily(formData.metadata.itemSubtype, structuredGenre)
+      : '';
+    return getItemVisualDescription(formData.metadata.itemCategory || '', family, structuredGenre);
   }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
+  const selectedRideableImageDescription = useMemo(() => {
+    const key = RIDEABLE_TYPE_METADATA_KEY[formData.assetType];
+    if (!key) return '';
+    const genre = formData.genre === 'Any Genre' ? null : (structuredGenre as RideablePortraitGenre);
+    return getRideableImageDescription(formData.metadata[key] || '', genre);
+  }, [formData.assetType, formData.genre, formData.metadata, structuredGenre]);
   const powerSubtypeOptions = useMemo(() => {
     const catalogTypes = [...getPowerImageSubtypes(formData.metadata.powerCategory || '')];
     const current = formData.metadata.powerSubtype?.trim();
@@ -2632,8 +2647,8 @@ export default function AdminMedia() {
                         Applies To: {selectedItemArtFamilyMembers.join(', ')}.
                       </p>
                     )}
-                    {selectedUtilityVisualDescription && (
-                      <p className="help-text">{selectedUtilityVisualDescription}</p>
+                    {selectedItemVisualDescription && (
+                      <p className="help-text">{selectedItemVisualDescription}</p>
                     )}
                   </div>
                 )}
@@ -2753,6 +2768,9 @@ export default function AdminMedia() {
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Combat Mounts Sold At Stables For This Genre (E.g. War Destrier, Hover-Bike). Must Match The RPG Catalog Exactly.
                     </p>
+                    {selectedRideableImageDescription && (
+                      <p className="help-text">{selectedRideableImageDescription}</p>
+                    )}
                   </div>
                 )}
 
@@ -2779,6 +2797,9 @@ export default function AdminMedia() {
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Travel Vehicles Sold At The Garage / Motor Pool For This Genre (E.g. Cargo Truck, Speeder Taxi). Must Match The RPG Catalog Exactly.
                     </p>
+                    {selectedRideableImageDescription && (
+                      <p className="help-text">{selectedRideableImageDescription}</p>
+                    )}
                   </div>
                 )}
 
@@ -2805,6 +2826,9 @@ export default function AdminMedia() {
                     <p className="mt-1 text-xs text-brand-text-muted">
                       Shipyard Templates For This Genre (E.g. War Galley, SWAT Command Van, Heavy Dreadnought). Must Match The RPG Catalog Exactly.
                     </p>
+                    {selectedRideableImageDescription && (
+                      <p className="help-text">{selectedRideableImageDescription}</p>
+                    )}
                   </div>
                 )}
 

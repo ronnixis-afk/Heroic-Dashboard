@@ -1222,3 +1222,79 @@ export const getUtilityVisualDescription = (
   genre: string | null | undefined = 'Fantasy'
 ): string =>
   UTILITY_VISUAL_DESCRIPTION_BY_GENRE[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';
+
+/** Consumable art family → "Looks like …" sentence. Image-generation reference only. */
+export const CONSUMABLE_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+  'Fantasy': {
+    'Ability Potion': 'Looks like a tall faceted glass bottle of swirling golden liquid, capped with a pewter stopper shaped like a small clenched fist.',
+    'Combat Potion': 'Looks like a squat iron-banded glass vial of churning orange liquid, sealed with black wax stamped with a crossed swords crest.',
+    'Extra Damage Oil': 'Looks like a small clay flask of thick amber oil with a cloth rag tied around its neck and a dark drip down one side.',
+    'Healing Potion': 'Looks like a round-bellied glass flask of glowing crimson liquid, stoppered with a cork and tied with a twist of red string.',
+    'Immunity Elixir': 'Looks like an ornate crystal decanter of pearly white liquid, crowned with a silver stopper and etched with a small shield rune.',
+    'Resistance Potion': 'Looks like a sturdy square glass bottle of shimmering teal liquid, wrapped in a thin copper cage with a riveted cap.',
+    'Ward Philter': 'Looks like a slim violet glass phial hanging from a leather cord, with a tiny glowing sigil floating inside the liquid.',
+  },
+  'Modern': {
+    'Ability Booster': 'Looks like a small white pill bottle with a bright orange label, a few glossy capsules spilling out beside its child-proof cap.',
+    'Ammo Boost Pack': 'Looks like an olive drab canvas pouch holding a stack of brass-tipped rounds bound with a printed paper band and a velcro flap.',
+    'Combat Stim': 'Looks like a yellow plastic auto-injector pen with a black safety cap and a printed hazard stripe along its barrel.',
+    'Immunity Serum': 'Looks like a sealed metal vial with a blue rubber top and a barcode label, resting in a small insulated cooler case.',
+    'Resistance Serum': 'Looks like a clear glass ampule of pale green serum sitting in a foam-lined case beside a capped disposable syringe.',
+    'Status Ward': 'Looks like a foil blister pack of round white tablets with one tablet popped out and a printed dosage strip.',
+    'Trauma Medkit': 'Looks like a compact red nylon pouch unzipped to show gauze rolls, a tourniquet, trauma shears, and a white cross patch.',
+  },
+  'Sci-Fi': {
+    'Ability Stim': 'Looks like a slim chrome injector with a pulsing amber core visible through a ribbed transparent sleeve and a thumb trigger.',
+    'Combat Stim': 'Looks like an angular black injector with orange warning chevrons, a digital dose counter, and a hissing vent near the tip.',
+    'Immunity Stim': 'Looks like a sealed white capsule injector with a softly glowing halo ring around its middle and a medical cross icon.',
+    'Power Cell Charge': 'Looks like a palm-sized metal battery cell with glowing blue coils inside a clear housing and gold contact pins on each end.',
+    'Resistance Stim': 'Looks like a translucent green cartridge with layered hexagonal patterns inside, clicked into a compact grey injector handle.',
+    'Status Ward': 'Looks like a small adhesive dermal patch with a glowing circuit pattern, peeled halfway off its translucent backing film.',
+    'Stimpack': 'Looks like a short cylindrical injector of white polymer with a glowing red fill window and a retractable needle at one end.',
+  },
+};
+
+/** Throwable art family → "Looks like …" sentence. Image-generation reference only. */
+export const THROWABLE_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+  'Fantasy': {
+    'Bomb': 'Looks like a round black iron sphere with a short braided fuse sticking out of the top, its tip glowing with a spark.',
+    'Control Flask': 'Looks like a bulbous clay flask sealed with a wooden plug, hazy grey vapor seeping out around the cracked rim.',
+    'Damage Vial': 'Looks like a thin glass vial of bubbling orange liquid with a wax-sealed cork and a tiny wisp of smoke curling from it.',
+    'Smoke Grenade': 'Looks like a fist-sized cloth bundle of powder tied tight with twine, a dark wick poking out and pale smoke trailing.',
+  },
+  'Modern': {
+    'Damage Vial': 'Looks like a small shatterproof plastic vial of bright orange chemical with a hazard label and a screw-on red safety cap.',
+    'Flashbang Grenade': 'Looks like a black cylindrical stun grenade with perforated sides, a matte spoon lever, and a bright yellow pull ring.',
+    'Grenade': 'Looks like a ribbed olive drab fragmentation grenade with a steel spoon lever and a round pull ring hanging from its pin.',
+    'Smoke Canister': 'Looks like a green metal can with a stenciled white label and a pull ring on top, thick grey smoke billowing out.',
+  },
+  'Sci-Fi': {
+    'Damage Canister': 'Looks like a small capsule of brushed metal with a glowing orange energy core visible through a narrow window slit.',
+    'Flashbang': 'Looks like a smooth white disc with a glowing ring around its rim and a single recessed trigger button at the center.',
+    'Frag Charge': 'Looks like a compact hexagonal charge of dark alloy plates with a pulsing red arming light and a magnetic base.',
+    'Smoke Screen Canister': 'Looks like a sleek cylinder of matte grey polymer with vent slots along its sides, releasing shimmering dark nanite haze.',
+  },
+};
+
+const ITEM_VISUAL_DESCRIPTIONS_BY_CATEGORY: Readonly<
+  Record<string, Readonly<Record<ItemPortraitGenre, Readonly<Record<string, string>>>>>
+> = {
+  utilities: UTILITY_VISUAL_DESCRIPTION_BY_GENRE,
+  consumables: CONSUMABLE_VISUAL_DESCRIPTION_BY_GENRE,
+  throwables: THROWABLE_VISUAL_DESCRIPTION_BY_GENRE,
+};
+
+/** "Looks like …" sentence for an Item Image category + art family; '' when the category has none. */
+export const getItemVisualDescription = (
+  category: string,
+  name: string,
+  genre: string | null | undefined = 'Fantasy'
+): string => {
+  const byGenre = ITEM_VISUAL_DESCRIPTIONS_BY_CATEGORY[(category || '').trim().toLowerCase()];
+  if (!byGenre) return '';
+  return byGenre[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';
+};

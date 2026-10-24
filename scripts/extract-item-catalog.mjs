@@ -178,12 +178,12 @@ const sliceBraceBody = (src, openIndex) => {
 };
 
 /**
- * UTILITY_VISUAL_DESCRIPTIONS: { Fantasy: { 'Name': 'Looks like ...' }, ... }.
+ * UTILITY / CONSUMABLE / THROWABLE_VISUAL_DESCRIPTIONS: { Fantasy: { 'Name': 'Looks like ...' }, ... }.
  * Image-generation reference for the admin upload form only.
  */
-const extractUtilityVisualDescriptions = (src) => {
+const extractVisualDescriptions = (src, constName) => {
   const result = { Fantasy: new Map(), Modern: new Map(), 'Sci-Fi': new Map() };
-  const root = /(?:export\s+)?const\s+UTILITY_VISUAL_DESCRIPTIONS\s*(?::[^=]+)?=\s*\{/m.exec(src);
+  const root = new RegExp(`(?:export\\s+)?const\\s+${constName}\\s*(?::[^=]+)?=\\s*\\{`, 'm').exec(src);
   if (!root) return result;
   const body = sliceBraceBody(src, root.index + root[0].length - 1);
   const quoted = `(?:'((?:\\\\'|[^'])*)'|"((?:\\\\"|[^"])*)")`;
@@ -490,20 +490,25 @@ for (const genre of GENRES) {
   }
 }
 
-const utilityVisualsByGenre = extractUtilityVisualDescriptions(utilitiesSrc);
-for (const genre of GENRES) {
-  const shelf = new Set(utilitiesByGenre[genre]);
-  const visuals = utilityVisualsByGenre[genre];
+const assertVisualsMatchShelf = (label, genre, shelfNames, visuals) => {
+  const shelf = new Set(shelfNames);
   const missing = [...shelf].filter((name) => !visuals.has(name));
   const extra = [...visuals.keys()].filter((name) => !shelf.has(name));
   if (missing.length > 0 || extra.length > 0) {
     console.error(
-      `[sync:item-catalog] Genre "${genre}" utility visual descriptions do not match the shelf (missing: ${
+      `[sync:item-catalog] Genre "${genre}" ${label} visual descriptions do not match the shelf (missing: ${
         missing.join(', ') || 'none'
       }; not on shelf: ${extra.join(', ') || 'none'}). Aborting.`
     );
     process.exit(1);
   }
+};
+
+const utilityVisualsByGenre = extractVisualDescriptions(utilitiesSrc, 'UTILITY_VISUAL_DESCRIPTIONS');
+const consumableVisualsByGenre = extractVisualDescriptions(consumablesSrc, 'CONSUMABLE_VISUAL_DESCRIPTIONS');
+const throwableVisualsByGenre = extractVisualDescriptions(throwablesSrc, 'THROWABLE_VISUAL_DESCRIPTIONS');
+for (const genre of GENRES) {
+  assertVisualsMatchShelf('utility', genre, utilitiesByGenre[genre], utilityVisualsByGenre[genre]);
 }
 if (utilitiesByGenre.Fantasy.length === 0) {
   const legacy = extractTableNames(registrySrc, 'utilities');
@@ -547,6 +552,8 @@ for (const genre of GENRES) {
   const consumablesFolded = foldThroughFamilies(consumableNames, artFamiliesByGenre[genre]);
   const throwableNames = foldThroughFamilies(throwablesByGenre[genre] || [], artFamiliesByGenre[genre]);
   const utilityNames = foldThroughFamilies(utilitiesByGenre[genre] || [], artFamiliesByGenre[genre]);
+  assertVisualsMatchShelf('consumable', genre, consumablesFolded, consumableVisualsByGenre[genre]);
+  assertVisualsMatchShelf('throwable', genre, throwableNames, throwableVisualsByGenre[genre]);
 
   const weightMap = weightCategoryByGenre[genre];
   for (const [name, weight] of weaponWeightByGenre[genre].entries()) {
@@ -633,10 +640,10 @@ const serializeWeightCategoriesByGenre = () =>
       `  '${genre}': ${serializeWeightCategories(weightCategoryByGenre[genre]).replace(/\n/g, '\n  ')}`
   ).join(',\n');
 
-const serializeUtilityVisualsByGenre = () =>
+const serializeVisualsByGenre = (visualsByGenre) =>
   GENRES.map(
     (genre) =>
-      `  '${genre}': ${serializeArtFamilies(utilityVisualsByGenre[genre]).replace(/\n/g, '\n  ')}`
+      `  '${genre}': ${serializeArtFamilies(visualsByGenre[genre]).replace(/\n/g, '\n  ')}`
   ).join(',\n');
 
 const today = new Date().toISOString().slice(0, 10);
@@ -791,7 +798,7 @@ export const getItemPortraitSubtypes = (
 export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
   Record<ItemPortraitGenre, Readonly<Record<string, string>>>
 > = {
-${serializeUtilityVisualsByGenre()},
+${serializeVisualsByGenre(utilityVisualsByGenre)},
 };
 
 export const getUtilityVisualDescription = (
@@ -799,6 +806,39 @@ export const getUtilityVisualDescription = (
   genre: string | null | undefined = 'Fantasy'
 ): string =>
   UTILITY_VISUAL_DESCRIPTION_BY_GENRE[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';
+
+/** Consumable art family → "Looks like …" sentence. Image-generation reference only. */
+export const CONSUMABLE_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+${serializeVisualsByGenre(consumableVisualsByGenre)},
+};
+
+/** Throwable art family → "Looks like …" sentence. Image-generation reference only. */
+export const THROWABLE_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+${serializeVisualsByGenre(throwableVisualsByGenre)},
+};
+
+const ITEM_VISUAL_DESCRIPTIONS_BY_CATEGORY: Readonly<
+  Record<string, Readonly<Record<ItemPortraitGenre, Readonly<Record<string, string>>>>>
+> = {
+  utilities: UTILITY_VISUAL_DESCRIPTION_BY_GENRE,
+  consumables: CONSUMABLE_VISUAL_DESCRIPTION_BY_GENRE,
+  throwables: THROWABLE_VISUAL_DESCRIPTION_BY_GENRE,
+};
+
+/** "Looks like …" sentence for an Item Image category + art family; '' when the category has none. */
+export const getItemVisualDescription = (
+  category: string,
+  name: string,
+  genre: string | null | undefined = 'Fantasy'
+): string => {
+  const byGenre = ITEM_VISUAL_DESCRIPTIONS_BY_CATEGORY[(category || '').trim().toLowerCase()];
+  if (!byGenre) return '';
+  return byGenre[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';
+};
 `;
 
 fs.writeFileSync(outPath, file);
