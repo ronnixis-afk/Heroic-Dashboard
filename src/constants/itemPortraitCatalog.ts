@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-10-20
+ * Last synced: 2026-10-24
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
@@ -128,19 +128,17 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Utilities',
       subtypes: [
-      'Bedroll',
-      'Chalk',
+      'Bearing Harness',
+      'Binding Focus',
       'Crowbar',
-      'Grappling Hook',
-      'Healer\'s Kit',
-      'Holy Symbol',
+      'Draught of Water Breathing',
+      'Expedition Pack',
+      'Field Cot',
+      'Gill Cowl',
       'Lockpick',
-      'Mirror',
-      'Silk Rope (50 ft)',
-      'Spyglass',
-      'Tinderbox',
-      'Torch',
-      'Waterskin',
+      'Merchant\'s Seal',
+      'Portable Forge',
+      'Wayfinder',
     ],
     },
     {
@@ -302,19 +300,17 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Utilities',
       subtypes: [
-      'Binoculars',
-      'Canteen',
-      'Compact Mirror',
+      'Bargainer\'s Card',
+      'Breather Vial',
       'Crowbar',
-      'First Aid Kit',
-      'Flashlight',
-      'Grappling Hook',
-      'Lighter',
+      'Field Bench',
+      'Frame Backpack',
+      'Load Frame',
       'Lockpick Set',
-      'Marking Chalk',
-      'Multitool',
-      'Paracord (50 ft)',
-      'Sleeping Bag',
+      'Rebreather Mask',
+      'Recovery Blanket',
+      'Signal Anchor',
+      'Trail Gps',
     ],
     },
     {
@@ -490,19 +486,17 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
     {
       name: 'Utilities',
       subtypes: [
-      'Faction Sigil',
-      'Field Medkit',
-      'Glowrod',
-      'Hydration Pack',
-      'Mag-Grapple',
-      'Magnoculars',
-      'Marker Gel',
-      'Mono Cable (50 ft)',
+      'Cargo Harness',
+      'Continuity Beacon',
+      'Inertia Harness',
+      'Micro-Fabricator',
       'Omni-Prybar',
-      'Optic Reflector',
-      'Plasma Igniter',
+      'Oxy-Dose',
+      'Rest Liner',
+      'Route Compiler',
+      'Sealed Respirator',
       'Security Spike',
-      'Thermal Bedroll',
+      'Trade Protocol',
     ],
     },
     {

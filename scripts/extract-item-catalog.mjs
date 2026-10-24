@@ -130,6 +130,42 @@ const extractNamedTemplateArray = (src, constName) => {
 };
 
 /**
+ * Utility shelf names: util('Name') calls, then the first object of each
+ * sharedTools({ pack: 'Expedition Pack', ... }, { ...sentences }) call.
+ * RETIRED_UTILITY_NAMES is never read, so retired chassis are not upload slots.
+ */
+const extractUtilityNames = (src, constName) => {
+  const body = extractConstArrayBody(src, constName);
+  if (!body) return [];
+  const names = extractQuotedNames(body, /util\(\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/);
+  const callRe = /sharedTools\(\s*\{/g;
+  let call;
+  while ((call = callRe.exec(body)) !== null) {
+    const start = call.index + call[0].length - 1;
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < body.length; i++) {
+      if (body[i] === '{') depth++;
+      else if (body[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end < 0) continue;
+    names.push(
+      ...extractQuotedNames(
+        body.slice(start, end + 1),
+        /\w+:\s*(?:'((?:\\'|[^'])*)'|"((?:\\"|[^"])*)")/
+      )
+    );
+  }
+  return names;
+};
+
+/**
  * Extract chassis display names from Record maps:
  * - flat: Fire: 'Resistance Potion'
  * - nested: Fire: { name: 'Damage Vial', role: 'fire_single' }  (name only)
@@ -399,10 +435,21 @@ if (throwablesByGenre.Fantasy.length === 0) {
 }
 
 const utilitiesByGenre = {
-  Fantasy: extractNamedTemplateArray(utilitiesSrc, 'FANTASY_UTILITY_LOOT_TEMPLATES'),
-  Modern: extractNamedTemplateArray(utilitiesSrc, 'MODERN_UTILITY_LOOT_TEMPLATES'),
-  'Sci-Fi': extractNamedTemplateArray(utilitiesSrc, 'SCIFI_UTILITY_LOOT_TEMPLATES'),
+  Fantasy: extractUtilityNames(utilitiesSrc, 'FANTASY_UTILITY_LOOT_TEMPLATES'),
+  Modern: extractUtilityNames(utilitiesSrc, 'MODERN_UTILITY_LOOT_TEMPLATES'),
+  'Sci-Fi': extractUtilityNames(utilitiesSrc, 'SCIFI_UTILITY_LOOT_TEMPLATES'),
 };
+
+const EXPECTED_UTILITY_COUNT = 11;
+for (const genre of GENRES) {
+  const count = new Set(utilitiesByGenre[genre] || []).size;
+  if (count !== EXPECTED_UTILITY_COUNT) {
+    console.error(
+      `[sync:item-catalog] Genre "${genre}" has ${count} Utilities subtypes; expected ${EXPECTED_UTILITY_COUNT}. Aborting.`
+    );
+    process.exit(1);
+  }
+}
 if (utilitiesByGenre.Fantasy.length === 0) {
   const legacy = extractTableNames(registrySrc, 'utilities');
   utilitiesByGenre.Fantasy = legacy;
