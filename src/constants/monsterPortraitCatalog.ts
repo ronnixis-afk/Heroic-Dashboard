@@ -7,7 +7,7 @@
  * Regenerate:
  *   npm run sync:monster-catalog
  *
- * Last synced: 2026-10-20
+ * Last synced: 2026-10-24
  */
 
 export interface MonsterPortraitSubtype {
@@ -39,7 +39,7 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a desert heat shimmer given a solid body of crystal and glass, eyes flashing disorienting mirage light patterns."
       },
       {
-        "name": "Deep-Sea Beholder",
+        "name": "Deepwatch Oculus",
         "visualDescription": "Looks like a bloated floating eyeball the size of a wooden barrel, trailing glowing translucent tentacles like long jellyfish arms."
       },
       {
@@ -363,8 +363,8 @@ export const MONSTER_PORTRAIT_CATALOG: readonly MonsterPortraitType[] = [
         "visualDescription": "Looks like a large silver wolf that leaves glowing trails of wind wherever its paws strike the open grassy ground."
       },
       {
-        "name": "Grove Owlbear",
-        "visualDescription": "Looks like a bear fused with a giant owl, feather furred with glowing green eyes and wooden antler like horns."
+        "name": "Grove Talonbear",
+        "visualDescription": "Looks like a massive forest bear with hooked talons, a feathered ruff, glowing green eyes, and wooden antler-like horns."
       },
       {
         "name": "Cinder Panther",

@@ -165,6 +165,45 @@ const extractUtilityNames = (src, constName) => {
   return names;
 };
 
+const sliceBraceBody = (src, openIndex) => {
+  let depth = 0;
+  for (let i = openIndex; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) return src.slice(openIndex, i + 1);
+    }
+  }
+  return '';
+};
+
+/**
+ * UTILITY_VISUAL_DESCRIPTIONS: { Fantasy: { 'Name': 'Looks like ...' }, ... }.
+ * Image-generation reference for the admin upload form only.
+ */
+const extractUtilityVisualDescriptions = (src) => {
+  const result = { Fantasy: new Map(), Modern: new Map(), 'Sci-Fi': new Map() };
+  const root = /(?:export\s+)?const\s+UTILITY_VISUAL_DESCRIPTIONS\s*(?::[^=]+)?=\s*\{/m.exec(src);
+  if (!root) return result;
+  const body = sliceBraceBody(src, root.index + root[0].length - 1);
+  const quoted = `(?:'((?:\\\\'|[^'])*)'|"((?:\\\\"|[^"])*)")`;
+  const unescape = (s) => s.replace(/\\(['"])/g, '$1');
+  for (const genre of GENRES) {
+    const keyPattern = genre === 'Sci-Fi' ? `['"]Sci-Fi['"]` : `['"]?${genre}['"]?`;
+    const genreMatch = new RegExp(`${keyPattern}\\s*:\\s*\\{`).exec(body);
+    if (!genreMatch) continue;
+    const block = sliceBraceBody(body, genreMatch.index + genreMatch[0].length - 1);
+    const entryRe = new RegExp(`${quoted}\\s*:\\s*${quoted}`, 'g');
+    let entry;
+    while ((entry = entryRe.exec(block)) !== null) {
+      const name = unescape(entry[1] ?? entry[2] ?? '').trim();
+      const sentence = unescape(entry[3] ?? entry[4] ?? '').trim();
+      if (name && sentence) result[genre].set(name, sentence);
+    }
+  }
+  return result;
+};
+
 /**
  * Extract chassis display names from Record maps:
  * - flat: Fire: 'Resistance Potion'
@@ -450,6 +489,22 @@ for (const genre of GENRES) {
     process.exit(1);
   }
 }
+
+const utilityVisualsByGenre = extractUtilityVisualDescriptions(utilitiesSrc);
+for (const genre of GENRES) {
+  const shelf = new Set(utilitiesByGenre[genre]);
+  const visuals = utilityVisualsByGenre[genre];
+  const missing = [...shelf].filter((name) => !visuals.has(name));
+  const extra = [...visuals.keys()].filter((name) => !shelf.has(name));
+  if (missing.length > 0 || extra.length > 0) {
+    console.error(
+      `[sync:item-catalog] Genre "${genre}" utility visual descriptions do not match the shelf (missing: ${
+        missing.join(', ') || 'none'
+      }; not on shelf: ${extra.join(', ') || 'none'}). Aborting.`
+    );
+    process.exit(1);
+  }
+}
 if (utilitiesByGenre.Fantasy.length === 0) {
   const legacy = extractTableNames(registrySrc, 'utilities');
   utilitiesByGenre.Fantasy = legacy;
@@ -576,6 +631,12 @@ const serializeWeightCategoriesByGenre = () =>
   GENRES.map(
     (genre) =>
       `  '${genre}': ${serializeWeightCategories(weightCategoryByGenre[genre]).replace(/\n/g, '\n  ')}`
+  ).join(',\n');
+
+const serializeUtilityVisualsByGenre = () =>
+  GENRES.map(
+    (genre) =>
+      `  '${genre}': ${serializeArtFamilies(utilityVisualsByGenre[genre]).replace(/\n/g, '\n  ')}`
   ).join(',\n');
 
 const today = new Date().toISOString().slice(0, 10);
@@ -725,6 +786,19 @@ export const getItemPortraitSubtypes = (
   );
   return entry?.subtypes ?? [];
 };
+
+/** Utility chassis → "Looks like …" sentence. Image-generation reference only. */
+export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+${serializeUtilityVisualsByGenre()},
+};
+
+export const getUtilityVisualDescription = (
+  name: string,
+  genre: string | null | undefined = 'Fantasy'
+): string =>
+  UTILITY_VISUAL_DESCRIPTION_BY_GENRE[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';
 `;
 
 fs.writeFileSync(outPath, file);

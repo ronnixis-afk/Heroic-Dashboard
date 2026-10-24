@@ -1171,3 +1171,54 @@ export const getItemPortraitSubtypes = (
   );
   return entry?.subtypes ?? [];
 };
+
+/** Utility chassis → "Looks like …" sentence. Image-generation reference only. */
+export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
+  Record<ItemPortraitGenre, Readonly<Record<string, string>>>
+> = {
+  'Fantasy': {
+    'Bearing Harness': 'Looks like broad crossed leather webbing with padded shoulder straps, iron rings, and loops riding on the hips.',
+    'Binding Focus': 'Looks like a carved crystal shard wrapped in silver wire, hanging from a braided cord and glowing faintly from within.',
+    'Crowbar': 'Looks like a long black iron bar with a curved pry hook at one end and a flattened wedge at the other.',
+    'Draught of Water Breathing': 'Looks like a small corked glass vial of pale blue liquid with tiny bubbles drifting upward, sealed with green wax.',
+    'Expedition Pack': 'Looks like a large waxed canvas pack lashed to a wooden frame, with a rolled blanket and brass buckles on the straps.',
+    'Field Cot': 'Looks like a taut canvas bed stretched over a folding wooden X-frame, with leather ties for rolling it up.',
+    'Gill Cowl': 'Looks like a close-fitting leather cowl that covers the jaw and neck, with fan-like gill slits stitched along each side.',
+    'Lockpick': 'Looks like a slender steel pick paired with a bent tension wrench, bound together by a twist of worn leather cord.',
+    'Merchant\'s Seal': 'Looks like a heavy brass signet ring beside a red wax-sealed token stamped with a set of balanced scales.',
+    'Portable Forge': 'Looks like an iron-banded wooden chest that opens into a small folding anvil and a coal brazier with a hand bellows.',
+    'Wayfinder': 'Looks like a brass compass with a floating needle, set into a tooled leather case lined with a folded map.',
+  },
+  'Modern': {
+    'Bargainer\'s Card': 'Looks like a plain matte black metal card with a single embossed logo and a small chip set in one corner.',
+    'Breather Vial': 'Looks like a scored glass ampule of clear blue fluid tucked inside a ribbed plastic sleeve with a pull tab.',
+    'Crowbar': 'Looks like a steel pry bar painted matte red, with a black rubber grip and a split claw at the curved end.',
+    'Field Bench': 'Looks like a compact folding steel work bench with a small vise, a clip-on lamp, and a tray of hand tools.',
+    'Frame Backpack': 'Looks like a tall nylon hiking pack on an aluminum frame, with a padded hip belt and side compression straps.',
+    'Load Frame': 'Looks like an external aluminum backpack frame with nylon webbing, a padded hip belt, and cargo lash points.',
+    'Lockpick Set': 'Looks like a black vinyl roll opened flat, holding a row of thin steel picks and tension wrenches in elastic loops.',
+    'Rebreather Mask': 'Looks like a black rubber half-mask over the mouth and nose, with a compact canister clipped under the jaw.',
+    'Recovery Blanket': 'Looks like a crinkled silver and olive insulated blanket half pulled from a small drawstring stuff sack.',
+    'Signal Anchor': 'Looks like a fist-sized weatherproof beacon in yellow plastic with a blinking light and a thin whip antenna.',
+    'Trail Gps': 'Looks like a rugged handheld unit in orange rubber armor, with a small screen showing a topographic trail line.',
+  },
+  'Sci-Fi': {
+    'Cargo Harness': 'Looks like a modular webbing harness of grey composite straps, with a compact chest winch and magnetic clamps.',
+    'Continuity Beacon': 'Looks like a smooth palm-sized puck with a pulsing core light visible through a ring of transparent panels.',
+    'Inertia Harness': 'Looks like a lightweight body harness studded with small glowing nodes at the shoulders, hips, and knees.',
+    'Micro-Fabricator': 'Looks like a pocket-sized matte brick that opens to reveal a glowing print bay and a tiny articulated nozzle.',
+    'Omni-Prybar': 'Looks like a sleek powered lever of brushed alloy, with a lit grip and a split wedge tip that hums faintly.',
+    'Oxy-Dose': 'Looks like a single-use inhaler ampule of white polymer, with a cyan fill window and a twist-off cap.',
+    'Rest Liner': 'Looks like a thin rollable sleeping pad of soft polymer, with a glowing status strip running along one edge.',
+    'Route Compiler': 'Looks like a slim handheld device projecting a faint holographic route line and star map above its screen.',
+    'Sealed Respirator': 'Looks like a full-face transparent visor mask joined to an armored neck collar with twin filter ports.',
+    'Security Spike': 'Looks like a short metallic data needle with a ribbed grip and a thin glowing band running around its tip.',
+    'Trade Protocol': 'Looks like a thin translucent data wafer etched with lit circuitry, glowing softly when held between two fingers.',
+  },
+};
+
+export const getUtilityVisualDescription = (
+  name: string,
+  genre: string | null | undefined = 'Fantasy'
+): string =>
+  UTILITY_VISUAL_DESCRIPTION_BY_GENRE[resolveItemPortraitGenre(genre)][(name || '').trim()] ?? '';

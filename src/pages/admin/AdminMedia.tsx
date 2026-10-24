@@ -78,6 +78,7 @@ import {
   getItemPortraitCategoryNames,
   getItemPortraitSubtypes,
   getItemWeightCategory,
+  getUtilityVisualDescription,
   resolveItemArtFamily,
 } from '../../constants/itemPortraitCatalog';
 import {
@@ -1309,6 +1310,12 @@ export default function AdminMedia() {
     const members = getItemArtFamilyMembers(family, structuredGenre);
     if (members.length === 0) return [family];
     return [...members].sort((a, b) => a.localeCompare(b));
+  }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
+
+  const selectedUtilityVisualDescription = useMemo(() => {
+    if (formData.assetType !== 'Item Image') return '';
+    if ((formData.metadata.itemCategory || '').trim().toLowerCase() !== 'utilities') return '';
+    return getUtilityVisualDescription(formData.metadata.itemSubtype || '', structuredGenre);
   }, [formData.assetType, formData.metadata.itemCategory, formData.metadata.itemSubtype, structuredGenre]);
   const powerSubtypeOptions = useMemo(() => {
     const catalogTypes = [...getPowerImageSubtypes(formData.metadata.powerCategory || '')];
@@ -2624,6 +2631,9 @@ export default function AdminMedia() {
                       <p className="text-xs text-brand-text-muted">
                         Applies To: {selectedItemArtFamilyMembers.join(', ')}.
                       </p>
+                    )}
+                    {selectedUtilityVisualDescription && (
+                      <p className="help-text">{selectedUtilityVisualDescription}</p>
                     )}
                   </div>
                 )}
