@@ -20,7 +20,8 @@ export const IMAGE_ASSET_PAGE_SIZE = 60;
 export const IMAGE_ASSET_FACET_QUERY_KEY = ['image-asset-facets'] as const;
 const REALTIME_INVALIDATE_DEBOUNCE_MS = 5000;
 
-export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern'] as const;
+/** `Mixed` holds Monster Portraits for non-humanoid subtypes that spawn in several genres. */
+export const IMAGE_GENRES = ['Any Genre', 'Fantasy', 'Sci-Fi', 'Modern', 'Mixed'] as const;
 export const IMAGE_ASSET_TYPES = [
   'Character Portrait',
   'Monster Portrait',

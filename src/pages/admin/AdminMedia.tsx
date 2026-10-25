@@ -32,7 +32,7 @@ import {
   ImageGenre,
   useImageAssets,
 } from '../../hooks/useImageAssets';
-import { useMonsterCatalogWithSubtypes } from '../../hooks/useMonsterCatalog';
+import { useMonsterCatalogWithSubtypes, type MonsterTypePortraitLite } from '../../hooks/useMonsterCatalog';
 import { useDiscoveredRaces } from '../../hooks/useDiscoveredRaces';
 import { useRaceCatalog, type Race, type RaceGenre } from '../../hooks/useRaceCatalog';
 import {
@@ -57,6 +57,11 @@ import {
   formatOptionLabel,
   getCount,
 } from '../../lib/imageAssetFacetCounts';
+import {
+  isMonsterSubtypeInImageGenre,
+  isSharedMonsterSubtype,
+  MIXED_IMAGE_GENRE,
+} from '../../lib/monsterPortraitGenreBuckets';
 import { formatBytes } from '../../lib/utils';
 import {
   optimizeImageToOriginalWebp,
@@ -95,16 +100,19 @@ import {
   ORIGIN_ITEM_OPTIONS,
 } from '../../constants/originItemCatalog';
 
-type SpecificImageGenre = Exclude<ImageGenre, 'Any Genre'>;
+type PooledImageGenre = 'Any Genre' | 'Mixed';
+type SpecificImageGenre = Exclude<ImageGenre, PooledImageGenre>;
+
+const isPooledImageGenre = (genre: ImageGenre): genre is PooledImageGenre =>
+  genre === 'Any Genre' || genre === MIXED_IMAGE_GENRE;
 
 const GENERATED_MONSTER_TYPE_OPTIONS = getMonsterTypeNames();
 const ITEM_CATEGORY_OPTIONS = getItemPortraitCategoryNames();
 const POWER_IMAGE_CATEGORY_OPTIONS = getPowerImageCategoryNames();
 /** Uploadable types. */
 const UPLOADABLE_IMAGE_ASSET_TYPES = [...IMAGE_ASSET_TYPES] as ImageAssetType[];
-const getAssetTypeOptionsForGenre = (
-  _genre: ImageGenre
-): ImageAssetType[] => [...UPLOADABLE_IMAGE_ASSET_TYPES];
+const getAssetTypeOptionsForGenre = (genre: ImageGenre): ImageAssetType[] =>
+  genre === MIXED_IMAGE_GENRE ? ['Monster Portrait'] : [...UPLOADABLE_IMAGE_ASSET_TYPES];
 
 const WEIGHT_SORT_ORDER: Record<string, number> = {
   Light: 0,
@@ -287,7 +295,7 @@ const ALL_ZONE_TERRAIN_OPTIONS = new Set(
 );
 
 const getZoneTerrainOptions = (genre: ImageGenre): string[] => {
-  if (genre !== 'Any Genre') return ZONE_TERRAIN_OPTIONS[genre];
+  if (!isPooledImageGenre(genre)) return ZONE_TERRAIN_OPTIONS[genre];
   const seen = new Set<string>();
   const out: string[] = [];
   for (const list of Object.values(ZONE_TERRAIN_OPTIONS)) {
@@ -367,7 +375,7 @@ const mergeRideableTypeOptions = (
 };
 
 const assetMatchesStructuredGenre = (assetGenre: string, formGenre: ImageGenre, structuredGenre: SpecificImageGenre) => {
-  if (formGenre === 'Any Genre') {
+  if (isPooledImageGenre(formGenre)) {
     return assetGenre === structuredGenre || assetGenre === 'Any Genre';
   }
   return assetGenre === formGenre || assetGenre === 'Any Genre';
@@ -437,7 +445,7 @@ const ALL_SUGGESTED_PORTRAIT_RACES = [
 ].sort((a, b) => a.localeCompare(b));
 
 const getSuggestedPortraitRacesForGenre = (genre: ImageGenre): string[] => {
-  if (genre === 'Any Genre') {
+  if (isPooledImageGenre(genre)) {
     return [...ALL_SUGGESTED_PORTRAIT_RACES];
   }
   return [...(SUGGESTED_PORTRAIT_RACES_BY_GENRE[genre] || ALL_SUGGESTED_PORTRAIT_RACES)];
@@ -543,7 +551,7 @@ const RACE_MOVEMENT_MODES: ReadonlyArray<{
 ];
 
 const getStructuredGenre = (genre: ImageGenre): SpecificImageGenre =>
-  genre === 'Any Genre' ? 'Fantasy' : genre;
+  isPooledImageGenre(genre) ? 'Fantasy' : genre;
 
 const initialForm = {
   genre: 'Fantasy' as ImageGenre,
@@ -801,20 +809,11 @@ export default function AdminMedia() {
   } = useMonsterCatalogWithSubtypes();
 
   const liveMonsterTypesByName = useMemo(() => {
-    const map: Record<string, { id: string; subtypes: Array<{ id: string; name: string; visualDescription: string }> }> =
-      {};
+    const map: Record<string, MonsterTypePortraitLite> = {};
     for (const t of liveMonsterTypesWithSubtypes) {
       map[t.name] = t;
     }
     return map;
-  }, [liveMonsterTypesWithSubtypes]);
-
-  const monsterTypeOptions = useMemo(() => {
-    const generatedSet = new Set(GENERATED_MONSTER_TYPE_OPTIONS);
-    const appended = liveMonsterTypesWithSubtypes
-      .map((t) => t.name)
-      .filter((name) => !generatedSet.has(name));
-    return [...GENERATED_MONSTER_TYPE_OPTIONS, ...appended];
   }, [liveMonsterTypesWithSubtypes]);
 
   const {
@@ -1258,17 +1257,49 @@ export default function AdminMedia() {
     if (current && !catalog.includes(current)) return [...catalog, current];
     return catalog;
   }, [formData.genre, formData.metadata.terrainType]);
+  const monsterTypeOptions = useMemo(() => {
+    const generatedSet = new Set(GENERATED_MONSTER_TYPE_OPTIONS);
+    const appended = liveMonsterTypesWithSubtypes
+      .map((t) => t.name)
+      .filter((name) => !generatedSet.has(name));
+    const all = [...GENERATED_MONSTER_TYPE_OPTIONS, ...appended];
+    // The generated fallback has no genres, so stay unfiltered until the live catalog loads.
+    if (liveMonsterTypesWithSubtypes.length === 0) return all;
+    const current = formData.metadata.monsterType || '';
+    return all.filter((typeName) => {
+      if (typeName === current) return true;
+      const liveType = liveMonsterTypesByName[typeName];
+      if (!liveType) return formData.genre !== MIXED_IMAGE_GENRE;
+      return liveType.subtypes.some((subtype) =>
+        isMonsterSubtypeInImageGenre(typeName, subtype.genres, liveType.genres, formData.genre)
+      );
+    });
+  }, [formData.genre, formData.metadata.monsterType, liveMonsterTypesByName, liveMonsterTypesWithSubtypes]);
   const monsterSubtypeOptions = useMemo(
     () => {
       const typeName = formData.metadata.monsterType || '';
       const liveType = liveMonsterTypesByName[typeName];
-      if (liveType && Array.isArray(liveType.subtypes)) return liveType.subtypes;
+      if (liveType && Array.isArray(liveType.subtypes)) {
+        const current = formData.metadata.monsterSubtype || '';
+        return liveType.subtypes.filter(
+          (subtype) =>
+            subtype.name === current ||
+            isMonsterSubtypeInImageGenre(typeName, subtype.genres, liveType.genres, formData.genre)
+        );
+      }
 
       // Fallback: generated catalog (stale but keeps the page usable before live load).
       return getMonsterSubtypes(typeName);
     },
-    [formData.metadata.monsterType, liveMonsterTypesByName]
+    [formData.genre, formData.metadata.monsterType, formData.metadata.monsterSubtype, liveMonsterTypesByName]
   );
+  const selectedMonsterSubtypeIsShared = useMemo(() => {
+    const typeName = formData.metadata.monsterType || '';
+    const liveType = liveMonsterTypesByName[typeName];
+    const liveSubtype = liveType?.subtypes.find((s) => s.name === formData.metadata.monsterSubtype);
+    if (!liveType || !liveSubtype) return false;
+    return isSharedMonsterSubtype(typeName, liveSubtype.genres, liveType.genres);
+  }, [formData.metadata.monsterType, formData.metadata.monsterSubtype, liveMonsterTypesByName]);
 
   const selectedMonsterSubtypeVisualDescription = useMemo(() => {
     const typeName = formData.metadata.monsterType || '';
@@ -2119,7 +2150,9 @@ export default function AdminMedia() {
                       const allowedTypes = getAssetTypeOptionsForGenre(nextGenre);
                       const nextAssetType = allowedTypes.includes(formData.assetType)
                         ? formData.assetType
-                        : 'Character Portrait';
+                        : nextGenre === MIXED_IMAGE_GENRE
+                          ? 'Monster Portrait'
+                          : 'Character Portrait';
                       setFormData((current) => {
                         const nextForm = {
                           ...current,
@@ -2882,6 +2915,16 @@ export default function AdminMedia() {
                     {formData.metadata.monsterSubtype && (
                       <p className="help-text">
                         {selectedMonsterSubtypeVisualDescription}
+                      </p>
+                    )}
+                    {selectedMonsterSubtypeIsShared && formData.genre !== MIXED_IMAGE_GENRE && (
+                      <p className="help-text">
+                        This Subtype Spawns In Several Genres. Upload Under Mixed So Every Genre Shares One Library.
+                      </p>
+                    )}
+                    {formData.genre === MIXED_IMAGE_GENRE && (
+                      <p className="help-text">
+                        Mixed Lists Non-Humanoid Subtypes That Spawn In Two Or More Genres. Every Genre They Spawn In Uses This One Library.
                       </p>
                     )}
                     <div>

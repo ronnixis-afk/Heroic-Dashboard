@@ -154,6 +154,8 @@ export interface MonsterSubtypePortraitLite {
   id: string;
   name: string;
   visualDescription: string;
+  /** Own genre tags; empty inherits the type's genres. */
+  genres: MonsterGenre[];
   enabled: boolean;
   isProtected: boolean;
 }
@@ -191,6 +193,7 @@ async function fetchMonsterTypesWithSubtypes(getToken: (options?: any) => Promis
           id: String(s.id),
           name: String(s.name),
           visualDescription: String(s.visualDescription ?? ''),
+          genres: Array.isArray(s.genres) ? (s.genres as MonsterGenre[]) : [],
           enabled: Boolean(s.enabled),
           isProtected: Boolean(s.isProtected),
         }))
