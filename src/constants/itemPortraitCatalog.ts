@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-10-27
+ * Last synced: 2026-10-28
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
@@ -138,6 +138,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       'Lockpick',
       'Merchant\'s Seal',
       'Portable Forge',
+      'Repair Kit',
       'Wayfinder',
     ],
     },
@@ -307,6 +308,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       'Frame Backpack',
       'Load Frame',
       'Lockpick Set',
+      'Patch Kit',
       'Recovery Blanket',
       'Scuba Gear',
       'Signal Anchor',
@@ -491,6 +493,7 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       'Continuity Beacon',
       'Inertia Harness',
       'Micro-Fabricator',
+      'Nanite Seal',
       'Omni-Prybar',
       'Oxy-Dose',
       'Rest Liner',
@@ -1187,6 +1190,7 @@ export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
     'Lockpick': 'Looks like a slender steel pick paired with a bent tension wrench, bound together by a twist of worn leather cord.',
     'Merchant\'s Seal': 'Looks like a heavy brass signet ring beside a red wax-sealed token stamped with a set of balanced scales.',
     'Portable Forge': 'Looks like an iron-banded wooden chest that opens into a small folding anvil and a coal brazier with a hand bellows.',
+    'Repair Kit': 'Looks like a rope-bound wooden crate holding a tarred pitch pot, coils of oakum, a caulking mallet, and short spare planks.',
     'Wayfinder': 'Looks like a brass compass with a floating needle, set into a tooled leather case lined with a folded map.',
   },
   'Modern': {
@@ -1197,6 +1201,7 @@ export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
     'Frame Backpack': 'Looks like a tall nylon hiking pack on an aluminum frame, with a padded hip belt and side compression straps.',
     'Load Frame': 'Looks like an external aluminum backpack frame with nylon webbing, a padded hip belt, and cargo lash points.',
     'Lockpick Set': 'Looks like a black vinyl roll opened flat, holding a row of thin steel picks and tension wrenches in elastic loops.',
+    'Patch Kit': 'Looks like an orange hard-shell case opened flat, holding curved steel patch plates, a rivet gun, and twin tubes of marine epoxy.',
     'Recovery Blanket': 'Looks like a crinkled silver and olive insulated blanket half pulled from a small drawstring stuff sack.',
     'Scuba Gear': 'Looks like a black rubber half-mask over the mouth and nose, with a compact canister clipped under the jaw.',
     'Signal Anchor': 'Looks like a fist-sized weatherproof beacon in yellow plastic with a blinking light and a thin whip antenna.',
@@ -1208,6 +1213,7 @@ export const UTILITY_VISUAL_DESCRIPTION_BY_GENRE: Readonly<
     'Continuity Beacon': 'Looks like a smooth palm-sized puck with a pulsing core light visible through a ring of transparent panels.',
     'Inertia Harness': 'Looks like a lightweight body harness studded with small glowing nodes at the shoulders, hips, and knees.',
     'Micro-Fabricator': 'Looks like a pocket-sized matte brick that opens to reveal a glowing print bay and a tiny articulated nozzle.',
+    'Nanite Seal': 'Looks like a white pressurized canister with a glowing silver nozzle, strapped beside a stack of thin hexagonal hull plates.',
     'Omni-Prybar': 'Looks like a sleek powered lever of brushed alloy, with a lit grip and a split wedge tip that hums faintly.',
     'Oxy-Dose': 'Looks like a single-use inhaler ampule of white polymer, with a cyan fill window and a twist-off cap.',
     'Rest Liner': 'Looks like a thin rollable sleeping pad of soft polymer, with a glowing status strip running along one edge.',

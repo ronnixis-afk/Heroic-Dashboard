@@ -479,7 +479,7 @@ const utilitiesByGenre = {
   'Sci-Fi': extractUtilityNames(utilitiesSrc, 'SCIFI_UTILITY_LOOT_TEMPLATES'),
 };
 
-const EXPECTED_UTILITY_COUNT = 11;
+const EXPECTED_UTILITY_COUNT = 12;
 for (const genre of GENRES) {
   const count = new Set(utilitiesByGenre[genre] || []).size;
   if (count !== EXPECTED_UTILITY_COUNT) {
