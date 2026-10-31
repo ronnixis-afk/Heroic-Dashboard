@@ -33,6 +33,7 @@ import {
   useImageAssets,
 } from '../../hooks/useImageAssets';
 import {
+  SHIP_MONSTER_TYPE_NAME,
   isShipMonsterType,
   useMonsterCatalogWithSubtypes,
   type MonsterGenre,
@@ -1223,10 +1224,23 @@ export default function AdminMedia() {
     () => countByMetadataKey(facetRows, 'shipType', formAssetTypeScope),
     [facetRows, formAssetTypeScope]
   );
-  const monsterTypeCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'monsterType', formAssetTypeScope),
-    [facetRows, formAssetTypeScope]
+  /** Ship art lives as Ship Portrait rows keyed by `shipType` (the game's match key). */
+  const shipPortraitScope = useMemo(
+    () => ({ genre: formData.genre, assetTypes: ['Ship Portrait'] }),
+    [formData.genre]
   );
+  const isShipMonsterForm =
+    formData.assetType === 'Monster Portrait' &&
+    isShipMonsterType({ name: formData.metadata.monsterType });
+  const monsterTypeCounts = useMemo(() => {
+    const counts = countByMetadataKey(facetRows, 'monsterType', formAssetTypeScope);
+    if (formData.assetType !== 'Monster Portrait') return counts;
+    return {
+      ...counts,
+      [SHIP_MONSTER_TYPE_NAME]:
+        (counts[SHIP_MONSTER_TYPE_NAME] || 0) + countScopedTotal(facetRows, shipPortraitScope),
+    };
+  }, [facetRows, formAssetTypeScope, formData.assetType, shipPortraitScope]);
   const monsterSubtypeScope = useMemo(
     () => ({
       ...formAssetTypeScope,
@@ -1234,13 +1248,21 @@ export default function AdminMedia() {
     }),
     [formAssetTypeScope, formData.metadata.monsterType]
   );
-  const monsterSubtypeCounts = useMemo(
-    () => countByMetadataKey(facetRows, 'monsterSubtype', monsterSubtypeScope),
-    [facetRows, monsterSubtypeScope]
-  );
+  const monsterSubtypeCounts = useMemo(() => {
+    const counts = countByMetadataKey(facetRows, 'monsterSubtype', monsterSubtypeScope);
+    if (!isShipMonsterForm) return counts;
+    const shipCounts = countByMetadataKey(facetRows, 'shipType', shipPortraitScope);
+    const merged = { ...counts };
+    for (const [name, count] of Object.entries(shipCounts)) {
+      merged[name] = (merged[name] || 0) + count;
+    }
+    return merged;
+  }, [facetRows, monsterSubtypeScope, isShipMonsterForm, shipPortraitScope]);
   const monsterSubtypeTotal = useMemo(
-    () => countScopedTotal(facetRows, monsterSubtypeScope),
-    [facetRows, monsterSubtypeScope]
+    () =>
+      countScopedTotal(facetRows, monsterSubtypeScope) +
+      (isShipMonsterForm ? countScopedTotal(facetRows, shipPortraitScope) : 0),
+    [facetRows, monsterSubtypeScope, isShipMonsterForm, shipPortraitScope]
   );
   const libraryAssetTypeCounts = useMemo(
     () => countByAssetType(facetRows, { genre: filters.genre }),
@@ -1674,6 +1696,19 @@ export default function AdminMedia() {
         formData.assetType === 'Origin Item'
           ? { ...formData, genre: 'Any Genre' as ImageGenre }
           : { ...formData, metadata: { ...formData.metadata } };
+
+      if (saveData.assetType === 'Monster Portrait' && isShipMonsterType({ name: saveData.metadata.monsterType })) {
+        const shipName = saveData.metadata.monsterSubtype?.trim();
+        if (!shipName) {
+          throw new Error('Pick A Ship Subtype. Ship Art Is Matched By Ship Name.');
+        }
+        // The game resolves hull art as Ship Portrait by metadata.shipType.
+        saveData = {
+          ...saveData,
+          assetType: 'Ship Portrait',
+          metadata: { ...saveData.metadata, shipType: shipName },
+        };
+      }
 
       let catalogMovementNote: string | null = null;
 
