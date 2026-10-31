@@ -22,6 +22,7 @@ import {
 import { cn } from '../../lib/utils';
 import {
   formatMonsterTypeLevelRange,
+  isShipMonsterType,
   useMonsterCatalog,
   useMonsterTypeDetails,
   COMBAT_FLAVOR_DAMAGE_TYPES,
@@ -43,9 +44,19 @@ import {
   type MonsterType,
   type MonsterTypePayload,
 } from '../../hooks/useMonsterCatalog';
+import {
+  EMPTY_SHIP_DRAFT,
+  SHIP_ATMOSPHERE_TERRAINS,
+  SHIP_SPACE_TERRAINS,
+  ShipDetailsFields,
+  shipDraftFromSubtype,
+  shipPayloadFromDraft,
+  type ShipDraft,
+} from './MonsterShipFields';
 
 type CatalogFilter = 'All' | 'Enabled' | 'Disabled';
 type SubtypeDraft = {
+  ship: ShipDraft;
   visualDescription: string;
   size: string;
   allowedTerrains: string[];
@@ -180,6 +191,13 @@ const EMPTY_SUB_FORM = {
   minEncounterLevel: 1,
   genres: [] as MonsterGenre[],
   enabled: true,
+  ship: EMPTY_SHIP_DRAFT,
+};
+
+const EMPTY_SHIP_SUB_FORM = {
+  ...EMPTY_SUB_FORM,
+  size: 'Large',
+  allowedTerrains: [...SHIP_ATMOSPHERE_TERRAINS],
 };
 
 const subtypeLevel = (subtype: Pick<MonsterSubtype, 'minEncounterLevel'>): number =>
@@ -582,6 +600,7 @@ export default function AdminMonsters() {
   );
   const selectedType = typeDetails ?? catalogType;
   const templateType = catalogType || types[0] || null;
+  const isShipType = isShipMonsterType(selectedType);
 
   const stats = useMemo(() => {
     const enabled = types.filter((type) => type.enabled).length;
@@ -644,6 +663,10 @@ export default function AdminMonsters() {
     setAddingSubtype(false);
     setSubtypeQuery('');
   }, [selectedTypeId]);
+
+  useEffect(() => {
+    setSubForm(isShipType ? EMPTY_SHIP_SUB_FORM : EMPTY_SUB_FORM);
+  }, [selectedTypeId, isShipType]);
 
   useEffect(() => {
     if (!selectedType || selectedType.id !== selectedTypeId) return;
@@ -773,10 +796,11 @@ export default function AdminMonsters() {
         spawnRank: subForm.spawnRank,
         minEncounterLevel: subForm.minEncounterLevel,
         genres: subForm.genres,
+        ...(isShipType ? shipPayloadFromDraft(subForm.ship) : {}),
       });
-      setSubForm(EMPTY_SUB_FORM);
+      setSubForm(isShipType ? EMPTY_SHIP_SUB_FORM : EMPTY_SUB_FORM);
       setAddingSubtype(false);
-      setStatus({ type: 'success', msg: 'Monster Subtype Created.' });
+      setStatus({ type: 'success', msg: isShipType ? 'Ship Created.' : 'Monster Subtype Created.' });
     } catch (e: unknown) {
       setStatus({ type: 'error', msg: e instanceof Error ? e.message : 'Failed To Create Monster Subtype.' });
     } finally {
@@ -801,6 +825,7 @@ export default function AdminMonsters() {
           enabled: Boolean(subtype.enabled),
           combatFlavor: { ...(subtype.combatFlavor || {}) },
           flavorTemplate: 'Brute',
+          ship: shipDraftFromSubtype(subtype),
         },
       };
     });
@@ -851,17 +876,29 @@ export default function AdminMonsters() {
     setStatus(null);
     setSaving(true);
     try {
-      await updateSubtype(selectedTypeId, subtype.id, {
-        visualDescription: draft.visualDescription.trim(),
-        size: draft.size,
-        allowedTerrains: draft.allowedTerrains,
-        canSpeak: draft.canSpeak,
-        spawnRank: draft.spawnRank,
-        minEncounterLevel: draft.minEncounterLevel,
-        genres: draft.genres,
-        enabled: draft.enabled,
-        combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
-      });
+      await updateSubtype(
+        selectedTypeId,
+        subtype.id,
+        isShipType
+          ? {
+              visualDescription: draft.visualDescription.trim(),
+              size: draft.size,
+              allowedTerrains: draft.allowedTerrains,
+              enabled: draft.enabled,
+              ...shipPayloadFromDraft(draft.ship),
+            }
+          : {
+              visualDescription: draft.visualDescription.trim(),
+              size: draft.size,
+              allowedTerrains: draft.allowedTerrains,
+              canSpeak: draft.canSpeak,
+              spawnRank: draft.spawnRank,
+              minEncounterLevel: draft.minEncounterLevel,
+              genres: draft.genres,
+              enabled: draft.enabled,
+              combatFlavor: compactCombatFlavor(draft.combatFlavor, subtype.combatFlavor),
+            }
+      );
       setSubtypeDrafts((prev) => {
         const next = { ...prev };
         delete next[subtype.id];
@@ -1206,7 +1243,11 @@ export default function AdminMonsters() {
                 <div className="card-header">
                   <div>
                     <h2 className="card-title">Subtypes</h2>
-                    <p className="card-subtitle">Expand a row to edit visual identity, size, and terrains.</p>
+                    <p className="card-subtitle">
+                      {isShipType
+                        ? 'Each subtype is a hull sold at shipyards and crewed as an enemy ship. Expand a row to edit price, CR, and crew.'
+                        : 'Expand a row to edit visual identity, size, and terrains.'}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -1214,7 +1255,7 @@ export default function AdminMonsters() {
                     onClick={() => setAddingSubtype((open) => !open)}
                   >
                     {addingSubtype ? <X size={12} /> : <Plus size={12} />}
-                    {addingSubtype ? 'Cancel' : 'Add Subtype'}
+                    {addingSubtype ? 'Cancel' : isShipType ? 'Add Ship' : 'Add Subtype'}
                   </button>
                 </div>
 
@@ -1288,29 +1329,45 @@ export default function AdminMonsters() {
                         }))
                       }
                     />
-                    <SubtypeGenresField
-                      value={subForm.genres}
-                      typeGenres={selectedType.genres || []}
-                      onChange={(genres) => setSubForm((prev) => ({ ...prev, genres }))}
-                    />
-                    <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
-                      <CanSpeakSelect
-                        id="sub-can-speak"
-                        value={subForm.canSpeak}
-                        typeDefault={Boolean(selectedType.canSpeak)}
-                        onChange={(canSpeak) => setSubForm((prev) => ({ ...prev, canSpeak }))}
+                    {isShipType ? (
+                      <ShipDetailsFields
+                        idPrefix="sub-ship"
+                        value={subForm.ship}
+                        onChange={(patch) => setSubForm((prev) => ({ ...prev, ship: { ...prev.ship, ...patch } }))}
+                        onSpaceCapableChange={(spaceCapable) =>
+                          setSubForm((prev) => ({
+                            ...prev,
+                            allowedTerrains: [...(spaceCapable ? SHIP_SPACE_TERRAINS : SHIP_ATMOSPHERE_TERRAINS)],
+                          }))
+                        }
                       />
-                      <SpawnRankSelect
-                        id="sub-spawn-rank"
-                        value={subForm.spawnRank}
-                        onChange={(spawnRank) => setSubForm((prev) => ({ ...prev, spawnRank }))}
-                      />
-                      <MinEncounterLevelInput
-                        id="sub-min-level"
-                        value={subForm.minEncounterLevel}
-                        onChange={(minEncounterLevel) => setSubForm((prev) => ({ ...prev, minEncounterLevel }))}
-                      />
-                    </div>
+                    ) : (
+                      <>
+                        <SubtypeGenresField
+                          value={subForm.genres}
+                          typeGenres={selectedType.genres || []}
+                          onChange={(genres) => setSubForm((prev) => ({ ...prev, genres }))}
+                        />
+                        <div className="grid gap-3 sm:grid-cols-3 sm:max-w-[864px]">
+                          <CanSpeakSelect
+                            id="sub-can-speak"
+                            value={subForm.canSpeak}
+                            typeDefault={Boolean(selectedType.canSpeak)}
+                            onChange={(canSpeak) => setSubForm((prev) => ({ ...prev, canSpeak }))}
+                          />
+                          <SpawnRankSelect
+                            id="sub-spawn-rank"
+                            value={subForm.spawnRank}
+                            onChange={(spawnRank) => setSubForm((prev) => ({ ...prev, spawnRank }))}
+                          />
+                          <MinEncounterLevelInput
+                            id="sub-min-level"
+                            value={subForm.minEncounterLevel}
+                            onChange={(minEncounterLevel) => setSubForm((prev) => ({ ...prev, minEncounterLevel }))}
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className="flex items-center justify-between">
                       <ToggleSwitch
                         checked={subForm.enabled}
@@ -1324,7 +1381,7 @@ export default function AdminMonsters() {
                         onClick={() => void handleCreateSubtype()}
                       >
                         {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                        Add Subtype
+                        {isShipType ? 'Add Ship' : 'Add Subtype'}
                       </button>
                     </div>
                   </div>
@@ -1361,14 +1418,26 @@ export default function AdminMonsters() {
                   <div className="overflow-x-auto -mx-3.5 px-3.5">
                     <table className="data-table">
                       <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Size</th>
-                          <th>Terrains</th>
-                          <th>Speech</th>
-                          <th>Status</th>
-                          <th className="text-right">Actions</th>
-                        </tr>
+                        {isShipType ? (
+                          <tr>
+                            <th>Name</th>
+                            <th>Genre</th>
+                            <th>CR</th>
+                            <th>Price</th>
+                            <th>Crew</th>
+                            <th>Status</th>
+                            <th className="text-right">Actions</th>
+                          </tr>
+                        ) : (
+                          <tr>
+                            <th>Name</th>
+                            <th>Size</th>
+                            <th>Terrains</th>
+                            <th>Speech</th>
+                            <th>Status</th>
+                            <th className="text-right">Actions</th>
+                          </tr>
+                        )}
                       </thead>
                       <tbody>
                         {filteredSubtypes.map((subtype) => {
@@ -1383,32 +1452,55 @@ export default function AdminMonsters() {
                                 className={cn('cursor-pointer', expanded && 'bg-brand-hover')}
                                 onClick={() => openSubtypeEditor(subtype)}
                               >
-                                <td className="font-medium text-brand-text">
-                                  {subtype.name}
-                                  <span className="badge-muted ml-1.5 whitespace-nowrap">
-                                    Level {subtypeLevel(subtype)}
-                                  </span>
-                                  {subtype.spawnRank === 'boss_only' && (
-                                    <span className="badge-muted ml-1.5 whitespace-nowrap">
-                                      Spawn Rank: {SPAWN_RANK_LABELS.boss_only}
-                                    </span>
-                                  )}
-                                  {subtypeGenres(subtype).length > 0 && (
-                                    <span className="badge-muted ml-1.5 whitespace-nowrap">
-                                      Genres: {subtypeGenres(subtype).join(', ')}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="text-brand-text-muted">{subtype.size}</td>
-                                <td className="text-brand-text-muted max-w-[280px] truncate">
-                                  {(subtype.allowedTerrains || []).join(', ') || '—'}
-                                </td>
-                                <td className="whitespace-nowrap">
-                                  <span className={speaks ? 'badge-success' : 'badge-muted'}>
-                                    {speaks ? 'Speaks' : 'Mute'}
-                                  </span>
-                                  {inheritsSpeech && <span className="help-text ml-1.5">Inherited</span>}
-                                </td>
+                                {isShipType ? (
+                                  <>
+                                    <td className="font-medium text-brand-text">
+                                      {subtype.name}
+                                      {subtype.shipDetails?.spaceCapable && (
+                                        <span className="badge-muted ml-1.5 whitespace-nowrap">Space</span>
+                                      )}
+                                    </td>
+                                    <td className="text-brand-text-muted">{subtypeGenres(subtype).join(', ') || '—'}</td>
+                                    <td className="text-brand-text-muted">{subtype.acquisition?.fixedCr ?? '—'}</td>
+                                    <td className="text-brand-text-muted whitespace-nowrap">
+                                      {typeof subtype.acquisition?.price === 'number'
+                                        ? subtype.acquisition.price.toLocaleString()
+                                        : '—'}
+                                    </td>
+                                    <td className="text-brand-text-muted capitalize">
+                                      {subtype.shipDetails?.crewClass || '—'}
+                                    </td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td className="font-medium text-brand-text">
+                                      {subtype.name}
+                                      <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                        Level {subtypeLevel(subtype)}
+                                      </span>
+                                      {subtype.spawnRank === 'boss_only' && (
+                                        <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                          Spawn Rank: {SPAWN_RANK_LABELS.boss_only}
+                                        </span>
+                                      )}
+                                      {subtypeGenres(subtype).length > 0 && (
+                                        <span className="badge-muted ml-1.5 whitespace-nowrap">
+                                          Genres: {subtypeGenres(subtype).join(', ')}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="text-brand-text-muted">{subtype.size}</td>
+                                    <td className="text-brand-text-muted max-w-[280px] truncate">
+                                      {(subtype.allowedTerrains || []).join(', ') || '—'}
+                                    </td>
+                                    <td className="whitespace-nowrap">
+                                      <span className={speaks ? 'badge-success' : 'badge-muted'}>
+                                        {speaks ? 'Speaks' : 'Mute'}
+                                      </span>
+                                      {inheritsSpeech && <span className="help-text ml-1.5">Inherited</span>}
+                                    </td>
+                                  </>
+                                )}
                                 <td>
                                   <span className={badge.className}>{badge.label}</span>
                                 </td>
@@ -1436,7 +1528,7 @@ export default function AdminMonsters() {
                               </tr>
                               {expanded && draft && (
                                 <tr>
-                                  <td colSpan={6} className="bg-brand-bg">
+                                  <td colSpan={isShipType ? 7 : 6} className="bg-brand-bg">
                                     <div className="py-2 space-y-3">
                                       {subtype.isProtected && (
                                         <p className="help-text">Protected subtypes are read-only.</p>
@@ -1487,6 +1579,25 @@ export default function AdminMonsters() {
                                           }
                                         />
                                       </div>
+                                      {isShipType ? (
+                                        <ShipDetailsFields
+                                          idPrefix={`ship-${subtype.id}`}
+                                          value={draft.ship}
+                                          disabled={subtype.isProtected}
+                                          onChange={(patch) =>
+                                            updateDraft(subtype.id, { ship: { ...draft.ship, ...patch } })
+                                          }
+                                          onSpaceCapableChange={(spaceCapable) =>
+                                            updateDraft(subtype.id, {
+                                              ship: { ...draft.ship, spaceCapable },
+                                              allowedTerrains: [
+                                                ...(spaceCapable ? SHIP_SPACE_TERRAINS : SHIP_ATMOSPHERE_TERRAINS),
+                                              ],
+                                            })
+                                          }
+                                        />
+                                      ) : (
+                                      <>
                                       <SubtypeGenresField
                                         value={draft.genres}
                                         typeGenres={selectedType.genres || []}
@@ -1698,6 +1809,8 @@ export default function AdminMonsters() {
                                           );
                                         })()}
                                       </div>
+                                      </>
+                                      )}
                                       {!subtype.isProtected && (
                                         <div className="flex items-center justify-between">
                                           <ToggleSwitch

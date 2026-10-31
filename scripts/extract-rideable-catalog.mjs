@@ -5,6 +5,9 @@
  * Override with HEROIC_RPG_ROOT if the repos are not siblings.
  *
  * Usage: npm run sync:rideable-catalog
+ *
+ * Mounts and vehicles only. Ships are Ship monster subtypes in the live catalog; the Media Library
+ * reads ship names and image prompts from /api/admin/monster-types.
  */
 import fs from 'fs';
 import path from 'path';
@@ -64,7 +67,7 @@ if (end < 0) {
 const body = src.slice(arrStart, end + 1);
 const entries = [];
 const nameRe = /name:\s*((?:'((?:\\'|[^'])*)')|(?:"((?:\\"|[^"])*)"))/g;
-const categoryRe = /category:\s*'(mount|vehicle|ship)'/;
+const categoryRe = /category:\s*'(mount|vehicle)'/;
 const genreRe = /genre:\s*'(Fantasy|Modern|Sci-Fi)'/;
 
 // Split on top-level objects by finding `{` ... `},` blocks with brace depth
@@ -108,9 +111,9 @@ if (entries.length === 0) {
 }
 
 const byGenre = {
-  Fantasy: { mount: [], vehicle: [], ship: [] },
-  Modern: { mount: [], vehicle: [], ship: [] },
-  'Sci-Fi': { mount: [], vehicle: [], ship: [] },
+  Fantasy: { mount: [], vehicle: [] },
+  Modern: { mount: [], vehicle: [] },
+  'Sci-Fi': { mount: [], vehicle: [] },
 };
 
 for (const entry of entries) {
@@ -157,7 +160,7 @@ const extractImageDescriptions = () => {
 
 const imageDescriptionsByGenre = extractImageDescriptions();
 for (const genre of Object.keys(byGenre)) {
-  const names = new Set([...byGenre[genre].mount, ...byGenre[genre].vehicle, ...byGenre[genre].ship]);
+  const names = new Set([...byGenre[genre].mount, ...byGenre[genre].vehicle]);
   const descriptions = imageDescriptionsByGenre[genre];
   const missing = [...names].filter((name) => !descriptions.has(name));
   const extra = [...descriptions.keys()].filter((name) => !names.has(name));
@@ -190,7 +193,7 @@ const file = `/**
  */
 
 export type RideablePortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
-export type RideablePortraitCategory = 'mount' | 'vehicle' | 'ship';
+export type RideablePortraitCategory = 'mount' | 'vehicle';
 
 export const RIDEABLE_PORTRAIT_CATALOG: Record<
   RideablePortraitGenre,
@@ -199,17 +202,14 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
   Fantasy: {
     mount: ${serializeList(byGenre.Fantasy.mount)},
     vehicle: ${serializeList(byGenre.Fantasy.vehicle)},
-    ship: ${serializeList(byGenre.Fantasy.ship)},
   },
   Modern: {
     mount: ${serializeList(byGenre.Modern.mount)},
     vehicle: ${serializeList(byGenre.Modern.vehicle)},
-    ship: ${serializeList(byGenre.Modern.ship)},
   },
   'Sci-Fi': {
     mount: ${serializeList(byGenre['Sci-Fi'].mount)},
     vehicle: ${serializeList(byGenre['Sci-Fi'].vehicle)},
-    ship: ${serializeList(byGenre['Sci-Fi'].ship)},
   },
 };
 

@@ -48,9 +48,13 @@ View your app in Vercel: https://heroic-dashboard-three.vercel.app
 
 | Scope | Tools |
 | --- | --- |
-| `read` | `get_insights`, `list_patch_notes`, `list_monster_types`, `get_monster_type` |
-| `monsters` | `create_monster_type`, `update_monster_type`, `create_monster_subtype`, `update_monster_subtype`, `update_monster_combat_flavor` |
+| `read` | `get_insights`, `list_patch_notes`, `list_monster_types`, `get_monster_type`, `list_ships` |
+| `monsters` | `create_monster_type`, `update_monster_type`, `create_monster_subtype`, `update_monster_subtype`, `update_monster_combat_flavor`, `create_ship`, `update_ship` |
 | `patch_notes` | `publish_patch_note` |
+
+### Ships
+
+Ships are subtypes of the protected `Ship` monster type in the RPG catalog. `list_ships`, `create_ship`, and `update_ship` look up the Ship type id for you and apply the fields the RPG requires on every hull: `fly` movement, `encounterExcluded: true`, `rideable: false`, `acquisition` with `allyKind: "ship"`, `progressionMode: "fixed"`, `fixedCr` and `price` (party level 1 values; the shipyard scales both), and `shipDetails` (`crewClass`, `spaceCapable`, `imagePrompt`). `update_ship` merges `acquisition` and `shipDetails` over the current hull. The generic subtype tools also accept validated `acquisition` and `shipDetails` objects; the RPG rejects `shipDetails` on any other type.
 
 Comparisons are constant-time. Keys and hashes are never written to logs. Invalid `MCP_API_KEYS` JSON fails closed (HTTP 500) and the error body does not echo the variable. Generate a key and hash with:
 

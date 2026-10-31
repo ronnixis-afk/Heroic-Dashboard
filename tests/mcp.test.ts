@@ -40,6 +40,9 @@ const EXPECTED_TOOL_NAMES = [
   'create_monster_subtype',
   'update_monster_subtype',
   'update_monster_combat_flavor',
+  'list_ships',
+  'create_ship',
+  'update_ship',
 ];
 
 const KEY = 'test-mcp-key-please-ignore';
@@ -254,7 +257,7 @@ describe('MCP JSON-RPC tools', () => {
       };
       assert.equal(info.protocolVersion, '2025-03-26');
       assert.equal(info.serverInfo.name, 'heroic-dashboard');
-      assert.equal(info.serverInfo.version, '1.2.0');
+      assert.equal(info.serverInfo.version, '1.3.0');
       assert.equal(info.capabilities.tools.listChanged, true);
       assert.match(info.instructions, /never null/);
     }
@@ -1400,6 +1403,7 @@ describe('MCP key scopes', { concurrency: 1 }, () => {
       'list_patch_notes',
       'list_monster_types',
       'get_monster_type',
+      'list_ships',
     ]);
 
     const denied = mockResponse();
@@ -1811,5 +1815,207 @@ describe('MCP subtype movement modes', () => {
     assert.equal(events[0].targetId, 'sub-9');
     assert.match(events[0].diffSummary, /fields=movementModes,primaryMovementMode/);
     assert.equal(events[0].createdAt, '2026-10-15T13:00:00.000Z');
+  });
+});
+
+describe('MCP ship tools', () => {
+  const windSkiff = {
+    id: 'ship-1',
+    name: 'Wind Skiff',
+    visualDescription: 'A nimble single-mast skyboat.',
+    size: 'Large',
+    archetype: 'Aerial',
+    allowedTerrains: ['Airborne', 'Mountain', 'Plains', 'Forest', 'Coastal'],
+    genres: ['Fantasy'],
+    enabled: true,
+    encounterExcluded: true,
+    rideable: false,
+    acquisition: {
+      allyKind: 'ship',
+      template: 'Tank',
+      combatMode: 'automatic',
+      progressionMode: 'fixed',
+      fixedCr: 3,
+      price: 500,
+      levelsWithParty: false,
+    },
+    shipDetails: { crewClass: 'small', spaceCapable: false, imagePrompt: 'Looks like a skiff.' },
+  };
+  const blockadeBreaker = {
+    ...windSkiff,
+    id: 'ship-2',
+    name: 'Blockade Breaker',
+    genres: ['Sci-Fi'],
+    shipDetails: { crewClass: 'large', spaceCapable: true },
+  };
+  const catalog = {
+    types: [
+      { id: 'type-beast', name: 'Beast', genres: ['Fantasy'], subtypes: [] },
+      { id: 'type-ship', name: 'Ship', genres: ['Fantasy', 'Modern', 'Sci-Fi'], subtypes: [windSkiff, blockadeBreaker] },
+    ],
+  };
+
+  const recordingFetch = (calls: { path: string; init?: RequestInit }[], data: unknown = catalog) =>
+    async (path: string, init?: RequestInit) => {
+      calls.push({ path, init });
+      return init?.method ? { id: 'ship-new' } : data;
+    };
+
+  it('lists ships flattened from the Ship type with a genre filter', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    const output = (await executeMcpTool('list_ships', { genre: 'Sci-Fi' }, { fetchRpgAdmin: recordingFetch(calls) })) as {
+      typeId: string;
+      ships: Record<string, unknown>[];
+    };
+    assert.deepEqual(calls.map((c) => c.path), ['/api/admin/monster-types?includeSubtypes=1']);
+    assert.equal(output.typeId, 'type-ship');
+    assert.equal(output.ships.length, 1);
+    assert.equal(output.ships[0].name, 'Blockade Breaker');
+    assert.equal(output.ships[0].crewClass, 'large');
+    assert.equal(output.ships[0].spaceCapable, true);
+    assert.equal(output.ships[0].fixedCr, 3);
+  });
+
+  it('create_ship posts a full ship subtype under the Ship type', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'create_ship',
+      {
+        name: 'Ember Corsair',
+        visualDescription: 'A red-sailed raider.',
+        genre: 'Fantasy',
+        fixedCr: 4,
+        price: 950,
+        template: 'Skirmisher',
+        crewClass: 'medium',
+        spaceCapable: true,
+      },
+      { fetchRpgAdmin: recordingFetch(calls) }
+    );
+    assert.equal(calls[1].path, '/api/admin/monster-types/type-ship/subtypes');
+    assert.equal(calls[1].init?.method, 'POST');
+    const body = JSON.parse(String(calls[1].init?.body));
+    assert.deepEqual(body.genres, ['Fantasy']);
+    assert.deepEqual(body.movementModes, ['fly']);
+    assert.equal(body.primaryMovementMode, 'fly');
+    assert.equal(body.encounterExcluded, true);
+    assert.equal(body.rideable, false);
+    assert.equal(body.archetype, 'Aerial');
+    assert.deepEqual(body.allowedTerrains, ['Orbital', 'Deep Space', 'Airborne', 'Warp Rift']);
+    assert.deepEqual(body.acquisition, {
+      allyKind: 'ship',
+      template: 'Skirmisher',
+      combatMode: 'automatic',
+      progressionMode: 'fixed',
+      fixedCr: 4,
+      price: 950,
+      levelsWithParty: false,
+    });
+    assert.deepEqual(body.shipDetails, { crewClass: 'medium', spaceCapable: true });
+  });
+
+  it('create_ship requires genre, fixedCr, and price', async () => {
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'create_ship',
+          { name: 'Ember Corsair', visualDescription: 'Raider.', fixedCr: 4, price: 950 },
+          { fetchRpgAdmin: recordingFetch([]) }
+        ),
+      /Genre Is Required/
+    );
+    await assert.rejects(
+      () =>
+        executeMcpTool(
+          'create_ship',
+          { name: 'Ember Corsair', visualDescription: 'Raider.', genre: 'Fantasy', price: 950 },
+          { fetchRpgAdmin: recordingFetch([]) }
+        ),
+      /Fixed CR Is Required/
+    );
+  });
+
+  it('update_ship merges acquisition and shipDetails over the current hull', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool(
+      'update_ship',
+      { subtypeId: 'ship-1', price: 650, crewClass: 'medium' },
+      { fetchRpgAdmin: recordingFetch(calls) }
+    );
+    assert.equal(calls[1].path, '/api/admin/monster-types/type-ship/subtypes/ship-1');
+    assert.equal(calls[1].init?.method, 'PATCH');
+    const body = JSON.parse(String(calls[1].init?.body));
+    assert.deepEqual(body.acquisition, { ...windSkiff.acquisition, price: 650 });
+    assert.deepEqual(body.shipDetails, { crewClass: 'medium', spaceCapable: false, imagePrompt: 'Looks like a skiff.' });
+    assert.equal(body.allowedTerrains, undefined);
+  });
+
+  it('update_ship swaps terrains when spaceCapable changes and rejects unknown hulls', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    await executeMcpTool('update_ship', { subtypeId: 'ship-1', spaceCapable: true }, { fetchRpgAdmin: recordingFetch(calls) });
+    const body = JSON.parse(String(calls[1].init?.body));
+    assert.deepEqual(body.allowedTerrains, ['Orbital', 'Deep Space', 'Airborne', 'Warp Rift']);
+    assert.equal(body.acquisition, undefined);
+
+    await assert.rejects(
+      () => executeMcpTool('update_ship', { subtypeId: 'nope', price: 10 }, { fetchRpgAdmin: recordingFetch([]) }),
+      /Was Not Found Under The Ship Type/
+    );
+  });
+
+  it('errors clearly when the Ship type is missing', async () => {
+    await assert.rejects(
+      () => executeMcpTool('list_ships', {}, { fetchRpgAdmin: recordingFetch([], { types: [catalog.types[0]] }) }),
+      /Ship Monster Type Was Not Found/
+    );
+  });
+
+  it('generic subtype tools validate acquisition and shipDetails', () => {
+    const payload = buildMonsterSubtypeUpdatePayload({
+      acquisition: windSkiff.acquisition,
+      shipDetails: { crewClass: 'small', spaceCapable: false },
+    });
+    assert.deepEqual(payload.acquisition, windSkiff.acquisition);
+    assert.deepEqual(payload.shipDetails, { crewClass: 'small', spaceCapable: false });
+    assert.equal(buildMonsterSubtypeUpdatePayload({ acquisition: null }).acquisition, null);
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ acquisition: { ...windSkiff.acquisition, allyKind: 'boat' } }),
+      /allyKind must be one of/
+    );
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ shipDetails: { crewClass: 'huge', spaceCapable: false } }),
+      /crewClass must be one of/
+    );
+    assert.throws(
+      () => buildMonsterSubtypeUpdatePayload({ shipDetails: { crewClass: 'small', spaceCapable: false, hp: 9 } }),
+      /Unknown Ship Details Keys: hp/
+    );
+  });
+
+  it('ship writes need the monsters scope and are audited', async () => {
+    await assert.rejects(
+      () =>
+        executeMcpTool('create_ship', {}, {
+          principal: { name: 'reader', scopes: ['read'] },
+          fetchRpgAdmin: recordingFetch([]),
+        }),
+      /Missing Scope: monsters/
+    );
+    const events: McpAuditEvent[] = [];
+    await executeMcpTool(
+      'update_ship',
+      { subtypeId: 'ship-1', price: 700 },
+      {
+        principal: { name: 'bestiary', scopes: ['monsters'] },
+        recordAudit: async (event) => {
+          events.push(event);
+        },
+        fetchRpgAdmin: recordingFetch([]),
+      }
+    );
+    assert.equal(events.length, 1);
+    assert.equal(events[0].tool, 'update_ship');
+    assert.equal(events[0].targetId, 'ship-1');
+    assert.match(events[0].diffSummary, /fields=price/);
   });
 });

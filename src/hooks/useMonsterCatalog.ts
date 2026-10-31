@@ -124,12 +124,45 @@ export function formatMonsterTypeLevelRange(type: Pick<MonsterType, 'minEncounte
 export const MONSTER_SPAWN_RANKS = ['any', 'boss_only'] as const;
 export type MonsterSpawnRank = (typeof MONSTER_SPAWN_RANKS)[number];
 
+export const MONSTER_MOVEMENT_MODES = ['ground', 'fly', 'climb', 'swim'] as const;
+export type MonsterMovementMode = (typeof MONSTER_MOVEMENT_MODES)[number];
+
+export const SHIP_MONSTER_TYPE_NAME = 'Ship';
+export const SHIP_CREW_CLASSES = ['small', 'medium', 'large'] as const;
+export type ShipCrewClass = (typeof SHIP_CREW_CLASSES)[number];
+export const SHIP_SUBTYPE_ARCHETYPES = ['Aerial', 'Hoverer'] as const;
+
+/** True for the protected Ship type whose subtypes are the game's shipyard / hull catalog. */
+export const isShipMonsterType = (type: { name?: string | null } | null | undefined): boolean =>
+  (type?.name || '').trim().toLowerCase() === SHIP_MONSTER_TYPE_NAME.toLowerCase();
+
+/** Acquisition rules for stables / shipyards (RPG `acquisitionSchema`). */
+export interface MonsterSubtypeAcquisition {
+  allyKind: 'mount' | 'ship' | 'summon' | 'tamed' | 'dominated';
+  template: string;
+  combatMode: 'automatic' | 'noncombat';
+  progressionMode: 'party' | 'fixed';
+  fixedCr?: number;
+  price?: number;
+  levelsWithParty?: boolean;
+}
+
+/** Ship type only (RPG `shipDetailsSchema`). */
+export interface MonsterSubtypeShipDetails {
+  crewClass: ShipCrewClass;
+  spaceCapable: boolean;
+  imagePrompt?: string | null;
+}
+
 export interface MonsterSubtype {
   id: string;
   name: string;
   visualDescription: string;
   size: string;
   archetype: string | null;
+  /** Empty falls back to the archetype map. */
+  movementModes?: MonsterMovementMode[];
+  primaryMovementMode?: MonsterMovementMode | null;
   allowedTerrains: string[];
   encounterExcluded: boolean;
   rideable: boolean;
@@ -142,7 +175,9 @@ export interface MonsterSubtype {
   /** Genre tags. Empty or absent inherits the type's genres. */
   genres?: MonsterGenre[];
   affinityOverride: string | null;
-  acquisition: unknown | null;
+  acquisition: MonsterSubtypeAcquisition | null;
+  /** Present on Ship subtypes; null elsewhere. */
+  shipDetails?: MonsterSubtypeShipDetails | null;
   combatFlavor?: MonsterCombatFlavorMap | null;
   enabled: boolean;
   isProtected: boolean;
@@ -158,6 +193,8 @@ export interface MonsterSubtypePortraitLite {
   genres: MonsterGenre[];
   enabled: boolean;
   isProtected: boolean;
+  /** Ship subtypes: Ship Portrait image-generation reference. */
+  imagePrompt?: string | null;
 }
 
 export interface MonsterTypePortraitLite {
@@ -196,6 +233,8 @@ async function fetchMonsterTypesWithSubtypes(getToken: (options?: any) => Promis
           genres: Array.isArray(s.genres) ? (s.genres as MonsterGenre[]) : [],
           enabled: Boolean(s.enabled),
           isProtected: Boolean(s.isProtected),
+          imagePrompt:
+            s.shipDetails && typeof s.shipDetails.imagePrompt === 'string' ? s.shipDetails.imagePrompt : null,
         }))
       : [],
   }));

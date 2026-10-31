@@ -186,6 +186,7 @@ const READ_TOOLS = new Set([
   'list_patch_notes',
   'list_monster_types',
   'get_monster_type',
+  'list_ships',
 ]);
 
 const MONSTER_WRITE_TOOLS = new Set([
@@ -194,6 +195,8 @@ const MONSTER_WRITE_TOOLS = new Set([
   'create_monster_subtype',
   'update_monster_subtype',
   'update_monster_combat_flavor',
+  'create_ship',
+  'update_ship',
 ]);
 
 const LEGACY_KEY_NAME = 'legacy';
@@ -417,7 +420,11 @@ export function summarizeMcpWrite(
 
   let targetId: string | null = null;
   if (tool === 'update_monster_type') targetId = argId || resultId;
-  else if (tool === 'update_monster_subtype' || tool === 'update_monster_combat_flavor') {
+  else if (
+    tool === 'update_monster_subtype' ||
+    tool === 'update_monster_combat_flavor' ||
+    tool === 'update_ship'
+  ) {
     targetId = subtypeId || resultId;
   } else if (tool === 'create_monster_subtype') targetId = resultId || typeId || null;
   else targetId = resultId;
@@ -636,7 +643,9 @@ export interface MonsterSubtypeAttributes {
   /** Empty list inherits the type's genres. */
   genres?: string[];
   affinityOverride?: string | null;
-  acquisition?: unknown;
+  acquisition?: MonsterSubtypeAcquisition | null;
+  /** Ship type only; the RPG rejects it on every other type. */
+  shipDetails?: MonsterSubtypeShipDetails | null;
   combatFlavor?: unknown;
   enabled?: boolean;
 }
@@ -694,6 +703,115 @@ function optionalPrimaryMovementMode(value: unknown): MovementMode | null | unde
   if (value === undefined) return undefined;
   if (value === null) return null;
   return toMovementMode(value);
+}
+
+export const ACQUISITION_ALLY_KINDS = ['mount', 'ship', 'summon', 'tamed', 'dominated'] as const;
+export const ACQUISITION_COMBAT_MODES = ['automatic', 'noncombat'] as const;
+export const ACQUISITION_PROGRESSION_MODES = ['party', 'fixed'] as const;
+
+export interface MonsterSubtypeAcquisition {
+  allyKind: (typeof ACQUISITION_ALLY_KINDS)[number];
+  template: string;
+  combatMode: (typeof ACQUISITION_COMBAT_MODES)[number];
+  progressionMode: (typeof ACQUISITION_PROGRESSION_MODES)[number];
+  fixedCr?: number;
+  price?: number;
+  levelsWithParty?: boolean;
+}
+
+export const SHIP_CREW_CLASSES = ['small', 'medium', 'large'] as const;
+export type ShipCrewClass = (typeof SHIP_CREW_CLASSES)[number];
+export const SHIP_SUBTYPE_ARCHETYPES = ['Aerial', 'Hoverer'] as const;
+export const SHIP_MONSTER_TYPE_NAME = 'Ship';
+export const SHIP_ATMOSPHERE_TERRAINS = ['Airborne', 'Mountain', 'Plains', 'Forest', 'Coastal'];
+export const SHIP_SPACE_TERRAINS = ['Orbital', 'Deep Space', 'Airborne', 'Warp Rift'];
+
+export interface MonsterSubtypeShipDetails {
+  crewClass: ShipCrewClass;
+  spaceCapable: boolean;
+  imagePrompt?: string | null;
+}
+
+function enumValue<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
+  if (typeof value !== 'string' || !(allowed as readonly string[]).includes(value)) {
+    throw new Error(`${label} must be one of ${allowed.join(', ')}.`);
+  }
+  return value as T;
+}
+
+function optionalPositiveInt(value: unknown, label: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new Error(`${label} Must Be A Whole Number Of At Least 1.`);
+  }
+  return value;
+}
+
+const ACQUISITION_KEYS = new Set([
+  'allyKind',
+  'template',
+  'combatMode',
+  'progressionMode',
+  'fixedCr',
+  'price',
+  'levelsWithParty',
+]);
+
+/** Mirrors the RPG strict `acquisitionSchema`; null clears the column. */
+function optionalAcquisition(value: unknown): MonsterSubtypeAcquisition | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Acquisition must be an object or null.');
+  }
+  const record = value as Record<string, unknown>;
+  const unknownKeys = Object.keys(record).filter((key) => !ACQUISITION_KEYS.has(key));
+  if (unknownKeys.length) throw new Error(`Unknown Acquisition Keys: ${unknownKeys.join(', ')}.`);
+  const template = optionalTrimmedString(record.template, 'Acquisition Template');
+  if (!template) throw new Error('Acquisition Template Is Required.');
+  return assignDefined(
+    {
+      allyKind: enumValue(record.allyKind, ACQUISITION_ALLY_KINDS, 'Acquisition allyKind'),
+      template,
+      combatMode: enumValue(record.combatMode, ACQUISITION_COMBAT_MODES, 'Acquisition combatMode'),
+      progressionMode: enumValue(
+        record.progressionMode,
+        ACQUISITION_PROGRESSION_MODES,
+        'Acquisition progressionMode'
+      ),
+    } as MonsterSubtypeAcquisition,
+    {
+      fixedCr: optionalPositiveInt(record.fixedCr, 'Fixed CR'),
+      price: optionalPositiveInt(record.price, 'Price'),
+      levelsWithParty: optionalBoolean(record.levelsWithParty, 'Levels With Party'),
+    }
+  );
+}
+
+const SHIP_DETAILS_KEYS = new Set(['crewClass', 'spaceCapable', 'imagePrompt']);
+
+/** Mirrors the RPG strict `shipDetailsSchema` (Ship type only); null clears the column. */
+function optionalShipDetails(value: unknown): MonsterSubtypeShipDetails | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Ship Details must be an object or null.');
+  }
+  const record = value as Record<string, unknown>;
+  const unknownKeys = Object.keys(record).filter((key) => !SHIP_DETAILS_KEYS.has(key));
+  if (unknownKeys.length) throw new Error(`Unknown Ship Details Keys: ${unknownKeys.join(', ')}.`);
+  if (typeof record.spaceCapable !== 'boolean') throw new Error('Ship Details spaceCapable must be true or false.');
+  const imagePrompt = optionalNullableString(record.imagePrompt, 'Image Prompt');
+  if (typeof imagePrompt === 'string' && imagePrompt.length > 1000) {
+    throw new Error('Image Prompt must be at most 1000 characters.');
+  }
+  return assignDefined(
+    {
+      crewClass: enumValue(record.crewClass, SHIP_CREW_CLASSES, 'Ship Details crewClass'),
+      spaceCapable: record.spaceCapable,
+    } as MonsterSubtypeShipDetails,
+    { imagePrompt }
+  );
 }
 
 const COMBAT_FLAVOR_TEMPLATE_NAMES = [
@@ -1049,7 +1167,8 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     minEncounterLevel: optionalEncounterLevel(record.minEncounterLevel),
     genres: optionalSubtypeGenres(record.genres),
     affinityOverride: optionalNullableString(record.affinityOverride, 'Affinity Override'),
-    acquisition: record.acquisition === undefined ? undefined : record.acquisition,
+    acquisition: optionalAcquisition(record.acquisition),
+    shipDetails: optionalShipDetails(record.shipDetails),
     combatFlavor: optionalCombatFlavorMap(record.combatFlavor),
     enabled: optionalBoolean(record.enabled, 'Enabled'),
   });
@@ -1118,9 +1237,205 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
       genres: attributes.genres,
       affinityOverride: attributes.affinityOverride,
       acquisition: attributes.acquisition,
+      shipDetails: attributes.shipDetails,
       combatFlavor: attributes.combatFlavor,
     }
   );
+}
+
+export interface ShipToolInput {
+  name?: string;
+  visualDescription?: string;
+  genre?: MonsterGenre;
+  archetype?: string;
+  size?: string;
+  allowedTerrains?: string[];
+  template?: string;
+  combatMode?: MonsterSubtypeAcquisition['combatMode'];
+  fixedCr?: number;
+  price?: number;
+  crewClass?: ShipCrewClass;
+  spaceCapable?: boolean;
+  imagePrompt?: string | null;
+  enabled?: boolean;
+}
+
+export function parseShipToolInput(input: unknown): ShipToolInput {
+  const record = asRecord(input);
+  const genre = record.genre === undefined ? undefined : enumValue(record.genre, MONSTER_GENRES, 'Genre');
+  const archetype =
+    record.archetype === undefined ? undefined : enumValue(record.archetype, SHIP_SUBTYPE_ARCHETYPES, 'Archetype');
+  const template = optionalTrimmedString(record.template, 'Template');
+  if (template && !COMBAT_FLAVOR_TEMPLATE_SET.has(template)) {
+    throw new Error(`Template must be one of ${COMBAT_FLAVOR_TEMPLATE_NAMES.join(', ')}.`);
+  }
+  const imagePrompt = optionalNullableString(record.imagePrompt, 'Image Prompt');
+  if (typeof imagePrompt === 'string' && imagePrompt.length > 1000) {
+    throw new Error('Image Prompt must be at most 1000 characters.');
+  }
+  return assignDefined({} as ShipToolInput, {
+    name: optionalTrimmedString(record.name, 'Name'),
+    visualDescription: optionalTrimmedString(record.visualDescription, 'Visual Description'),
+    genre,
+    archetype,
+    size: optionalTrimmedString(record.size, 'Size'),
+    allowedTerrains: optionalStringArray(record.allowedTerrains, 'Allowed Terrains'),
+    template,
+    combatMode:
+      record.combatMode === undefined
+        ? undefined
+        : enumValue(record.combatMode, ACQUISITION_COMBAT_MODES, 'Combat Mode'),
+    fixedCr: optionalPositiveInt(record.fixedCr, 'Fixed CR'),
+    price: optionalPositiveInt(record.price, 'Price'),
+    crewClass:
+      record.crewClass === undefined ? undefined : enumValue(record.crewClass, SHIP_CREW_CLASSES, 'Crew Class'),
+    spaceCapable: optionalBoolean(record.spaceCapable, 'Space Capable'),
+    imagePrompt,
+    enabled: optionalBoolean(record.enabled, 'Enabled'),
+  });
+}
+
+const shipTerrainsFor = (spaceCapable: boolean): string[] =>
+  [...(spaceCapable ? SHIP_SPACE_TERRAINS : SHIP_ATMOSPHERE_TERRAINS)];
+
+/** Subtype POST body for a new Ship hull; fills every field the RPG `validateShipSubtypeRules` requires. */
+export function buildShipCreatePayload(input: unknown): Record<string, unknown> {
+  const ship = parseShipToolInput(input);
+  if (!ship.name) throw new Error('Name Is Required.');
+  if (!ship.visualDescription) throw new Error('Visual Description Is Required.');
+  if (!ship.genre) throw new Error('Genre Is Required.');
+  if (ship.fixedCr === undefined) throw new Error('Fixed CR Is Required.');
+  if (ship.price === undefined) throw new Error('Price Is Required.');
+  const spaceCapable = ship.spaceCapable ?? false;
+  return {
+    name: ship.name,
+    visualDescription: ship.visualDescription,
+    size: ship.size || 'Large',
+    archetype: ship.archetype || 'Aerial',
+    movementModes: ['fly'],
+    primaryMovementMode: 'fly',
+    allowedTerrains: ship.allowedTerrains?.length ? ship.allowedTerrains : shipTerrainsFor(spaceCapable),
+    genres: [ship.genre],
+    encounterExcluded: true,
+    rideable: false,
+    canSpeak: null,
+    enabled: ship.enabled ?? true,
+    acquisition: {
+      allyKind: 'ship',
+      template: ship.template || 'Tank',
+      combatMode: ship.combatMode || 'automatic',
+      progressionMode: 'fixed',
+      fixedCr: ship.fixedCr,
+      price: ship.price,
+      levelsWithParty: false,
+    },
+    shipDetails: assignDefined(
+      { crewClass: ship.crewClass || 'small', spaceCapable } as MonsterSubtypeShipDetails,
+      { imagePrompt: ship.imagePrompt }
+    ),
+  };
+}
+
+/**
+ * Subtype PATCH body for a Ship hull. acquisition and shipDetails are sent whole, merged over
+ * the current row, so a partial edit never drops fixedCr / price / crewClass.
+ */
+export function buildShipUpdatePayload(input: unknown, current: unknown): Record<string, unknown> {
+  const ship = parseShipToolInput(input);
+  const currentRecord = asRecord(current);
+  const currentAcq = asRecord(currentRecord.acquisition);
+  const currentDetails = asRecord(currentRecord.shipDetails);
+
+  const payload = assignDefined({} as Record<string, unknown>, {
+    name: ship.name,
+    visualDescription: ship.visualDescription,
+    size: ship.size,
+    archetype: ship.archetype,
+    allowedTerrains: ship.allowedTerrains,
+    genres: ship.genre ? [ship.genre] : undefined,
+    enabled: ship.enabled,
+  });
+
+  const touchesAcquisition =
+    ship.template !== undefined ||
+    ship.combatMode !== undefined ||
+    ship.fixedCr !== undefined ||
+    ship.price !== undefined;
+  if (touchesAcquisition) {
+    payload.acquisition = assignDefined(
+      {
+        allyKind: 'ship',
+        template: ship.template ?? (typeof currentAcq.template === 'string' ? currentAcq.template : 'Tank'),
+        combatMode: ship.combatMode ?? (currentAcq.combatMode === 'noncombat' ? 'noncombat' : 'automatic'),
+        progressionMode: 'fixed',
+        levelsWithParty: false,
+      } as MonsterSubtypeAcquisition,
+      {
+        fixedCr: ship.fixedCr ?? (typeof currentAcq.fixedCr === 'number' ? currentAcq.fixedCr : undefined),
+        price: ship.price ?? (typeof currentAcq.price === 'number' ? currentAcq.price : undefined),
+      }
+    );
+  }
+
+  const touchesDetails =
+    ship.crewClass !== undefined || ship.spaceCapable !== undefined || ship.imagePrompt !== undefined;
+  if (touchesDetails) {
+    const currentCrew = SHIP_CREW_CLASSES.find((crew) => crew === currentDetails.crewClass);
+    const currentPrompt = typeof currentDetails.imagePrompt === 'string' ? currentDetails.imagePrompt : undefined;
+    payload.shipDetails = assignDefined(
+      {
+        crewClass: ship.crewClass ?? currentCrew ?? 'small',
+        spaceCapable: ship.spaceCapable ?? currentDetails.spaceCapable === true,
+      } as MonsterSubtypeShipDetails,
+      { imagePrompt: ship.imagePrompt !== undefined ? ship.imagePrompt : currentPrompt }
+    );
+    if (ship.spaceCapable !== undefined && ship.allowedTerrains === undefined) {
+      payload.allowedTerrains = shipTerrainsFor(ship.spaceCapable);
+    }
+  }
+
+  if (Object.keys(payload).length === 0) {
+    throw new Error('At Least One Ship Attribute Is Required.');
+  }
+  return payload;
+}
+
+const findShipType = (types: unknown[]): Record<string, unknown> | null => {
+  for (const type of types) {
+    const record = asRecord(type);
+    if (typeof record.name === 'string' && record.name.trim().toLowerCase() === SHIP_MONSTER_TYPE_NAME.toLowerCase()) {
+      return record;
+    }
+  }
+  return null;
+};
+
+const SHIP_TYPE_MISSING_ERROR =
+  'The Ship Monster Type Was Not Found. Deploy the RPG ship catalog migration and seed first.';
+
+/** Flat row per hull for list_ships. */
+export function summarizeShipSubtype(subtype: unknown, typeGenres: string[]): Record<string, unknown> {
+  const record = asRecord(subtype);
+  const acq = asRecord(record.acquisition);
+  const details = asRecord(record.shipDetails);
+  const genres = Array.isArray(record.genres) && record.genres.length > 0 ? record.genres : typeGenres;
+  return {
+    id: record.id ?? null,
+    name: record.name ?? null,
+    genre: genres[0] ?? null,
+    enabled: record.enabled ?? true,
+    archetype: record.archetype ?? null,
+    size: record.size ?? null,
+    allowedTerrains: record.allowedTerrains ?? [],
+    template: acq.template ?? null,
+    combatMode: acq.combatMode ?? null,
+    fixedCr: acq.fixedCr ?? null,
+    price: acq.price ?? null,
+    crewClass: details.crewClass ?? null,
+    spaceCapable: details.spaceCapable ?? null,
+    imagePrompt: details.imagePrompt ?? null,
+    visualDescription: record.visualDescription ?? null,
+  };
 }
 
 export function buildMonsterSubtypeUpdatePayload(input: unknown): Record<string, unknown> {
@@ -1248,7 +1563,7 @@ async function fetchRpgPublic<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const MCP_SERVER_INFO = {
   name: 'heroic-dashboard',
-  version: '1.2.0',
+  version: '1.3.0',
   title: 'Heroic Dashboard',
 };
 
@@ -1361,13 +1676,81 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
       'Genre tags for this subtype: Fantasy, Modern, Sci-Fi. Multiple genres are allowed. An empty list inherits the type genres. Sending genres replaces the full list; omit on update to keep the current list. Stored only for now; spawning still filters by type genres.',
   },
   affinityOverride: { type: ['string', 'null'], description: 'Affinity override, or null.' },
-  acquisition: { description: 'Optional acquisition / unlock payload from the game CMS.' },
+  acquisition: {
+    type: ['object', 'null'],
+    properties: {
+      allyKind: { type: 'string', enum: [...ACQUISITION_ALLY_KINDS] },
+      template: { type: 'string', description: 'Combat template, e.g. Tank, Skirmisher, Brute.' },
+      combatMode: { type: 'string', enum: [...ACQUISITION_COMBAT_MODES] },
+      progressionMode: { type: 'string', enum: [...ACQUISITION_PROGRESSION_MODES] },
+      fixedCr: { type: 'integer', minimum: 1 },
+      price: { type: 'integer', minimum: 1 },
+      levelsWithParty: { type: 'boolean' },
+    },
+    required: ['allyKind', 'template', 'combatMode', 'progressionMode'],
+    additionalProperties: false,
+    description:
+      'How players acquire this subtype as an ally (stables, shipyards, summons). Sent whole; null clears it. Ship subtypes need allyKind ship, progressionMode fixed, fixedCr and price — prefer create_ship / update_ship.',
+  },
+  shipDetails: {
+    type: ['object', 'null'],
+    properties: {
+      crewClass: { type: 'string', enum: [...SHIP_CREW_CLASSES] },
+      spaceCapable: { type: 'boolean' },
+      imagePrompt: { type: ['string', 'null'], maxLength: 1000 },
+    },
+    required: ['crewClass', 'spaceCapable'],
+    additionalProperties: false,
+    description:
+      'Ship type subtypes only (rejected on every other type). crewClass sets hull crew slots (small 1, medium 2-3, large 4-6); spaceCapable adds the space travel tag; imagePrompt is the Ship Portrait art reference. Sent whole.',
+  },
   combatFlavor: {
     type: ['object', 'null'],
     description:
       'Partial kit map by template (Agile, Brute, Tank, Brawler, Sniper, Grenadier, Caster, Healer, Controller, Skirmisher; not Custom). Kit: description, attacks[], specialAbilities[]. Slots need name+description; optional damageType, targetType, saveAbility, saveEffect (not target/save). attacks/specialAbilities full-replace. Null key deletes that kit; null field clears all. PATCH merges by template key. Dice/DC are not flavor fields.',
   },
   enabled: { type: 'boolean', description: 'Whether the subtype is enabled.' },
+};
+
+const SHIP_TOOL_PROPERTIES: Record<string, unknown> = {
+  name: { type: 'string', description: 'Hull name, unique across the Ship type.' },
+  visualDescription: { type: 'string', description: 'Shipyard listing line shown to players.' },
+  genre: { type: 'string', enum: [...MONSTER_GENRES], description: 'The one genre whose shipyards sell it.' },
+  archetype: {
+    type: 'string',
+    enum: [...SHIP_SUBTYPE_ARCHETYPES],
+    description: 'Hull body plan. Defaults to Aerial on create.',
+  },
+  size: { type: 'string', description: 'Size class. Defaults to Large on create.' },
+  allowedTerrains: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Terrains the hull flies in. Omit to use the atmosphere or space flight set.',
+  },
+  template: {
+    type: 'string',
+    enum: [...COMBAT_FLAVOR_TEMPLATE_NAMES],
+    description: 'Hull combat template. Defaults to Tank on create.',
+  },
+  combatMode: {
+    type: 'string',
+    enum: [...ACQUISITION_COMBAT_MODES],
+    description: 'automatic fights in party combat; noncombat is transport only. Defaults to automatic.',
+  },
+  fixedCr: { type: 'integer', minimum: 1, description: 'Hull CR at party level 1 (sets hull HP and attacks).' },
+  price: { type: 'integer', minimum: 1, description: 'Shipyard price at party level 1.' },
+  crewClass: {
+    type: 'string',
+    enum: [...SHIP_CREW_CLASSES],
+    description: 'Crew slots: small 1, medium 2-3, large 4-6. Defaults to small on create.',
+  },
+  spaceCapable: { type: 'boolean', description: 'Can travel in space. Defaults to false on create.' },
+  imagePrompt: {
+    type: ['string', 'null'],
+    maxLength: 1000,
+    description: 'Ship Portrait art reference ("Looks like …"). Never shown in game.',
+  },
+  enabled: { type: 'boolean', description: 'Disabled hulls leave shipyards; owned copies keep working.' },
 };
 
 export const MCP_TOOLS: McpToolDefinition[] = [
@@ -1535,6 +1918,43 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'list_ships',
+    description:
+      'List shipyard hulls: the subtypes of the protected Ship monster type, flattened to name, genre, template, combatMode, base fixedCr / price (party level 1; the shipyard scales both with party level), crewClass, spaceCapable, and imagePrompt. Includes the Ship typeId for update_monster_subtype. Optional genre filter.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        genre: { type: 'string', enum: [...MONSTER_GENRES], description: 'Only hulls of this genre.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_ship',
+    description:
+      'Add a hull to the Ship monster type. It is sold at shipyards of its genre and can be crewed as an enemy ship. Applies the ship defaults the game requires: fly movement, encounterExcluded, not rideable, acquisition allyKind ship with progressionMode fixed. Terrains default to the atmosphere or space flight set from spaceCapable.',
+    inputSchema: {
+      type: 'object',
+      properties: SHIP_TOOL_PROPERTIES,
+      required: ['name', 'visualDescription', 'genre', 'fixedCr', 'price'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_ship',
+    description:
+      'Update a Ship hull by subtypeId. Send only the fields to change; acquisition and shipDetails are merged over the current hull so CR, price, and crew are kept. Changing spaceCapable without allowedTerrains swaps terrains to the matching flight set. Renaming a hull keeps owned ships and Ship Portrait art linked.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        subtypeId: { type: 'string', description: 'Ship subtype id from list_ships.' },
+        ...SHIP_TOOL_PROPERTIES,
+      },
+      required: ['subtypeId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export type RpgAdminFetch = (path: string, init?: RequestInit) => Promise<unknown>;
@@ -1678,6 +2098,41 @@ async function executeMcpToolBody(
     return { ok: true, typeId, subtypeId, payload, result: updated };
   }
 
+  if (name === 'list_ships' || name === 'create_ship' || name === 'update_ship') {
+    const { types } = normalizeMonsterTypesList(await fetchRpgAdmin('/api/admin/monster-types?includeSubtypes=1'));
+    const shipType = findShipType(types);
+    const typeId = typeof shipType?.id === 'string' ? shipType.id : '';
+    if (!shipType || !typeId) throw new Error(SHIP_TYPE_MISSING_ERROR);
+    const subtypes = Array.isArray(shipType.subtypes) ? shipType.subtypes : [];
+    const subtypesPath = `/api/admin/monster-types/${encodeURIComponent(typeId)}/subtypes`;
+
+    if (name === 'list_ships') {
+      const record = asRecord(args);
+      const genre = record.genre === undefined ? undefined : enumValue(record.genre, MONSTER_GENRES, 'Genre');
+      const typeGenres = Array.isArray(shipType.genres) ? (shipType.genres as string[]) : [];
+      const ships = subtypes
+        .map((subtype) => summarizeShipSubtype(subtype, typeGenres))
+        .filter((ship) => !genre || ship.genre === genre);
+      return { typeId, ships };
+    }
+
+    if (name === 'create_ship') {
+      const payload = buildShipCreatePayload(args);
+      const created = await fetchRpgAdmin(subtypesPath, { method: 'POST', body: JSON.stringify(payload) });
+      return { ok: true, typeId, payload, result: created };
+    }
+
+    const subtypeId = requireCatalogId(asRecord(args).subtypeId, 'Subtype Id');
+    const current = subtypes.find((subtype) => asRecord(subtype).id === subtypeId);
+    if (!current) throw new Error(`Ship ${subtypeId} Was Not Found Under The Ship Type.`);
+    const payload = buildShipUpdatePayload(args, current);
+    const updated = await fetchRpgAdmin(`${subtypesPath}/${encodeURIComponent(subtypeId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return { ok: true, typeId, subtypeId, payload, result: updated };
+  }
+
   throw new Error(`Unknown Tool: ${name}`);
 }
 
@@ -1806,7 +2261,7 @@ async function handleSingle(
           },
           serverInfo: MCP_SERVER_INFO,
           instructions:
-            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Min encounter level is a whole number of at least 1 stored on every subtype (default 1, never null); set it with create_monster_subtype / update_monster_subtype. A type minEncounterLevel / maxEncounterLevel is a read-only range derived from its subtypes. Subtypes carry their own genres list (Fantasy, Modern, Sci-Fi; several allowed); an empty list inherits the type genres. Do not invent a local bestiary.',
+            'Use get_insights for live analytics; list_patch_notes for published notes; publish_patch_note creates an unpublished draft only (published false, never is_popup) until an admin publishes it. list/get/create/update monster type, create/update subtype, and update_monster_combat_flavor for the CMS catalog. Min encounter level is a whole number of at least 1 stored on every subtype (default 1, never null); set it with create_monster_subtype / update_monster_subtype. A type minEncounterLevel / maxEncounterLevel is a read-only range derived from its subtypes. Subtypes carry their own genres list (Fantasy, Modern, Sci-Fi; several allowed); an empty list inherits the type genres. Ships are subtypes of the protected Ship monster type (one genre each; sold at shipyards and crewed as enemy hulls, never random encounters): use list_ships / create_ship / update_ship, which apply the required ship defaults (fly, encounterExcluded, acquisition allyKind ship with fixed CR and price, shipDetails crewClass / spaceCapable / imagePrompt). Do not invent a local bestiary.',
         });
       case 'ping':
         return rpcResult(id, {});

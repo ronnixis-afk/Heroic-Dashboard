@@ -5,7 +5,7 @@
  */
 
 export type RideablePortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
-export type RideablePortraitCategory = 'mount' | 'vehicle' | 'ship';
+export type RideablePortraitCategory = 'mount' | 'vehicle';
 
 export const RIDEABLE_PORTRAIT_CATALOG: Record<
   RideablePortraitGenre,
@@ -23,16 +23,6 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
     'Shadow Panther',
   ],
     vehicle: [],
-    ship: [
-    'Wind Skiff',
-    'Cloud Sloop',
-    'Moonwing Cutter',
-    'Sky Galleon',
-    'Solar Schooner',
-    'Phantom Skiff',
-    'Star Cathedral',
-    'Astral Galleon',
-  ],
   },
   Modern: {
     mount: [
@@ -59,16 +49,6 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
     'Dirt Bike',
     'Trail Quad',
   ],
-    ship: [
-    'Medevac VTOL',
-    'Stealth VTOL',
-    'Tiltrotor Gunship',
-    'Skyfort Carrier',
-    'Rescue Lander',
-    'Uplink Lander',
-    'Haven Lander',
-    'Starlifter Hauler',
-  ],
   },
   'Sci-Fi': {
     mount: [
@@ -91,19 +71,6 @@ export const RIDEABLE_PORTRAIT_CATALOG: Record<
     'Survey Buggy',
     'Utility Drone Cart',
   ],
-    ship: [
-    'Heavy Dreadnought',
-    'Stealth Interceptor',
-    'Science Explorer',
-    'Medical Frigate',
-    'Smuggler\'s Runner',
-    'Freighter Hauler',
-    'Fighter Wingcraft',
-    'Colony Transport',
-    'Merchant Yacht',
-    'Strike Corvette',
-    'Blockade Breaker',
-  ],
   },
 };
 
@@ -125,14 +92,6 @@ export const RIDEABLE_IMAGE_DESCRIPTION_BY_GENRE: Readonly<
     'Griffon': 'Looks like a beast with a white eagle head and wings on a tawny lion body, wearing a riveted leather flight saddle.',
     'Cave Bear': 'Looks like a massive dark brown bear with thick shaggy fur, carrying a small wooden howdah lashed across its broad back.',
     'Shadow Panther': 'Looks like a sleek black panther with glowing green eyes and a faint smoky aura, wearing a dark leather riding saddle.',
-    'Wind Skiff': 'Looks like a small wooden boat floating in the sky, with one triangular sail, rope rigging, and glowing runes along its keel.',
-    'Cloud Sloop': 'Looks like a narrow single-masted wooden airship with white canvas sails and fan-like vanes sprouting from both sides of its hull.',
-    'Moonwing Cutter': 'Looks like a slender pale wooden sky ship with curved silver leaf-shaped wings and lanterns glowing soft blue along its rails.',
-    'Sky Galleon': 'Looks like a huge multi-deck wooden galleon floating among clouds, with tall masts, billowing sails, and rows of cannon ports.',
-    'Solar Schooner': 'Looks like an elegant two-masted wooden ship with shimmering golden sun sails, gilded yardarms, and glowing crystal lanterns on deck.',
-    'Phantom Skiff': 'Looks like a dark wooden raider boat with tattered black sails, wisps of shadow trailing behind it against a starry sky.',
-    'Star Cathedral': 'Looks like a floating white stone cathedral with stained glass windows and spires, drifting through space on a glowing rune-carved base.',
-    'Astral Galleon': 'Looks like a massive armored wooden warship sailing through space, with a spiked prow, glowing rune sails, and deck ballistae.',
   },
   Modern: {
     'Hunting Dog': 'Looks like a lean brown and white hound with floppy ears and a scarred muzzle, wearing an orange tracking harness.',
@@ -155,14 +114,6 @@ export const RIDEABLE_IMAGE_DESCRIPTION_BY_GENRE: Readonly<
     'Touring Motorcycle': 'Looks like a big chrome-trimmed touring motorcycle with hard side saddlebags, a tall windshield, and a wide padded seat.',
     'Dirt Bike': 'Looks like a lightweight orange dirt bike with knobby tires, long suspension forks, and a high raised front fender.',
     'Trail Quad': 'Looks like a green four-wheeled ATV with chunky tread tires, front and rear cargo racks, and a wide handlebar.',
-    'Medevac VTOL': 'Looks like a white tiltrotor aircraft with red cross markings, twin tilting rotors, and a rescue hoist beside its open side door.',
-    'Stealth VTOL': 'Looks like an angular matte black tiltjet with shrouded rotors, faceted armor panels, and open cabin doors along its side.',
-    'Tiltrotor Gunship': 'Looks like a grey armored tiltrotor with a chin-mounted cannon, stub wings loaded with missile pods, and twin tilting rotors.',
-    'Skyfort Carrier': 'Looks like a massive grey flying carrier held aloft by four giant ducted rotors, with a flat flight deck and searchlight mast.',
-    'Rescue Lander': 'Looks like a squat orange orbital lander with thick padded fenders, cable winches, and a round pressure hatch on its side.',
-    'Uplink Lander': 'Looks like a compact white orbital lander with a long folding antenna boom, a satellite dish, and a small sealed cabin.',
-    'Haven Lander': 'Looks like a sleek pearl white orbital lander with smooth curved panels, tinted cabin windows, and recessed thruster ports.',
-    'Starlifter Hauler': 'Looks like a huge grey cargo spacecraft with an armored spine of stacked containers and a cluster of heavy engines.',
   },
   'Sci-Fi': {
     'Hover-Bike': 'Looks like a sleek white anti-gravity bike with no wheels, glowing blue thrusters underneath, and a low swept windscreen.',
@@ -181,17 +132,6 @@ export const RIDEABLE_IMAGE_DESCRIPTION_BY_GENRE: Readonly<
     'Grav Wagon': 'Looks like a long floating cargo wagon on anti-gravity skids, with modular crates locked down under bright magnetic clamps.',
     'Survey Buggy': 'Looks like an open-frame buggy with big balloon tires, tall sensor masts, and trays of sample canisters behind the seats.',
     'Utility Drone Cart': 'Looks like a low flat tool cart towed by a small hovering drone, with racks of tools and a toolbox lid.',
-    'Heavy Dreadnought': 'Looks like a colossal grey battleship with layered armor plating, rows of turret batteries, and a towering command bridge.',
-    'Stealth Interceptor': 'Looks like a sleek black arrowhead starfighter with sharp faceted panels, a tinted canopy, and dim blue engine glow.',
-    'Science Explorer': 'Looks like a white research starship with a rotating sensor ring, dish arrays, and long glowing observation windows along its hull.',
-    'Medical Frigate': 'Looks like a white and red starship with large cross markings, docking bays along its sides, and soft green running lights.',
-    'Smuggler\'s Runner': 'Looks like a worn, patched-up freighter with an oversized engine block, a cockpit off to one side, and scorched hull plates.',
-    'Freighter Hauler': 'Looks like a long bulky freighter with a skeletal spine of stacked shipping containers and glowing tractor docking rings.',
-    'Fighter Wingcraft': 'Looks like a small twin-engine starfighter with swept wings, cannons on each wingtip, and a tight bubble cockpit canopy.',
-    'Colony Transport': 'Looks like a long spacecraft with rotating habitat rings, rows of lit cryo-berth windows, and a cluster of engines at the stern.',
-    'Merchant Yacht': 'Looks like a sleek white luxury spaceship with a glass-domed lounge at the front, joined to a stout boxy cargo hold.',
-    'Strike Corvette': 'Looks like a compact wedge-shaped grey warship with twin forward cannons, an armored bridge, and three glowing engines.',
-    'Blockade Breaker': 'Looks like a heavily armored arrowhead warship with a reinforced ram prow, thick plating, and oversized blazing engines.',
   },
 };
 

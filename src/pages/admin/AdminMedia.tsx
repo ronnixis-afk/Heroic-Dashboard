@@ -32,7 +32,12 @@ import {
   ImageGenre,
   useImageAssets,
 } from '../../hooks/useImageAssets';
-import { useMonsterCatalogWithSubtypes, type MonsterTypePortraitLite } from '../../hooks/useMonsterCatalog';
+import {
+  isShipMonsterType,
+  useMonsterCatalogWithSubtypes,
+  type MonsterGenre,
+  type MonsterTypePortraitLite,
+} from '../../hooks/useMonsterCatalog';
 import { useDiscoveredRaces } from '../../hooks/useDiscoveredRaces';
 import { useRaceCatalog, type Race, type RaceGenre } from '../../hooks/useRaceCatalog';
 import {
@@ -313,10 +318,10 @@ const PORTRAIT_METADATA_OPTIONS = {
   race: ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling/Gnome'],
 };
 
-/** Suggested rideable types from RPG rideableCatalog (synced via npm run sync:rideable-catalog). */
+/** Suggested mount / vehicle types from RPG rideableCatalog (synced via npm run sync:rideable-catalog). */
 const getCatalogRideableSuggestions = (
   genre: SpecificImageGenre,
-  category: 'mount' | 'vehicle' | 'ship'
+  category: 'mount' | 'vehicle'
 ): string[] => [...getRideableTypeSuggestions(genre as RideablePortraitGenre, category)];
 
 const CUSTOM_RACES_STORAGE_KEY = 'heroic-dashboard-custom-portrait-races';
@@ -715,7 +720,7 @@ const ALL_MONSTER_PORTRAIT_TAG_OPTIONS = (() => {
   return options;
 })();
 
-const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> => {
+const getManagedStructuredTagOptions = (assetType: ImageAssetType, liveShipNames: readonly string[]): Set<string> => {
   if (assetType === 'Character Portrait') {
     return new Set([...PORTRAIT_METADATA_OPTIONS.race, ...PORTRAIT_METADATA_OPTIONS.gender]);
   }
@@ -737,11 +742,7 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
     ]);
   }
   if (assetType === 'Ship Portrait') {
-    return new Set([
-      ...getCatalogRideableSuggestions('Fantasy', 'ship'),
-      ...getCatalogRideableSuggestions('Modern', 'ship'),
-      ...getCatalogRideableSuggestions('Sci-Fi', 'ship'),
-    ]);
+    return new Set(liveShipNames);
   }
   if (assetType === 'Power Image') {
     return new Set([
@@ -761,7 +762,7 @@ const getManagedStructuredTagOptions = (assetType: ImageAssetType): Set<string> 
   return new Set();
 };
 
-const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
+const buildTagsWithStructuredMetadata = (input: typeof initialForm, liveShipNames: readonly string[]) => {
   const selectionTags = [
     input.genre,
     input.assetType,
@@ -770,7 +771,7 @@ const getTagsWithStructuredMetadata = (input: typeof initialForm) => {
       ? [input.metadata.startingStoryId]
       : []),
   ].filter(Boolean);
-  const managedTags = getManagedStructuredTagOptions(input.assetType);
+  const managedTags = getManagedStructuredTagOptions(input.assetType, liveShipNames);
   const baseTags =
     managedTags.size > 0
       ? input.tags.filter((tag) => !managedTags.has(tag))
@@ -815,6 +816,19 @@ export default function AdminMedia() {
     }
     return map;
   }, [liveMonsterTypesWithSubtypes]);
+
+  /** Ship Portrait choices come from the live Ship monster type (ships are its subtypes). */
+  const liveShipSubtypes = useMemo(() => {
+    const shipType = liveMonsterTypesWithSubtypes.find((t) => isShipMonsterType(t));
+    if (!shipType) return [];
+    return shipType.subtypes.map((s) => ({
+      ...s,
+      genres: s.genres.length > 0 ? s.genres : shipType.genres,
+    }));
+  }, [liveMonsterTypesWithSubtypes]);
+  const liveShipNames = useMemo(() => liveShipSubtypes.map((s) => s.name), [liveShipSubtypes]);
+  const getTagsWithStructuredMetadata = (input: typeof initialForm) =>
+    buildTagsWithStructuredMetadata(input, liveShipNames);
 
   const {
     assets,
@@ -1360,9 +1374,13 @@ export default function AdminMedia() {
   const selectedRideableImageDescription = useMemo(() => {
     const key = RIDEABLE_TYPE_METADATA_KEY[formData.assetType];
     if (!key) return '';
+    if (formData.assetType === 'Ship Portrait') {
+      const shipName = (formData.metadata[key] || '').trim();
+      return liveShipSubtypes.find((s) => s.name === shipName)?.imagePrompt || '';
+    }
     const genre = formData.genre === 'Any Genre' ? null : (structuredGenre as RideablePortraitGenre);
     return getRideableImageDescription(formData.metadata[key] || '', genre);
-  }, [formData.assetType, formData.genre, formData.metadata, structuredGenre]);
+  }, [formData.assetType, formData.genre, formData.metadata, structuredGenre, liveShipSubtypes]);
   const powerSubtypeOptions = useMemo(() => {
     const catalogTypes = [...getPowerImageSubtypes(formData.metadata.powerCategory || '')];
     const current = formData.metadata.powerSubtype?.trim();
@@ -1408,12 +1426,11 @@ export default function AdminMedia() {
       )
       .map((asset) => getStringMetadata(asset.metadata).shipType?.trim())
       .filter((value): value is string => Boolean(value));
-    return mergeRideableTypeOptions(
-      getCatalogRideableSuggestions(structuredGenre, 'ship'),
-      fromAssets,
-      formData.metadata.shipType
-    );
-  }, [assets, formData.genre, formData.metadata.shipType, structuredGenre]);
+    const fromCatalog = liveShipSubtypes
+      .filter((s) => formData.genre === 'Any Genre' || s.genres.includes(structuredGenre as MonsterGenre))
+      .map((s) => s.name);
+    return mergeRideableTypeOptions(fromCatalog, fromAssets, formData.metadata.shipType);
+  }, [assets, formData.genre, formData.metadata.shipType, structuredGenre, liveShipSubtypes]);
   const previewUploadOrder = useMemo(
     () => (editingAsset ? getTrailingUploadOrder(editingAsset.title) || 1 : getNextUploadOrder(assets, formData)),
     [assets, editingAsset, formData]
