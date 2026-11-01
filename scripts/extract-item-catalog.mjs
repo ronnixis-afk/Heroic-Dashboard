@@ -574,6 +574,7 @@ for (const genre of GENRES) {
     { name: 'Quest', subtypes: quest },
     { name: 'Material', subtypes: materials },
     { name: 'Currency', subtypes: ['Currency'] },
+    { name: 'Forge Token', subtypes: ['Forge Token'] },
   ];
 }
 
@@ -671,7 +672,8 @@ export type ItemPortraitCategory =
   | 'Consumables'
   | 'Quest'
   | 'Material'
-  | 'Currency';
+  | 'Currency'
+  | 'Forge Token';
 
 export type ItemWeightCategory = 'Light' | 'Medium' | 'Heavy' | 'Shield';
 

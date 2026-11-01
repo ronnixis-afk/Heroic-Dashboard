@@ -5,7 +5,7 @@
  * Weight categories (Light / Medium / Heavy / Shield) come from weapon tags and armorStats.armorType.
  * Sync: npm run sync:item-catalog
  *
- * Last synced: 2026-10-28
+ * Last synced: 2026-11-01
  */
 
 export type ItemPortraitGenre = 'Fantasy' | 'Modern' | 'Sci-Fi';
@@ -20,7 +20,8 @@ export type ItemPortraitCategory =
   | 'Consumables'
   | 'Quest'
   | 'Material'
-  | 'Currency';
+  | 'Currency'
+  | 'Forge Token';
 
 export type ItemWeightCategory = 'Light' | 'Medium' | 'Heavy' | 'Shield';
 
@@ -208,6 +209,12 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       subtypes: [
       'Currency',
     ],
+    },
+    {
+      name: 'Forge Token',
+      subtypes: [
+      'Forge Token',
+    ],
     }
   ],
   'Modern': [
@@ -380,6 +387,12 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       name: 'Currency',
       subtypes: [
       'Currency',
+    ],
+    },
+    {
+      name: 'Forge Token',
+      subtypes: [
+      'Forge Token',
     ],
     }
   ],
@@ -567,6 +580,12 @@ export const ITEM_PORTRAIT_CATALOG_BY_GENRE: Record<
       name: 'Currency',
       subtypes: [
       'Currency',
+    ],
+    },
+    {
+      name: 'Forge Token',
+      subtypes: [
+      'Forge Token',
     ],
     }
   ],
