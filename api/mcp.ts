@@ -635,6 +635,7 @@ export interface MonsterSubtypeAttributes {
   allowedTerrains?: string[];
   encounterExcluded?: boolean;
   rideable?: boolean;
+  behavior?: string | null;
   /** Null inherits the type's canSpeak. */
   canSpeak?: boolean | null;
   spawnRank?: MonsterSpawnRank;
@@ -908,6 +909,21 @@ function optionalTrimmedString(value: unknown, field: string): string | undefine
   return trimmed || undefined;
 }
 
+function optionalBehavior(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error('Behavior Must Be A String Or Null.');
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length > 20) {
+    throw new Error('Behavior Must Be At Most 20 Words.');
+  }
+  return trimmed;
+}
+
 function optionalNullableString(value: unknown, field: string): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -1162,6 +1178,7 @@ export function parseMonsterSubtypeAttributes(input: unknown): MonsterSubtypeAtt
     allowedTerrains: optionalStringArray(record.allowedTerrains, 'Allowed Terrains'),
     encounterExcluded: optionalBoolean(record.encounterExcluded, 'Encounter Excluded'),
     rideable: optionalBoolean(record.rideable, 'Rideable'),
+    behavior: optionalBehavior(record.behavior),
     canSpeak: optionalNullableBoolean(record.canSpeak, 'Can Speak'),
     spawnRank: optionalSpawnRank(record.spawnRank),
     minEncounterLevel: optionalEncounterLevel(record.minEncounterLevel),
@@ -1232,6 +1249,7 @@ export function buildMonsterSubtypeCreatePayload(input: unknown): Record<string,
     } as Record<string, unknown>,
     {
       archetype: attributes.archetype ?? null,
+      behavior: attributes.behavior ?? null,
       movementModes: attributes.movementModes,
       primaryMovementMode: attributes.primaryMovementMode,
       genres: attributes.genres,
@@ -1651,6 +1669,11 @@ const MONSTER_SUBTYPE_ATTRIBUTE_PROPERTIES: Record<string, unknown> = {
   },
   encounterExcluded: { type: 'boolean', description: 'Exclude from random encounters.' },
   rideable: { type: 'boolean', description: 'Whether this subtype is rideable.' },
+  behavior: {
+    type: ['string', 'null'],
+    description:
+      'Behavioral tendencies for this subtype (at most 20 words). Pass null or empty string to clear.',
+  },
   canSpeak: {
     type: ['boolean', 'null'],
     description:

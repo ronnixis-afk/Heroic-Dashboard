@@ -166,6 +166,7 @@ export interface MonsterSubtype {
   allowedTerrains: string[];
   encounterExcluded: boolean;
   rideable: boolean;
+  behavior?: string | null;
   /** Speech override; null inherits the type's canSpeak. */
   canSpeak: boolean | null;
   /** Absent on rows read before the column shipped; treat as 'any'. */

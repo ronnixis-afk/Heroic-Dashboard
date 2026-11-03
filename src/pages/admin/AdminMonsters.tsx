@@ -58,6 +58,7 @@ type CatalogFilter = 'All' | 'Enabled' | 'Disabled';
 type SubtypeDraft = {
   ship: ShipDraft;
   visualDescription: string;
+  behavior: string;
   size: string;
   allowedTerrains: string[];
   canSpeak: boolean | null;
@@ -184,6 +185,7 @@ const EMPTY_NEW_TYPE = {
 const EMPTY_SUB_FORM = {
   name: '',
   visualDescription: '',
+  behavior: '',
   size: 'Medium',
   allowedTerrains: ['Plains'] as string[],
   canSpeak: null as boolean | null,
@@ -198,6 +200,12 @@ const EMPTY_SHIP_SUB_FORM = {
   ...EMPTY_SUB_FORM,
   size: 'Large',
   allowedTerrains: [...SHIP_ATMOSPHERE_TERRAINS],
+};
+
+const countWords = (text: string): number => {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).filter(Boolean).length;
 };
 
 const subtypeLevel = (subtype: Pick<MonsterSubtype, 'minEncounterLevel'>): number =>
@@ -776,6 +784,10 @@ export default function AdminMonsters() {
       setStatus({ type: 'error', msg: 'Subtype Name and Visual Description are required.' });
       return;
     }
+    if (countWords(subForm.behavior) > 20) {
+      setStatus({ type: 'error', msg: 'Behavior Must Be At Most 20 Words.' });
+      return;
+    }
     if (subForm.allowedTerrains.length === 0) {
       setStatus({ type: 'error', msg: 'Choose at least one terrain.' });
       return;
@@ -786,6 +798,7 @@ export default function AdminMonsters() {
       await createSubtype(selectedTypeId, {
         name: subForm.name.trim(),
         visualDescription: subForm.visualDescription.trim(),
+        behavior: subForm.behavior.trim() || undefined,
         size: subForm.size,
         archetype: null,
         allowedTerrains: subForm.allowedTerrains,
@@ -816,6 +829,7 @@ export default function AdminMonsters() {
         ...prev,
         [subtype.id]: {
           visualDescription: subtype.visualDescription || '',
+          behavior: subtype.behavior || '',
           size: subtype.size || 'Medium',
           allowedTerrains: subtype.allowedTerrains?.length ? subtype.allowedTerrains : ['Plains'],
           canSpeak: typeof subtype.canSpeak === 'boolean' ? subtype.canSpeak : null,
@@ -869,6 +883,10 @@ export default function AdminMonsters() {
       setStatus({ type: 'error', msg: 'Visual Description is required.' });
       return;
     }
+    if (countWords(draft.behavior) > 20) {
+      setStatus({ type: 'error', msg: 'Behavior Must Be At Most 20 Words.' });
+      return;
+    }
     if (draft.allowedTerrains.length === 0) {
       setStatus({ type: 'error', msg: 'Choose at least one terrain.' });
       return;
@@ -882,6 +900,7 @@ export default function AdminMonsters() {
         isShipType
           ? {
               visualDescription: draft.visualDescription.trim(),
+              behavior: draft.behavior.trim() || null,
               size: draft.size,
               allowedTerrains: draft.allowedTerrains,
               enabled: draft.enabled,
@@ -889,6 +908,7 @@ export default function AdminMonsters() {
             }
           : {
               visualDescription: draft.visualDescription.trim(),
+              behavior: draft.behavior.trim() || null,
               size: draft.size,
               allowedTerrains: draft.allowedTerrains,
               canSpeak: draft.canSpeak,
@@ -1318,6 +1338,34 @@ export default function AdminMonsters() {
                         onChange={(e) => setSubForm((prev) => ({ ...prev, visualDescription: e.target.value }))}
                       />
                     </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="input-label" htmlFor="sub-behavior">
+                          Behavior
+                        </label>
+                        <span
+                          className={cn(
+                            'text-xs',
+                            countWords(subForm.behavior) > 20
+                              ? 'text-red-400 font-medium'
+                              : 'text-brand-text-muted'
+                          )}
+                        >
+                          {countWords(subForm.behavior)} / 20 Words
+                        </span>
+                      </div>
+                      <textarea
+                        id="sub-behavior"
+                        className={cn(
+                          'input-field !h-auto py-2 leading-relaxed',
+                          countWords(subForm.behavior) > 20 && 'border-red-400 focus:border-red-400'
+                        )}
+                        rows={2}
+                        placeholder="Optional behavioral tendencies (max 20 words)..."
+                        value={subForm.behavior}
+                        onChange={(e) => setSubForm((prev) => ({ ...prev, behavior: e.target.value }))}
+                      />
+                    </div>
                     <ChoicePills
                       label="Allowed Terrains"
                       options={TERRAINS}
@@ -1545,6 +1593,37 @@ export default function AdminMonsters() {
                                           disabled={subtype.isProtected}
                                           onChange={(e) =>
                                             updateDraft(subtype.id, { visualDescription: e.target.value })
+                                          }
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center justify-between">
+                                          <label className="input-label" htmlFor={`behavior-${subtype.id}`}>
+                                            Behavior
+                                          </label>
+                                          <span
+                                            className={cn(
+                                              'text-xs',
+                                              countWords(draft.behavior) > 20
+                                                ? 'text-red-400 font-medium'
+                                                : 'text-brand-text-muted'
+                                            )}
+                                          >
+                                            {countWords(draft.behavior)} / 20 Words
+                                          </span>
+                                        </div>
+                                        <textarea
+                                          id={`behavior-${subtype.id}`}
+                                          className={cn(
+                                            'input-field !h-auto py-2 leading-relaxed',
+                                            countWords(draft.behavior) > 20 && 'border-red-400 focus:border-red-400'
+                                          )}
+                                          rows={2}
+                                          placeholder="Optional behavioral tendencies (max 20 words)..."
+                                          value={draft.behavior}
+                                          disabled={subtype.isProtected}
+                                          onChange={(e) =>
+                                            updateDraft(subtype.id, { behavior: e.target.value })
                                           }
                                         />
                                       </div>

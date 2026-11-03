@@ -530,6 +530,7 @@ describe('monster catalog payloads', () => {
       minEncounterLevel: 1,
       enabled: true,
       archetype: null,
+      behavior: null,
     });
   });
 
@@ -1101,6 +1102,67 @@ describe('MCP monster canSpeak', () => {
     );
     assert.equal(calls[0].init?.method, 'PATCH');
     assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { canSpeak: null });
+  });
+});
+
+describe('MCP monster behavior', () => {
+  const toolProps = (toolName: string) => {
+    const tool = MCP_TOOLS.find((entry) => entry.name === toolName);
+    return (tool?.inputSchema as { properties: Record<string, any> }).properties;
+  };
+
+  it('exposes behavior as a nullable string on subtype tools only', () => {
+    for (const toolName of ['create_monster_subtype', 'update_monster_subtype']) {
+      assert.deepEqual(toolProps(toolName).behavior.type, ['string', 'null']);
+    }
+    for (const toolName of ['create_monster_type', 'update_monster_type']) {
+      assert.equal(toolProps(toolName).behavior, undefined);
+    }
+  });
+
+  it('forwards behavior update and allows clearing with null or empty string', async () => {
+    const calls: { path: string; init?: RequestInit }[] = [];
+    const client = {
+      fetchRpgAdmin: async (path: string, init?: RequestInit) => {
+        calls.push({ path, init });
+        return { subtype: { id: 'sub-9' } };
+      },
+    };
+
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', behavior: 'Stalks from shadows quietly.' },
+      client
+    );
+    assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { behavior: 'Stalks from shadows quietly.' });
+
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', behavior: null },
+      client
+    );
+    assert.deepEqual(JSON.parse(String(calls[1].init?.body)), { behavior: null });
+
+    await executeMcpTool(
+      'update_monster_subtype',
+      { typeId: 'type-1', subtypeId: 'sub-9', behavior: '   ' },
+      client
+    );
+    assert.deepEqual(JSON.parse(String(calls[2].init?.body)), { behavior: null });
+  });
+
+  it('rejects behavior exceeding 20 words', async () => {
+    const longBehavior = Array.from({ length: 21 }, (_, i) => `word${i + 1}`).join(' ');
+    await assert.rejects(
+      async () => {
+        await executeMcpTool(
+          'update_monster_subtype',
+          { typeId: 'type-1', subtypeId: 'sub-9', behavior: longBehavior },
+          { fetchRpgAdmin: async () => ({}) }
+        );
+      },
+      { message: 'Behavior Must Be At Most 20 Words.' }
+    );
   });
 });
 
