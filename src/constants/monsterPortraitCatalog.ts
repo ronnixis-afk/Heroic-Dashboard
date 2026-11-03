@@ -7,7 +7,7 @@
  * Regenerate:
  *   npm run sync:monster-catalog
  *
- * Last synced: 2026-10-25
+ * Last synced: 2026-11-03
  */
 
 export interface MonsterPortraitSubtype {
