@@ -1872,7 +1872,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'create_monster_subtype',
     description:
-      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any). Set minEncounterLevel to the lowest party level at which this subtype may appear in random encounters (defaults to 1). Set genres to tag the subtype with one or more genres; omit to inherit the type genres.',
+      'Create a subtype under a type via POST /api/admin/monster-types/:id/subtypes. Name and visualDescription are required. Omit movementModes to let the game AI assign them from the body description; sent modes are stored exactly and never overwritten by the AI. Set behavior to describe subtype behavioral tendencies (at most 20 words; string or null, null clears). Omit canSpeak to inherit the type default. Set spawnRank boss_only for subtypes that should only ever appear as a boss (defaults to any). Set minEncounterLevel to the lowest party level at which this subtype may appear in random encounters (defaults to 1). Set genres to tag the subtype with one or more genres; omit to inherit the type genres.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1886,7 +1886,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'update_monster_subtype',
     description:
-      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at. Send minEncounterLevel to change the lowest party level at which this subtype appears in random encounters. Send genres to replace the subtype genre tags, or [] to inherit the type genres again.',
+      'Update a subtype via PATCH /api/admin/monster-types/:id/subtypes/:subtypeId. Send only the attributes to change. Sending movementModes marks them as hand-set so AI re-runs skip this subtype; renames do not re-run the AI. Send behavior to update subtype behavioral tendencies (at most 20 words), or null to clear. Send canSpeak true / false to override speech, or null to inherit the type again. Send spawnRank any or boss_only to change which ranks the subtype may spawn at. Send minEncounterLevel to change the lowest party level at which this subtype appears in random encounters. Send genres to replace the subtype genre tags, or [] to inherit the type genres again.',
     inputSchema: {
       type: 'object',
       properties: {
